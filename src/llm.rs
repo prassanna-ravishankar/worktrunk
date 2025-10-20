@@ -57,7 +57,7 @@ fn try_generate_llm_message(
         return Err(format!("LLM command failed: {}", stderr).into());
     }
 
-    let message = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let message = String::from_utf8_lossy(&output.stdout).trim().to_owned();
 
     if message.is_empty() {
         return Err("LLM returned empty message".into());

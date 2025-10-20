@@ -75,19 +75,21 @@ impl Repository {
     /// Check if a git branch exists (local or remote).
     pub fn branch_exists(&self, branch: &str) -> Result<bool, GitError> {
         // Try local branch first
-        let result =
-            self.run_command(&["rev-parse", "--verify", &format!("refs/heads/{}", branch)]);
-        if result.is_ok() {
+        if self
+            .run_command(&["rev-parse", "--verify", &format!("refs/heads/{}", branch)])
+            .is_ok()
+        {
             return Ok(true);
         }
 
         // Try remote branch
-        let result = self.run_command(&[
-            "rev-parse",
-            "--verify",
-            &format!("refs/remotes/origin/{}", branch),
-        ]);
-        Ok(result.is_ok())
+        Ok(self
+            .run_command(&[
+                "rev-parse",
+                "--verify",
+                &format!("refs/remotes/origin/{}", branch),
+            ])
+            .is_ok())
     }
 
     /// Get the current branch name, or None if in detached HEAD state.
@@ -109,14 +111,12 @@ impl Repository {
     /// 2. If not cached, query the remote and cache the result
     pub fn default_branch(&self) -> Result<String, GitError> {
         // Try local cache first (fast path)
-        if let Ok(branch) = self.get_local_default_branch() {
-            return Ok(branch);
-        }
-
-        // Query remote and cache it
-        let branch = self.query_remote_default_branch()?;
-        self.cache_default_branch(&branch)?;
-        Ok(branch)
+        self.get_local_default_branch().or_else(|_| {
+            // Query remote and cache it
+            let branch = self.query_remote_default_branch()?;
+            self.cache_default_branch(&branch)?;
+            Ok(branch)
+        })
     }
 
     /// Get the git common directory (the actual .git directory for the repository).
@@ -411,10 +411,10 @@ impl Repository {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitError::CommandFailed(stderr.to_string()));
+            return Err(GitError::CommandFailed(stderr.into_owned()));
         }
 
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 }
 

@@ -73,8 +73,7 @@ pub fn handle_switch(
     }
 
     repo.run_command(&args)
-        .map_err(|e| GitError::CommandFailed(format!("Failed to create worktree: {}", e)))
-        .map(|_| ())?;
+        .map_err(|e| GitError::CommandFailed(format!("Failed to create worktree: {}", e)))?;
 
     // Output success message
     let success_msg = if create {
@@ -150,8 +149,7 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
         repo.run_command(&["switch", &default_branch])
             .map_err(|e| {
                 GitError::CommandFailed(format!("Failed to switch to '{}': {}", default_branch, e))
-            })
-            .map(|_| ())?;
+            })?;
 
         if !internal {
             println!("Switched to default branch '{}'", default_branch);
