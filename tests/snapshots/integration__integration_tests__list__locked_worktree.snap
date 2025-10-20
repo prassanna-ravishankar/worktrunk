@@ -17,14 +17,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-[REPO]
-  HEAD: [SHA]
-  branch: main
-
-[WORKTREE_LOCKED_FEATURE]
-  HEAD: [SHA]
-  branch: locked-feature
-  (locked: Testing lock functionality)
-
+[36mmain [SHA] [REPO][0m
+locked-feature [SHA] (locked: Testing lock functionality) [WORKTREE_LOCKED_FEATURE]
 
 ----- stderr -----

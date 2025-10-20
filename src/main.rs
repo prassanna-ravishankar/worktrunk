@@ -1,8 +1,10 @@
+use anstyle::{AnsiColor, Color, Style};
 use clap::{Parser, Subcommand};
 use std::process;
 use worktrunk::git::{
-    GitError, branch_exists, count_commits, get_changed_files, get_current_branch,
-    get_current_branch_in, get_default_branch, get_git_common_dir, get_worktree_root,
+    GitError, branch_exists, count_commits, get_ahead_behind_in, get_branch_diff_stats_in,
+    get_changed_files, get_commit_timestamp_in, get_current_branch, get_current_branch_in,
+    get_default_branch, get_git_common_dir, get_working_tree_diff_stats_in, get_worktree_root,
     has_merge_commits, is_ancestor, is_dirty, is_dirty_in, is_in_worktree, list_worktrees,
     worktree_for_branch,
 };
@@ -131,45 +133,157 @@ fn handle_init(shell_name: &str, cmd: &str, hook_str: &str) -> Result<(), String
     Ok(())
 }
 
+struct WorktreeInfo {
+    path: std::path::PathBuf,
+    head: String,
+    branch: Option<String>,
+    timestamp: i64,
+    ahead: usize,
+    behind: usize,
+    working_tree_diff: (usize, usize),
+    branch_diff: (usize, usize),
+    is_primary: bool,
+    detached: bool,
+    bare: bool,
+    locked: Option<String>,
+    prunable: Option<String>,
+}
+
 fn handle_list() -> Result<(), GitError> {
     let worktrees = list_worktrees()?;
 
-    for wt in worktrees {
-        println!("{}", wt.path.display());
-        println!("  HEAD: {}", &wt.head[..8.min(wt.head.len())]);
+    if worktrees.is_empty() {
+        return Ok(());
+    }
 
-        if let Some(branch) = wt.branch {
-            println!("  branch: {}", branch);
-        }
+    // First worktree is the primary
+    let primary = &worktrees[0];
+    let primary_branch = primary.branch.as_ref();
 
-        if wt.detached {
-            println!("  (detached)");
-        }
+    // Gather enhanced information for all worktrees
+    let mut infos: Vec<WorktreeInfo> = Vec::new();
 
-        if wt.bare {
-            println!("  (bare)");
-        }
+    for (idx, wt) in worktrees.iter().enumerate() {
+        let is_primary = idx == 0;
 
-        if let Some(reason) = wt.locked {
-            if reason.is_empty() {
-                println!("  (locked)");
-            } else {
-                println!("  (locked: {})", reason);
-            }
-        }
+        // Get commit timestamp
+        let timestamp = get_commit_timestamp_in(&wt.path, &wt.head).unwrap_or(0);
 
-        if let Some(reason) = wt.prunable {
-            if reason.is_empty() {
-                println!("  (prunable)");
-            } else {
-                println!("  (prunable: {})", reason);
-            }
-        }
+        // Calculate ahead/behind relative to primary branch (only if primary has a branch)
+        let (ahead, behind) = if is_primary || primary_branch.is_none() {
+            (0, 0)
+        } else {
+            get_ahead_behind_in(&wt.path, primary_branch.unwrap(), &wt.head).unwrap_or((0, 0))
+        };
 
-        println!();
+        // Get working tree diff stats
+        let working_tree_diff = get_working_tree_diff_stats_in(&wt.path).unwrap_or((0, 0));
+
+        // Get branch diff stats (downstream of primary, only if primary has a branch)
+        let branch_diff = if is_primary || primary_branch.is_none() {
+            (0, 0)
+        } else {
+            get_branch_diff_stats_in(&wt.path, primary_branch.unwrap(), &wt.head).unwrap_or((0, 0))
+        };
+
+        infos.push(WorktreeInfo {
+            path: wt.path.clone(),
+            head: wt.head.clone(),
+            branch: wt.branch.clone(),
+            timestamp,
+            ahead,
+            behind,
+            working_tree_diff,
+            branch_diff,
+            is_primary,
+            detached: wt.detached,
+            bare: wt.bare,
+            locked: wt.locked.clone(),
+            prunable: wt.prunable.clone(),
+        });
+    }
+
+    // Sort by most recent commit (descending)
+    infos.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+    // Display formatted output
+    for info in infos {
+        format_worktree_line(&info);
     }
 
     Ok(())
+}
+
+fn format_worktree_line(info: &WorktreeInfo) {
+    let primary_style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
+
+    let branch_display = info.branch.as_deref().unwrap_or("(detached)");
+    let short_head = &info.head[..8.min(info.head.len())];
+
+    // Build the line components
+    let mut parts = Vec::new();
+
+    // Branch name and HEAD
+    parts.push(format!("{} {}", branch_display, short_head));
+
+    // Ahead/behind (only for non-primary)
+    if !info.is_primary {
+        if info.ahead > 0 || info.behind > 0 {
+            parts.push(format!("↑{} ↓{}", info.ahead, info.behind));
+        }
+    }
+
+    // Working tree diff
+    let (wt_added, wt_deleted) = info.working_tree_diff;
+    if wt_added > 0 || wt_deleted > 0 {
+        parts.push(format!("+{} -{}", wt_added, wt_deleted));
+    }
+
+    // Branch diff (only for non-primary)
+    if !info.is_primary {
+        let (br_added, br_deleted) = info.branch_diff;
+        if br_added > 0 || br_deleted > 0 {
+            parts.push(format!("(+{} -{})", br_added, br_deleted));
+        }
+    }
+
+    // Worktree states
+    if info.detached {
+        parts.push("(detached)".to_string());
+    }
+    if info.bare {
+        parts.push("(bare)".to_string());
+    }
+    if let Some(ref reason) = info.locked {
+        if reason.is_empty() {
+            parts.push("(locked)".to_string());
+        } else {
+            parts.push(format!("(locked: {})", reason));
+        }
+    }
+    if let Some(ref reason) = info.prunable {
+        if reason.is_empty() {
+            parts.push("(prunable)".to_string());
+        } else {
+            parts.push(format!("(prunable: {})", reason));
+        }
+    }
+
+    // Path
+    parts.push(info.path.display().to_string());
+
+    let line = parts.join(" ");
+
+    if info.is_primary {
+        println!(
+            "{}{}{}",
+            primary_style.render(),
+            line,
+            primary_style.render_reset()
+        );
+    } else {
+        println!("{}", line);
+    }
 }
 
 fn handle_switch(

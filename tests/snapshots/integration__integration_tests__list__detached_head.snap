@@ -17,9 +17,6 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-[REPO]
-  HEAD: [SHA]
-  (detached)
-
+[36m(detached) [SHA] (detached) [REPO][0m
 
 ----- stderr -----

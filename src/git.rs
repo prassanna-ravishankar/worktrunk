@@ -420,6 +420,102 @@ pub fn get_changed_files_in(
     Ok(stdout.lines().map(|s| s.to_string()).collect())
 }
 
+/// Get commit timestamp in seconds since epoch
+pub fn get_commit_timestamp(commit: &str) -> Result<i64, GitError> {
+    get_commit_timestamp_in(std::path::Path::new("."), commit)
+}
+
+/// Get commit timestamp in seconds since epoch for a repository at the given path
+pub fn get_commit_timestamp_in(path: &std::path::Path, commit: &str) -> Result<i64, GitError> {
+    let stdout = run_git_command(&["show", "-s", "--format=%ct", commit], Some(path))?;
+    stdout
+        .trim()
+        .parse()
+        .map_err(|e| GitError::ParseError(format!("Failed to parse timestamp: {}", e)))
+}
+
+/// Calculate commits ahead and behind between two refs
+/// Returns (ahead, behind) where ahead is commits in head not in base,
+/// and behind is commits in base not in head
+pub fn get_ahead_behind(base: &str, head: &str) -> Result<(usize, usize), GitError> {
+    get_ahead_behind_in(std::path::Path::new("."), base, head)
+}
+
+/// Calculate commits ahead and behind at the given path
+pub fn get_ahead_behind_in(
+    path: &std::path::Path,
+    base: &str,
+    head: &str,
+) -> Result<(usize, usize), GitError> {
+    let ahead = count_commits_in(path, base, head)?;
+    let behind = count_commits_in(path, head, base)?;
+    Ok((ahead, behind))
+}
+
+/// Get line diff statistics for working tree changes (unstaged + staged)
+/// Returns (added_lines, deleted_lines)
+pub fn get_working_tree_diff_stats() -> Result<(usize, usize), GitError> {
+    get_working_tree_diff_stats_in(std::path::Path::new("."))
+}
+
+/// Get line diff statistics for working tree changes at the given path
+pub fn get_working_tree_diff_stats_in(path: &std::path::Path) -> Result<(usize, usize), GitError> {
+    let stdout = run_git_command(&["diff", "--numstat", "HEAD"], Some(path))?;
+    parse_numstat(&stdout)
+}
+
+/// Get line diff statistics between two refs (using three-dot diff for merge base)
+/// Returns (added_lines, deleted_lines)
+pub fn get_branch_diff_stats(base: &str, head: &str) -> Result<(usize, usize), GitError> {
+    get_branch_diff_stats_in(std::path::Path::new("."), base, head)
+}
+
+/// Get line diff statistics between two refs at the given path
+pub fn get_branch_diff_stats_in(
+    path: &std::path::Path,
+    base: &str,
+    head: &str,
+) -> Result<(usize, usize), GitError> {
+    let range = format!("{}...{}", base, head);
+    let stdout = run_git_command(&["diff", "--numstat", &range], Some(path))?;
+    parse_numstat(&stdout)
+}
+
+/// Parse git diff --numstat output
+/// Format: "added\tdeleted\tfilename" per line
+fn parse_numstat(output: &str) -> Result<(usize, usize), GitError> {
+    let mut total_added = 0;
+    let mut total_deleted = 0;
+
+    for line in output.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.split('\t').collect();
+        if parts.len() < 2 {
+            continue;
+        }
+
+        // Binary files show "-" for added/deleted
+        if parts[0] == "-" || parts[1] == "-" {
+            continue;
+        }
+
+        let added: usize = parts[0]
+            .parse()
+            .map_err(|e| GitError::ParseError(format!("Failed to parse added lines: {}", e)))?;
+        let deleted: usize = parts[1]
+            .parse()
+            .map_err(|e| GitError::ParseError(format!("Failed to parse deleted lines: {}", e)))?;
+
+        total_added += added;
+        total_deleted += deleted;
+    }
+
+    Ok((total_added, total_deleted))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -17,14 +17,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-[REPO]
-  HEAD: [SHA]
-  branch: main
-
-[WORKTREE_LOCKED_NO_REASON]
-  HEAD: [SHA]
-  branch: locked-no-reason
-  (locked)
-
+[36mmain [SHA] [REPO][0m
+locked-no-reason [SHA] (locked) [WORKTREE_LOCKED_NO_REASON]
 
 ----- stderr -----

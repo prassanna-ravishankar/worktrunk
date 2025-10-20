@@ -17,17 +17,8 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-[REPO]
-  HEAD: [SHA]
-  branch: main
-
-[WORKTREE_FEATURE_A]
-  HEAD: [SHA]
-  branch: feature-a
-
-[WORKTREE_FEATURE_B]
-  HEAD: [SHA]
-  branch: feature-b
-
+[36mmain [SHA] [REPO][0m
+feature-a [SHA] [WORKTREE_FEATURE_A]
+feature-b [SHA] [WORKTREE_FEATURE_B]
 
 ----- stderr -----
