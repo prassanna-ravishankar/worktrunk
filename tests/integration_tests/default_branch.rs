@@ -1,4 +1,5 @@
 use crate::common::TestRepo;
+use worktrunk::git::Repository;
 
 #[test]
 fn test_get_default_branch_with_origin_head() {
@@ -10,7 +11,8 @@ fn test_get_default_branch_with_origin_head() {
     assert!(repo.has_origin_head());
 
     // Test that we can get the default branch
-    let branch = worktrunk::git::get_default_branch_in(repo.root_path())
+    let branch = Repository::at(repo.root_path())
+        .default_branch()
         .expect("Failed to get default branch");
     assert_eq!(branch, "main");
 }
@@ -26,7 +28,8 @@ fn test_get_default_branch_without_origin_head() {
     assert!(!repo.has_origin_head());
 
     // Should still work by querying remote
-    let branch = worktrunk::git::get_default_branch_in(repo.root_path())
+    let branch = Repository::at(repo.root_path())
+        .default_branch()
         .expect("Failed to get default branch");
     assert_eq!(branch, "main");
 
@@ -45,11 +48,14 @@ fn test_get_default_branch_caches_result() {
     assert!(!repo.has_origin_head());
 
     // First call queries remote and caches
-    worktrunk::git::get_default_branch_in(repo.root_path()).expect("Failed to get default branch");
+    Repository::at(repo.root_path())
+        .default_branch()
+        .expect("Failed to get default branch");
     assert!(repo.has_origin_head());
 
     // Second call uses cache (fast path)
-    let branch = worktrunk::git::get_default_branch_in(repo.root_path())
+    let branch = Repository::at(repo.root_path())
+        .default_branch()
         .expect("Failed to get default branch on second call");
     assert_eq!(branch, "main");
 }
@@ -60,6 +66,6 @@ fn test_get_default_branch_no_remote() {
     repo.commit("Initial commit");
 
     // No remote configured, should fail
-    let result = worktrunk::git::get_default_branch_in(repo.root_path());
+    let result = Repository::at(repo.root_path()).default_branch();
     assert!(result.is_err());
 }

@@ -2,12 +2,7 @@ mod layout;
 mod render;
 
 use rayon::prelude::*;
-use std::path::Path;
-use worktrunk::git::{
-    GitError, get_ahead_behind_in, get_branch_diff_stats_in, get_commit_message_in,
-    get_commit_timestamp_in, get_upstream_branch_in, get_working_tree_diff_stats_in,
-    get_worktree_root_in, get_worktree_state_in, list_worktrees,
-};
+use worktrunk::git::{GitError, Repository};
 
 use layout::calculate_responsive_layout;
 use render::{format_header_line, format_worktree_line};
@@ -35,7 +30,8 @@ pub struct WorktreeInfo {
 }
 
 pub fn handle_list() -> Result<(), GitError> {
-    let worktrees = list_worktrees()?;
+    let repo = Repository::current();
+    let worktrees = repo.list_worktrees()?;
 
     if worktrees.is_empty() {
         return Ok(());
@@ -46,10 +42,11 @@ pub fn handle_list() -> Result<(), GitError> {
     let primary_branch = primary.branch.as_ref();
 
     // Get current worktree to identify active one
-    let current_worktree_path = get_worktree_root_in(Path::new(".")).ok();
+    let current_worktree_path = repo.worktree_root().ok();
 
     // Helper function to process a single worktree
     let process_worktree = |idx: usize, wt: &worktrunk::git::Worktree| -> WorktreeInfo {
+        let wt_repo = Repository::at(&wt.path);
         let is_primary = idx == 0;
         let is_current = current_worktree_path
             .as_ref()
@@ -57,26 +54,26 @@ pub fn handle_list() -> Result<(), GitError> {
             .unwrap_or(false);
 
         // Get commit timestamp
-        let timestamp = get_commit_timestamp_in(&wt.path, &wt.head).unwrap_or(0);
+        let timestamp = wt_repo.commit_timestamp(&wt.head).unwrap_or(0);
 
         // Get commit message
-        let commit_message = get_commit_message_in(&wt.path, &wt.head).unwrap_or_default();
+        let commit_message = wt_repo.commit_message(&wt.head).unwrap_or_default();
 
         // Calculate ahead/behind relative to primary branch (only if primary has a branch)
         let (ahead, behind) = if is_primary {
             (0, 0)
         } else if let Some(pb) = primary_branch {
-            get_ahead_behind_in(&wt.path, pb, &wt.head).unwrap_or((0, 0))
+            wt_repo.ahead_behind(pb, &wt.head).unwrap_or((0, 0))
         } else {
             (0, 0)
         };
-        let working_tree_diff = get_working_tree_diff_stats_in(&wt.path).unwrap_or((0, 0));
+        let working_tree_diff = wt_repo.working_tree_diff_stats().unwrap_or((0, 0));
 
         // Get branch diff stats (downstream of primary, only if primary has a branch)
         let branch_diff = if is_primary {
             (0, 0)
         } else if let Some(pb) = primary_branch {
-            get_branch_diff_stats_in(&wt.path, pb, &wt.head).unwrap_or((0, 0))
+            wt_repo.branch_diff_stats(pb, &wt.head).unwrap_or((0, 0))
         } else {
             (0, 0)
         };
@@ -84,15 +81,16 @@ pub fn handle_list() -> Result<(), GitError> {
         // Get upstream tracking info
         let (upstream_remote, upstream_ahead, upstream_behind) = if let Some(ref branch) = wt.branch
         {
-            if let Ok(Some(upstream_branch)) = get_upstream_branch_in(&wt.path, branch) {
+            if let Ok(Some(upstream_branch)) = wt_repo.upstream_branch(branch) {
                 // Extract remote name from "origin/main" -> "origin"
                 let remote = upstream_branch
                     .split('/')
                     .next()
                     .unwrap_or("origin")
                     .to_string();
-                let (ahead, behind) =
-                    get_ahead_behind_in(&wt.path, &upstream_branch, &wt.head).unwrap_or((0, 0));
+                let (ahead, behind) = wt_repo
+                    .ahead_behind(&upstream_branch, &wt.head)
+                    .unwrap_or((0, 0));
                 (Some(remote), ahead, behind)
             } else {
                 (None, 0, 0)
@@ -102,7 +100,7 @@ pub fn handle_list() -> Result<(), GitError> {
         };
 
         // Get worktree state (merge/rebase/etc)
-        let worktree_state = get_worktree_state_in(&wt.path).unwrap_or(None);
+        let worktree_state = wt_repo.worktree_state().unwrap_or(None);
 
         WorktreeInfo {
             path: wt.path.clone(),

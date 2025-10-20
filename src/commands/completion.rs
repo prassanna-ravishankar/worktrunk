@@ -1,8 +1,7 @@
 use clap::Command;
 use clap_complete::{Shell as CompletionShell, generate};
 use std::io;
-use std::path::Path;
-use worktrunk::git::{GitError, get_all_branches_in, get_available_branches};
+use worktrunk::git::{GitError, Repository};
 
 #[derive(clap::ValueEnum, Clone, Copy)]
 pub enum Shell {
@@ -75,7 +74,8 @@ pub fn handle_complete(args: Vec<String>) -> Result<(), GitError> {
     match context {
         CompletionContext::SwitchBranch => {
             // Complete with available branches (excluding those with worktrees)
-            let branches = get_branches_for_completion(get_available_branches);
+            let branches =
+                get_branches_for_completion(|| Repository::current().available_branches());
             for branch in branches {
                 println!("{}", branch);
             }
@@ -84,7 +84,7 @@ pub fn handle_complete(args: Vec<String>) -> Result<(), GitError> {
         | CompletionContext::MergeTarget
         | CompletionContext::BaseFlag => {
             // Complete with all branches
-            let branches = get_branches_for_completion(|| get_all_branches_in(Path::new(".")));
+            let branches = get_branches_for_completion(|| Repository::current().all_branches());
             for branch in branches {
                 println!("{}", branch);
             }

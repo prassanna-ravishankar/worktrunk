@@ -1,24 +1,22 @@
-use std::path::Path;
 use worktrunk::config::load_config;
 use worktrunk::error_format::format_error;
-use worktrunk::git::{
-    GitError, count_commits_in, get_commit_subjects_in, get_current_branch_in,
-    get_default_branch_in, get_merge_base_in, get_repo_root_in, has_staged_changes_in, is_dirty_in,
-    run_git_command,
-};
+use worktrunk::git::{GitError, Repository, run_git_command};
 
 use super::worktree::handle_push;
 use super::worktree::handle_remove;
 
 pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<(), GitError> {
+    let repo = Repository::current();
+
     // Get current branch
-    let current_branch = get_current_branch_in(Path::new("."))?
+    let current_branch = repo
+        .current_branch()?
         .ok_or_else(|| GitError::CommandFailed(format_error("Not on a branch (detached HEAD)")))?;
 
     // Get target branch (default to default branch if not provided)
     let target_branch = match target {
         Some(b) => b.to_string(),
-        None => get_default_branch_in(Path::new("."))?,
+        None => repo.default_branch()?,
     };
 
     // Check if already on target branch
@@ -28,7 +26,7 @@ pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<()
     }
 
     // Check for uncommitted changes
-    if is_dirty_in(Path::new("."))? {
+    if repo.is_dirty()? {
         return Err(GitError::CommandFailed(format_error(
             "Working tree has uncommitted changes. Commit or stash them first.",
         )));
@@ -42,7 +40,7 @@ pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<()
     // Rebase onto target
     println!("Rebasing onto '{}'...", target_branch);
 
-    run_git_command(&["rebase", &target_branch], Some(Path::new("."))).map_err(|e| {
+    run_git_command(&["rebase", &target_branch], Some(repo.path())).map_err(|e| {
         GitError::CommandFailed(format!("Failed to rebase onto '{}': {}", target_branch, e))
     })?;
 
@@ -55,12 +53,12 @@ pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<()
         println!("Cleaning up worktree...");
 
         // Get primary worktree path before finishing (while we can still run git commands)
-        let primary_worktree_dir = get_repo_root_in(Path::new("."))?;
+        let primary_worktree_dir = repo.repo_root()?;
 
         handle_remove(false)?;
 
         // Check if we need to switch to target branch
-        let new_branch = get_current_branch_in(&primary_worktree_dir)?;
+        let new_branch = Repository::at(&primary_worktree_dir).current_branch()?;
         if new_branch.as_deref() != Some(&target_branch) {
             println!("Switching to '{}'...", target_branch);
             run_git_command(&["switch", &target_branch], Some(&primary_worktree_dir)).map_err(
@@ -83,14 +81,16 @@ pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<()
 }
 
 fn handle_squash(target_branch: &str) -> Result<(), GitError> {
+    let repo = Repository::current();
+
     // Get merge base with target branch
-    let merge_base = get_merge_base_in(Path::new("."), "HEAD", target_branch)?;
+    let merge_base = repo.merge_base("HEAD", target_branch)?;
 
     // Count commits since merge base
-    let commit_count = count_commits_in(Path::new("."), &merge_base, "HEAD")?;
+    let commit_count = repo.count_commits(&merge_base, "HEAD")?;
 
     // Check if there are staged changes
-    let has_staged = has_staged_changes_in(Path::new("."))?;
+    let has_staged = repo.has_staged_changes()?;
 
     // Handle different scenarios
     if commit_count == 0 && !has_staged {
@@ -120,7 +120,7 @@ fn handle_squash(target_branch: &str) -> Result<(), GitError> {
 
     // Get commit subjects for the squash message
     let range = format!("{}..HEAD", merge_base);
-    let subjects = get_commit_subjects_in(Path::new("."), &range)?;
+    let subjects = repo.commit_subjects(&range)?;
 
     // Load config and generate commit message
     let config = load_config()
@@ -128,11 +128,11 @@ fn handle_squash(target_branch: &str) -> Result<(), GitError> {
     let commit_message = crate::llm::generate_squash_message(target_branch, &subjects, &config.llm);
 
     // Reset to merge base (soft reset stages all changes)
-    run_git_command(&["reset", "--soft", &merge_base], Some(Path::new(".")))
+    run_git_command(&["reset", "--soft", &merge_base], Some(repo.path()))
         .map_err(|e| GitError::CommandFailed(format!("Failed to reset to merge base: {}", e)))?;
 
     // Commit with the generated message
-    run_git_command(&["commit", "-m", &commit_message], Some(Path::new(".")))
+    run_git_command(&["commit", "-m", &commit_message], Some(repo.path()))
         .map_err(|e| GitError::CommandFailed(format!("Failed to create squash commit: {}", e)))?;
 
     println!("Successfully squashed {} commits into one", commit_count);

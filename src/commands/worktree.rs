@@ -2,12 +2,7 @@ use std::path::Path;
 use std::process;
 use worktrunk::config::format_worktree_path;
 use worktrunk::error_format::{format_error, format_error_with_bold, format_hint};
-use worktrunk::git::{
-    GitError, branch_exists_in, count_commits_in, get_changed_files_in, get_current_branch_in,
-    get_default_branch_in, get_git_common_dir_in, get_repo_root_in, get_worktree_root_in,
-    has_merge_commits_in, is_ancestor_in, is_dirty_in, is_in_worktree_in, run_git_command,
-    worktree_for_branch,
-};
+use worktrunk::git::{GitError, Repository, run_git_command};
 
 pub fn handle_switch(
     branch: &str,
@@ -16,8 +11,10 @@ pub fn handle_switch(
     internal: bool,
     worktree_path_template: &str,
 ) -> Result<(), GitError> {
+    let repo = Repository::current();
+
     // Check for conflicting conditions
-    if create && branch_exists_in(Path::new("."), branch)? {
+    if create && repo.branch_exists(branch)? {
         return Err(GitError::CommandFailed(format_error_with_bold(
             "Branch '",
             branch,
@@ -34,7 +31,7 @@ pub fn handle_switch(
     }
 
     // Check if worktree already exists for this branch
-    if let Some(existing_path) = worktree_for_branch(branch)? {
+    if let Some(existing_path) = repo.worktree_for_branch(branch)? {
         if existing_path.exists() {
             if internal {
                 println!("__WORKTRUNK_CD__{}", existing_path.display());
@@ -50,7 +47,7 @@ pub fn handle_switch(
     }
 
     // No existing worktree, create one
-    let repo_root = get_repo_root_in(Path::new("."))?;
+    let repo_root = repo.repo_root()?;
 
     let repo_name = repo_root
         .file_name()
@@ -97,17 +94,19 @@ pub fn handle_switch(
 }
 
 pub fn handle_remove(internal: bool) -> Result<(), GitError> {
+    let repo = Repository::current();
+
     // Check for uncommitted changes
-    if is_dirty_in(Path::new("."))? {
+    if repo.is_dirty()? {
         return Err(GitError::CommandFailed(format_error(
             "Working tree has uncommitted changes. Commit or stash them first.",
         )));
     }
 
     // Get current state
-    let current_branch = get_current_branch_in(Path::new("."))?;
-    let default_branch = get_default_branch_in(Path::new("."))?;
-    let in_worktree = is_in_worktree_in(Path::new("."))?;
+    let current_branch = repo.current_branch()?;
+    let default_branch = repo.default_branch()?;
+    let in_worktree = repo.is_in_worktree()?;
 
     // If we're on default branch and not in a worktree, nothing to do
     if !in_worktree && current_branch.as_deref() == Some(&default_branch) {
@@ -119,8 +118,8 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
 
     if in_worktree {
         // In worktree: navigate to primary worktree and remove this one
-        let worktree_root = get_worktree_root_in(Path::new("."))?;
-        let primary_worktree_dir = get_repo_root_in(Path::new("."))?;
+        let worktree_root = repo.worktree_root()?;
+        let primary_worktree_dir = repo.repo_root()?;
 
         if internal {
             println!("__WORKTRUNK_CD__{}", primary_worktree_dir.display());
@@ -162,14 +161,16 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
 }
 
 pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), GitError> {
+    let repo = Repository::current();
+
     // Get target branch (default to default branch if not provided)
     let target_branch = match target {
         Some(b) => b.to_string(),
-        None => get_default_branch_in(Path::new("."))?,
+        None => repo.default_branch()?,
     };
 
     // Check if it's a fast-forward
-    if !is_ancestor_in(Path::new("."), &target_branch, "HEAD")? {
+    if !repo.is_ancestor(&target_branch, "HEAD")? {
         let error_msg =
             format_error_with_bold("Not a fast-forward from '", &target_branch, "' to HEAD");
         let hint_msg = format_hint(
@@ -182,7 +183,7 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
     }
 
     // Check for merge commits unless allowed
-    if !allow_merge_commits && has_merge_commits_in(Path::new("."), &target_branch, "HEAD")? {
+    if !allow_merge_commits && repo.has_merge_commits(&target_branch, "HEAD")? {
         return Err(GitError::CommandFailed(format_error(
             "Found merge commits in push range. Use --allow-merge-commits to push non-linear history.",
         )));
@@ -205,13 +206,13 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
     }
 
     // Find worktree for target branch
-    let target_worktree = worktree_for_branch(&target_branch)?;
+    let target_worktree = repo.worktree_for_branch(&target_branch)?;
 
     if let Some(ref wt_path) = target_worktree {
         // Check if target worktree is dirty
-        if is_dirty_in(wt_path)? {
+        if Repository::at(wt_path).is_dirty()? {
             // Get files changed in the push
-            let push_files = get_changed_files_in(Path::new("."), &target_branch, "HEAD")?;
+            let push_files = repo.changed_files(&target_branch, "HEAD")?;
 
             // Get files changed in the worktree
             let wt_status_output = run_git_command(&["status", "--porcelain"], Some(wt_path))?;
@@ -249,7 +250,7 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
     }
 
     // Count commits and show info
-    let commit_count = count_commits_in(Path::new("."), &target_branch, "HEAD")?;
+    let commit_count = repo.count_commits(&target_branch, "HEAD")?;
     if commit_count > 0 {
         let commit_text = if commit_count == 1 {
             "commit"
@@ -263,7 +264,7 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
     }
 
     // Get git common dir for the push
-    let git_common_dir = get_git_common_dir_in(Path::new("."))?;
+    let git_common_dir = repo.git_common_dir()?;
 
     // Perform the push
     let push_target = format!("HEAD:{}", target_branch);

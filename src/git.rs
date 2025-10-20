@@ -34,6 +34,382 @@ impl std::fmt::Display for GitError {
 
 impl std::error::Error for GitError {}
 
+/// Repository context for git operations.
+///
+/// Provides a more ergonomic API than the `*_in(path, ...)` functions by
+/// encapsulating the repository path.
+///
+/// # Examples
+///
+/// ```no_run
+/// use worktrunk::git::Repository;
+///
+/// let repo = Repository::current();
+/// let branch = repo.current_branch()?;
+/// let is_dirty = repo.is_dirty()?;
+/// # Ok::<(), worktrunk::git::GitError>(())
+/// ```
+#[derive(Debug, Clone)]
+pub struct Repository {
+    path: PathBuf,
+}
+
+impl Repository {
+    /// Create a repository context at the specified path.
+    pub fn at(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into() }
+    }
+
+    /// Create a repository context for the current directory.
+    ///
+    /// This is the most common usage pattern.
+    pub fn current() -> Self {
+        Self::at(".")
+    }
+
+    /// Get the path this repository context operates on.
+    pub fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+
+    /// Check if a git branch exists (local or remote).
+    pub fn branch_exists(&self, branch: &str) -> Result<bool, GitError> {
+        // Try local branch first
+        let result = run_git_command(
+            &["rev-parse", "--verify", &format!("refs/heads/{}", branch)],
+            Some(&self.path),
+        );
+        if result.is_ok() {
+            return Ok(true);
+        }
+
+        // Try remote branch
+        let result = run_git_command(
+            &[
+                "rev-parse",
+                "--verify",
+                &format!("refs/remotes/origin/{}", branch),
+            ],
+            Some(&self.path),
+        );
+        Ok(result.is_ok())
+    }
+
+    /// Get the current branch name, or None if in detached HEAD state.
+    pub fn current_branch(&self) -> Result<Option<String>, GitError> {
+        let stdout = run_git_command(&["branch", "--show-current"], Some(&self.path))?;
+        let branch = stdout.trim();
+
+        if branch.is_empty() {
+            Ok(None) // Detached HEAD
+        } else {
+            Ok(Some(branch.to_string()))
+        }
+    }
+
+    /// Get the default branch name for the repository.
+    ///
+    /// Uses a hybrid approach:
+    /// 1. Try local cache (origin/HEAD) first for speed
+    /// 2. If not cached, query the remote and cache the result
+    pub fn default_branch(&self) -> Result<String, GitError> {
+        // Try local cache first (fast path)
+        if let Ok(branch) = self.get_local_default_branch() {
+            return Ok(branch);
+        }
+
+        // Query remote and cache it
+        let branch = self.query_remote_default_branch()?;
+        self.cache_default_branch(&branch)?;
+        Ok(branch)
+    }
+
+    /// Get the git common directory (the actual .git directory for the repository).
+    pub fn git_common_dir(&self) -> Result<PathBuf, GitError> {
+        let stdout = run_git_command(&["rev-parse", "--git-common-dir"], Some(&self.path))?;
+        Ok(PathBuf::from(stdout.trim()))
+    }
+
+    /// Get the git directory (may be different from common-dir in worktrees).
+    pub fn git_dir(&self) -> Result<PathBuf, GitError> {
+        let stdout = run_git_command(&["rev-parse", "--git-dir"], Some(&self.path))?;
+        Ok(PathBuf::from(stdout.trim()))
+    }
+
+    /// Get the canonicalized repository root directory (parent of .git).
+    ///
+    /// The canonicalization resolves symlinks and relative paths, which is important
+    /// for worktree operations to ensure consistent path handling.
+    pub fn repo_root(&self) -> Result<PathBuf, GitError> {
+        let git_common_dir = self
+            .git_common_dir()?
+            .canonicalize()
+            .map_err(|e| GitError::CommandFailed(format!("Failed to canonicalize path: {}", e)))?;
+
+        git_common_dir
+            .parent()
+            .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))
+            .map(|p| p.to_path_buf())
+    }
+
+    /// Check if the working tree has uncommitted changes.
+    pub fn is_dirty(&self) -> Result<bool, GitError> {
+        let stdout = run_git_command(&["status", "--porcelain"], Some(&self.path))?;
+        Ok(!stdout.trim().is_empty())
+    }
+
+    /// Get the worktree root directory (top-level of the working tree).
+    pub fn worktree_root(&self) -> Result<PathBuf, GitError> {
+        let stdout = run_git_command(&["rev-parse", "--show-toplevel"], Some(&self.path))?;
+        Ok(PathBuf::from(stdout.trim()))
+    }
+
+    /// Check if the path is in a worktree (vs the main repository).
+    pub fn is_in_worktree(&self) -> Result<bool, GitError> {
+        let git_dir = self.git_dir()?;
+        let common_dir = self.git_common_dir()?;
+        Ok(git_dir != common_dir)
+    }
+
+    /// Check if base is an ancestor of head (i.e., would be a fast-forward).
+    pub fn is_ancestor(&self, base: &str, head: &str) -> Result<bool, GitError> {
+        let output = std::process::Command::new("git")
+            .args(["merge-base", "--is-ancestor", base, head])
+            .current_dir(&self.path)
+            .output()
+            .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+
+        Ok(output.status.success())
+    }
+
+    /// Count commits between base and head.
+    pub fn count_commits(&self, base: &str, head: &str) -> Result<usize, GitError> {
+        let range = format!("{}..{}", base, head);
+        let stdout = run_git_command(&["rev-list", "--count", &range], Some(&self.path))?;
+        stdout
+            .trim()
+            .parse()
+            .map_err(|e| GitError::ParseError(format!("Failed to parse commit count: {}", e)))
+    }
+
+    /// Check if there are merge commits in the range base..head.
+    pub fn has_merge_commits(&self, base: &str, head: &str) -> Result<bool, GitError> {
+        let range = format!("{}..{}", base, head);
+        let stdout = run_git_command(&["rev-list", "--merges", &range], Some(&self.path))?;
+        Ok(!stdout.trim().is_empty())
+    }
+
+    /// Get files changed between base and head.
+    pub fn changed_files(&self, base: &str, head: &str) -> Result<Vec<String>, GitError> {
+        let range = format!("{}..{}", base, head);
+        let stdout = run_git_command(&["diff", "--name-only", &range], Some(&self.path))?;
+        Ok(stdout.lines().map(|s| s.to_string()).collect())
+    }
+
+    /// Get commit timestamp in seconds since epoch.
+    pub fn commit_timestamp(&self, commit: &str) -> Result<i64, GitError> {
+        let stdout = run_git_command(&["show", "-s", "--format=%ct", commit], Some(&self.path))?;
+        stdout
+            .trim()
+            .parse()
+            .map_err(|e| GitError::ParseError(format!("Failed to parse timestamp: {}", e)))
+    }
+
+    /// Get commit message (subject line) for a commit.
+    pub fn commit_message(&self, commit: &str) -> Result<String, GitError> {
+        let stdout = run_git_command(&["show", "-s", "--format=%s", commit], Some(&self.path))?;
+        Ok(stdout.trim().to_string())
+    }
+
+    /// Get the upstream tracking branch for the given branch.
+    pub fn upstream_branch(&self, branch: &str) -> Result<Option<String>, GitError> {
+        let result = run_git_command(
+            &["rev-parse", "--abbrev-ref", &format!("{}@{{u}}", branch)],
+            Some(&self.path),
+        );
+
+        match result {
+            Ok(upstream) => {
+                let trimmed = upstream.trim();
+                if trimmed.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(trimmed.to_string()))
+                }
+            }
+            Err(_) => Ok(None), // No upstream configured
+        }
+    }
+
+    /// Get merge/rebase status for the worktree.
+    pub fn worktree_state(&self) -> Result<Option<String>, GitError> {
+        let git_dir = self.git_dir()?;
+
+        // Check for merge
+        if git_dir.join("MERGE_HEAD").exists() {
+            return Ok(Some("MERGING".to_string()));
+        }
+
+        // Check for rebase
+        if git_dir.join("rebase-merge").exists() || git_dir.join("rebase-apply").exists() {
+            let rebase_dir = if git_dir.join("rebase-merge").exists() {
+                git_dir.join("rebase-merge")
+            } else {
+                git_dir.join("rebase-apply")
+            };
+
+            if let (Ok(msgnum), Ok(end)) = (
+                std::fs::read_to_string(rebase_dir.join("msgnum")),
+                std::fs::read_to_string(rebase_dir.join("end")),
+            ) {
+                let current = msgnum.trim();
+                let total = end.trim();
+                return Ok(Some(format!("REBASING {}/{}", current, total)));
+            }
+
+            return Ok(Some("REBASING".to_string()));
+        }
+
+        // Check for cherry-pick
+        if git_dir.join("CHERRY_PICK_HEAD").exists() {
+            return Ok(Some("CHERRY-PICKING".to_string()));
+        }
+
+        // Check for revert
+        if git_dir.join("REVERT_HEAD").exists() {
+            return Ok(Some("REVERTING".to_string()));
+        }
+
+        // Check for bisect
+        if git_dir.join("BISECT_LOG").exists() {
+            return Ok(Some("BISECTING".to_string()));
+        }
+
+        Ok(None)
+    }
+
+    /// Calculate commits ahead and behind between two refs.
+    ///
+    /// Returns (ahead, behind) where ahead is commits in head not in base,
+    /// and behind is commits in base not in head.
+    pub fn ahead_behind(&self, base: &str, head: &str) -> Result<(usize, usize), GitError> {
+        let ahead = self.count_commits(base, head)?;
+        let behind = self.count_commits(head, base)?;
+        Ok((ahead, behind))
+    }
+
+    /// Get line diff statistics for working tree changes (unstaged + staged).
+    ///
+    /// Returns (added_lines, deleted_lines).
+    pub fn working_tree_diff_stats(&self) -> Result<(usize, usize), GitError> {
+        let stdout = run_git_command(&["diff", "--numstat", "HEAD"], Some(&self.path))?;
+        parse_numstat(&stdout)
+    }
+
+    /// Get line diff statistics between two refs (using three-dot diff for merge base).
+    ///
+    /// Returns (added_lines, deleted_lines).
+    pub fn branch_diff_stats(&self, base: &str, head: &str) -> Result<(usize, usize), GitError> {
+        let range = format!("{}...{}", base, head);
+        let stdout = run_git_command(&["diff", "--numstat", &range], Some(&self.path))?;
+        parse_numstat(&stdout)
+    }
+
+    /// Get all branch names (local branches only).
+    pub fn all_branches(&self) -> Result<Vec<String>, GitError> {
+        let stdout = run_git_command(&["branch", "--format=%(refname:short)"], Some(&self.path))?;
+        Ok(stdout
+            .lines()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect())
+    }
+
+    /// Get the merge base between two commits.
+    pub fn merge_base(&self, commit1: &str, commit2: &str) -> Result<String, GitError> {
+        let output = run_git_command(&["merge-base", commit1, commit2], Some(&self.path))?;
+        Ok(output.trim().to_string())
+    }
+
+    /// Get commit subjects (first line of commit message) from a range.
+    pub fn commit_subjects(&self, range: &str) -> Result<Vec<String>, GitError> {
+        let output = run_git_command(&["log", "--format=%s", range], Some(&self.path))?;
+        Ok(output.lines().map(|s| s.to_string()).collect())
+    }
+
+    /// Check if there are staged changes.
+    pub fn has_staged_changes(&self) -> Result<bool, GitError> {
+        let output = std::process::Command::new("git")
+            .args(["diff", "--cached", "--quiet", "--exit-code"])
+            .current_dir(&self.path)
+            .output()
+            .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+
+        // exit code 0 = no changes, 1 = has changes
+        Ok(!output.status.success())
+    }
+
+    /// List all worktrees for this repository.
+    pub fn list_worktrees(&self) -> Result<Vec<Worktree>, GitError> {
+        let stdout = run_git_command(&["worktree", "list", "--porcelain"], Some(&self.path))?;
+        parse_worktree_list(&stdout)
+    }
+
+    /// Find the worktree path for a given branch, if one exists.
+    pub fn worktree_for_branch(&self, branch: &str) -> Result<Option<PathBuf>, GitError> {
+        let worktrees = self.list_worktrees()?;
+
+        for wt in worktrees {
+            if let Some(ref wt_branch) = wt.branch
+                && wt_branch == branch
+            {
+                return Ok(Some(wt.path));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Get branches that don't have worktrees (available for switch).
+    pub fn available_branches(&self) -> Result<Vec<String>, GitError> {
+        let all_branches = self.all_branches()?;
+        let worktrees = self.list_worktrees()?;
+
+        // Collect branches that have worktrees
+        let branches_with_worktrees: std::collections::HashSet<String> =
+            worktrees.into_iter().filter_map(|wt| wt.branch).collect();
+
+        // Filter out branches with worktrees
+        Ok(all_branches
+            .into_iter()
+            .filter(|branch| !branches_with_worktrees.contains(branch))
+            .collect())
+    }
+
+    // Private helper methods for default_branch()
+
+    fn get_local_default_branch(&self) -> Result<String, GitError> {
+        let stdout = run_git_command(
+            &["rev-parse", "--abbrev-ref", "origin/HEAD"],
+            Some(&self.path),
+        )?;
+        parse_local_default_branch(&stdout)
+    }
+
+    fn query_remote_default_branch(&self) -> Result<String, GitError> {
+        let stdout = run_git_command(
+            &["ls-remote", "--symref", "origin", "HEAD"],
+            Some(&self.path),
+        )?;
+        parse_remote_default_branch(&stdout)
+    }
+
+    fn cache_default_branch(&self, branch: &str) -> Result<(), GitError> {
+        run_git_command(&["remote", "set-head", "origin", branch], Some(&self.path))?;
+        Ok(())
+    }
+}
+
 /// Helper function to run a git command and return its stdout.
 ///
 /// For commands that don't need the output (e.g., git switch, git worktree add),
@@ -56,11 +432,6 @@ pub fn run_git_command(args: &[&str], path: Option<&std::path::Path>) -> Result<
     }
 
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
-}
-
-pub fn list_worktrees() -> Result<Vec<Worktree>, GitError> {
-    let stdout = run_git_command(&["worktree", "list", "--porcelain"], None)?;
-    parse_worktree_list(&stdout)
 }
 
 fn parse_worktree_list(output: &str) -> Result<Vec<Worktree>, GitError> {
@@ -146,29 +517,6 @@ fn parse_worktree_list(output: &str) -> Result<Vec<Worktree>, GitError> {
     Ok(worktrees)
 }
 
-/// Get the default branch name for a repository at the given path using a hybrid approach:
-/// 1. Try local cache (origin/HEAD) first for speed
-/// 2. If not cached, query the remote and cache the result
-pub fn get_default_branch_in(path: &std::path::Path) -> Result<String, GitError> {
-    // Try local cache first (fast path)
-    if let Ok(branch) = get_local_default_branch(path) {
-        return Ok(branch);
-    }
-
-    // Query remote and cache it
-    let branch = query_remote_default_branch(path)?;
-    cache_default_branch(path, &branch)?;
-    Ok(branch)
-}
-
-/// Try to get the default branch from the local cache (origin/HEAD)
-fn get_local_default_branch(path: &std::path::Path) -> Result<String, GitError> {
-    let stdout = run_git_command(&["rev-parse", "--abbrev-ref", "origin/HEAD"], Some(path))?;
-    parse_local_default_branch(&stdout)
-}
-
-/// Parse the output of `git rev-parse --abbrev-ref origin/HEAD`
-/// Expected format: "origin/main\n"
 fn parse_local_default_branch(output: &str) -> Result<String, GitError> {
     let trimmed = output.trim();
 
@@ -184,18 +532,6 @@ fn parse_local_default_branch(output: &str) -> Result<String, GitError> {
     Ok(branch.to_string())
 }
 
-/// Query the remote to determine the default branch
-fn query_remote_default_branch(path: &std::path::Path) -> Result<String, GitError> {
-    let stdout = run_git_command(&["ls-remote", "--symref", "origin", "HEAD"], Some(path))?;
-    parse_remote_default_branch(&stdout)
-}
-
-/// Parse the output of `git ls-remote --symref origin HEAD`
-/// Expected format:
-/// ```text
-/// ref: refs/heads/main    HEAD
-/// 85a1ce7c7182540f9c02453441cb3e8bf0ced214    HEAD
-/// ```
 fn parse_remote_default_branch(output: &str) -> Result<String, GitError> {
     for line in output.lines() {
         if let Some(symref) = line.strip_prefix("ref: ") {
@@ -215,276 +551,6 @@ fn parse_remote_default_branch(output: &str) -> Result<String, GitError> {
     ))
 }
 
-/// Cache the default branch locally by setting origin/HEAD
-fn cache_default_branch(path: &std::path::Path, branch: &str) -> Result<(), GitError> {
-    run_git_command(&["remote", "set-head", "origin", branch], Some(path))?;
-    Ok(())
-}
-
-/// Check if a git branch exists in the repository at the given path (local or remote)
-pub fn branch_exists_in(path: &std::path::Path, branch: &str) -> Result<bool, GitError> {
-    // Try local branch first
-    let result = run_git_command(
-        &["rev-parse", "--verify", &format!("refs/heads/{}", branch)],
-        Some(path),
-    );
-    if result.is_ok() {
-        return Ok(true);
-    }
-
-    // Try remote branch
-    let result = run_git_command(
-        &[
-            "rev-parse",
-            "--verify",
-            &format!("refs/remotes/origin/{}", branch),
-        ],
-        Some(path),
-    );
-    Ok(result.is_ok())
-}
-
-/// Get the current branch name for a repository at the given path, or None if in detached HEAD state
-pub fn get_current_branch_in(path: &std::path::Path) -> Result<Option<String>, GitError> {
-    let stdout = run_git_command(&["branch", "--show-current"], Some(path))?;
-    let branch = stdout.trim();
-
-    if branch.is_empty() {
-        Ok(None) // Detached HEAD
-    } else {
-        Ok(Some(branch.to_string()))
-    }
-}
-
-/// Get the git common directory for a repository at the given path (the actual .git directory for the repository)
-pub fn get_git_common_dir_in(path: &std::path::Path) -> Result<PathBuf, GitError> {
-    let stdout = run_git_command(&["rev-parse", "--git-common-dir"], Some(path))?;
-    Ok(PathBuf::from(stdout.trim()))
-}
-
-/// Get the git directory for a repository at the given path (may be different from common-dir in worktrees)
-pub fn get_git_dir_in(path: &std::path::Path) -> Result<PathBuf, GitError> {
-    let stdout = run_git_command(&["rev-parse", "--git-dir"], Some(path))?;
-    Ok(PathBuf::from(stdout.trim()))
-}
-
-/// Get the canonicalized repository root directory (parent of .git) for a repository at the given path.
-///
-/// This function:
-/// - Retrieves the git common directory
-/// - Canonicalizes the path (resolves symlinks and relative paths)
-/// - Returns the parent directory (the repository root)
-///
-/// The canonicalization is important for worktree operations as it ensures
-/// consistent path handling across symlinks and relative references.
-pub fn get_repo_root_in(path: &std::path::Path) -> Result<PathBuf, GitError> {
-    let git_common_dir = get_git_common_dir_in(path)?
-        .canonicalize()
-        .map_err(|e| GitError::CommandFailed(format!("Failed to canonicalize path: {}", e)))?;
-
-    git_common_dir
-        .parent()
-        .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))
-        .map(|p| p.to_path_buf())
-}
-
-/// Find the worktree path for a given branch, if one exists
-pub fn worktree_for_branch(branch: &str) -> Result<Option<PathBuf>, GitError> {
-    let worktrees = list_worktrees()?;
-
-    for wt in worktrees {
-        if let Some(ref wt_branch) = wt.branch
-            && wt_branch == branch
-        {
-            return Ok(Some(wt.path));
-        }
-    }
-
-    Ok(None)
-}
-
-/// Check if the working tree is dirty in the repository at the given path (has uncommitted changes)
-pub fn is_dirty_in(path: &std::path::Path) -> Result<bool, GitError> {
-    let stdout = run_git_command(&["status", "--porcelain"], Some(path))?;
-    Ok(!stdout.trim().is_empty())
-}
-
-/// Get the worktree root directory for a repository at the given path (top-level of the working tree)
-pub fn get_worktree_root_in(path: &std::path::Path) -> Result<PathBuf, GitError> {
-    let stdout = run_git_command(&["rev-parse", "--show-toplevel"], Some(path))?;
-    Ok(PathBuf::from(stdout.trim()))
-}
-
-/// Check if a path is in a worktree (vs the main repository)
-pub fn is_in_worktree_in(path: &std::path::Path) -> Result<bool, GitError> {
-    let git_dir = get_git_dir_in(path)?;
-    let common_dir = get_git_common_dir_in(path)?;
-    Ok(git_dir != common_dir)
-}
-
-/// Check if base is an ancestor of head in the repository at the given path (i.e., would be a fast-forward)
-pub fn is_ancestor_in(path: &std::path::Path, base: &str, head: &str) -> Result<bool, GitError> {
-    let output = std::process::Command::new("git")
-        .args(["merge-base", "--is-ancestor", base, head])
-        .current_dir(path)
-        .output()
-        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
-
-    Ok(output.status.success())
-}
-
-/// Count commits between base and head in the repository at the given path
-pub fn count_commits_in(path: &std::path::Path, base: &str, head: &str) -> Result<usize, GitError> {
-    let range = format!("{}..{}", base, head);
-    let stdout = run_git_command(&["rev-list", "--count", &range], Some(path))?;
-    stdout
-        .trim()
-        .parse()
-        .map_err(|e| GitError::ParseError(format!("Failed to parse commit count: {}", e)))
-}
-
-/// Check if there are merge commits in the range base..head at the given path
-pub fn has_merge_commits_in(
-    path: &std::path::Path,
-    base: &str,
-    head: &str,
-) -> Result<bool, GitError> {
-    let range = format!("{}..{}", base, head);
-    let stdout = run_git_command(&["rev-list", "--merges", &range], Some(path))?;
-    Ok(!stdout.trim().is_empty())
-}
-
-/// Get files changed between base and head at the given path
-pub fn get_changed_files_in(
-    path: &std::path::Path,
-    base: &str,
-    head: &str,
-) -> Result<Vec<String>, GitError> {
-    let range = format!("{}..{}", base, head);
-    let stdout = run_git_command(&["diff", "--name-only", &range], Some(path))?;
-    Ok(stdout.lines().map(|s| s.to_string()).collect())
-}
-
-/// Get commit timestamp in seconds since epoch for a repository at the given path
-pub fn get_commit_timestamp_in(path: &std::path::Path, commit: &str) -> Result<i64, GitError> {
-    let stdout = run_git_command(&["show", "-s", "--format=%ct", commit], Some(path))?;
-    stdout
-        .trim()
-        .parse()
-        .map_err(|e| GitError::ParseError(format!("Failed to parse timestamp: {}", e)))
-}
-
-/// Get commit message (subject line) for a commit
-pub fn get_commit_message_in(path: &std::path::Path, commit: &str) -> Result<String, GitError> {
-    let stdout = run_git_command(&["show", "-s", "--format=%s", commit], Some(path))?;
-    Ok(stdout.trim().to_string())
-}
-
-/// Get the upstream tracking branch for the current branch
-pub fn get_upstream_branch_in(
-    path: &std::path::Path,
-    branch: &str,
-) -> Result<Option<String>, GitError> {
-    let result = run_git_command(
-        &["rev-parse", "--abbrev-ref", &format!("{}@{{u}}", branch)],
-        Some(path),
-    );
-
-    match result {
-        Ok(upstream) => {
-            let trimmed = upstream.trim();
-            if trimmed.is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(trimmed.to_string()))
-            }
-        }
-        Err(_) => Ok(None), // No upstream configured
-    }
-}
-
-/// Get merge/rebase status for a worktree
-pub fn get_worktree_state_in(path: &std::path::Path) -> Result<Option<String>, GitError> {
-    let git_dir = get_git_dir_in(path)?;
-
-    // Check for merge
-    if git_dir.join("MERGE_HEAD").exists() {
-        return Ok(Some("MERGING".to_string()));
-    }
-
-    // Check for rebase
-    if git_dir.join("rebase-merge").exists() || git_dir.join("rebase-apply").exists() {
-        // Try to get rebase progress
-        let rebase_dir = if git_dir.join("rebase-merge").exists() {
-            git_dir.join("rebase-merge")
-        } else {
-            git_dir.join("rebase-apply")
-        };
-
-        if let (Ok(msgnum), Ok(end)) = (
-            std::fs::read_to_string(rebase_dir.join("msgnum")),
-            std::fs::read_to_string(rebase_dir.join("end")),
-        ) {
-            let current = msgnum.trim();
-            let total = end.trim();
-            return Ok(Some(format!("REBASING {}/{}", current, total)));
-        }
-
-        return Ok(Some("REBASING".to_string()));
-    }
-
-    // Check for cherry-pick
-    if git_dir.join("CHERRY_PICK_HEAD").exists() {
-        return Ok(Some("CHERRY-PICKING".to_string()));
-    }
-
-    // Check for revert
-    if git_dir.join("REVERT_HEAD").exists() {
-        return Ok(Some("REVERTING".to_string()));
-    }
-
-    // Check for bisect
-    if git_dir.join("BISECT_LOG").exists() {
-        return Ok(Some("BISECTING".to_string()));
-    }
-
-    Ok(None)
-}
-
-/// Calculate commits ahead and behind between two refs
-/// Returns (ahead, behind) where ahead is commits in head not in base,
-/// and behind is commits in base not in head
-pub fn get_ahead_behind_in(
-    path: &std::path::Path,
-    base: &str,
-    head: &str,
-) -> Result<(usize, usize), GitError> {
-    let ahead = count_commits_in(path, base, head)?;
-    let behind = count_commits_in(path, head, base)?;
-    Ok((ahead, behind))
-}
-
-/// Get line diff statistics for working tree changes at the given path (unstaged + staged)
-/// Returns (added_lines, deleted_lines)
-pub fn get_working_tree_diff_stats_in(path: &std::path::Path) -> Result<(usize, usize), GitError> {
-    let stdout = run_git_command(&["diff", "--numstat", "HEAD"], Some(path))?;
-    parse_numstat(&stdout)
-}
-
-/// Get line diff statistics between two refs at the given path (using three-dot diff for merge base)
-/// Returns (added_lines, deleted_lines)
-pub fn get_branch_diff_stats_in(
-    path: &std::path::Path,
-    base: &str,
-    head: &str,
-) -> Result<(usize, usize), GitError> {
-    let range = format!("{}...{}", base, head);
-    let stdout = run_git_command(&["diff", "--numstat", &range], Some(path))?;
-    parse_numstat(&stdout)
-}
-
-/// Parse git diff --numstat output
-/// Format: "added\tdeleted\tfilename" per line
 fn parse_numstat(output: &str) -> Result<(usize, usize), GitError> {
     let mut total_added = 0;
     let mut total_deleted = 0;
@@ -516,71 +582,6 @@ fn parse_numstat(output: &str) -> Result<(usize, usize), GitError> {
     }
 
     Ok((total_added, total_deleted))
-}
-
-/// Get all branch names in a specific directory (local branches only)
-/// Note: This excludes remote-tracking branches (e.g., origin/main)
-pub fn get_all_branches_in(path: &std::path::Path) -> Result<Vec<String>, GitError> {
-    let stdout = run_git_command(
-        &["branch", "--format=%(refname:short)"], // Removed --all to exclude remotes
-        Some(path),
-    )?;
-    Ok(stdout
-        .lines()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect())
-}
-
-/// Get branches that don't have worktrees (available for switch)
-/// Note: This function operates on the current directory (assumes you're in a git repo)
-pub fn get_available_branches() -> Result<Vec<String>, GitError> {
-    // Get all branches from current directory
-    let all_branches = get_all_branches_in(std::path::Path::new("."))?;
-
-    // Get worktrees (always operates on current git repository)
-    let worktrees = list_worktrees()?;
-
-    // Collect branches that have worktrees
-    let branches_with_worktrees: std::collections::HashSet<String> =
-        worktrees.into_iter().filter_map(|wt| wt.branch).collect();
-
-    // Filter out branches with worktrees
-    Ok(all_branches
-        .into_iter()
-        .filter(|branch| !branches_with_worktrees.contains(branch))
-        .collect())
-}
-
-/// Get the merge base between two commits at the given path
-pub fn get_merge_base_in(
-    path: &std::path::Path,
-    commit1: &str,
-    commit2: &str,
-) -> Result<String, GitError> {
-    let output = run_git_command(&["merge-base", commit1, commit2], Some(path))?;
-    Ok(output.trim().to_string())
-}
-
-/// Get commit subjects (first line of commit message) from a range at the given path
-pub fn get_commit_subjects_in(
-    path: &std::path::Path,
-    range: &str,
-) -> Result<Vec<String>, GitError> {
-    let output = run_git_command(&["log", "--format=%s", range], Some(path))?;
-    Ok(output.lines().map(|s| s.to_string()).collect())
-}
-
-/// Check if there are staged changes at the given path
-pub fn has_staged_changes_in(path: &std::path::Path) -> Result<bool, GitError> {
-    let output = Command::new("git")
-        .args(["diff", "--cached", "--quiet", "--exit-code"])
-        .current_dir(path)
-        .output()
-        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
-
-    // exit code 0 = no changes, 1 = has changes
-    Ok(!output.status.success())
 }
 
 #[cfg(test)]
