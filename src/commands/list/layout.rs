@@ -4,6 +4,26 @@ use unicode_width::UnicodeWidthStr;
 
 use super::WorktreeInfo;
 
+/// Helper: Check if a column is "dense" (appears in >50% of all rows)
+fn is_dense_for_all_rows(count: usize, total: usize) -> bool {
+    count * 2 > total
+}
+
+/// Helper: Check if a column is "dense" for non-primary rows (appears in >50% of non-primary rows)
+fn is_dense_for_non_primary(count: usize, non_primary_count: usize) -> bool {
+    non_primary_count > 0 && count * 2 > non_primary_count
+}
+
+/// Helper: Try to allocate space for a column. Returns the allocated width if successful.
+/// Updates `remaining` by subtracting the allocated width + spacing.
+fn try_allocate(remaining: &mut usize, ideal_width: usize, spacing: usize) -> usize {
+    if ideal_width == 0 || *remaining < ideal_width + spacing {
+        return 0;
+    }
+    *remaining = remaining.saturating_sub(ideal_width + spacing);
+    ideal_width
+}
+
 pub struct ColumnWidths {
     pub branch: usize,
     pub time: usize,
@@ -144,11 +164,11 @@ pub fn calculate_responsive_layout(infos: &[WorktreeInfo]) -> LayoutConfig {
     // A column is "dense" if it appears in >50% of applicable rows
     // For ahead/behind and branch_diff, applicable = non-primary rows
     // For others, applicable = all rows
-    let ahead_behind_is_dense = non_primary_count > 0 && ahead_behind_count * 2 > non_primary_count;
-    let working_diff_is_dense = working_diff_count * 2 > infos.len();
-    let branch_diff_is_dense = non_primary_count > 0 && branch_diff_count * 2 > non_primary_count;
-    let upstream_is_dense = upstream_count * 2 > infos.len();
-    let states_is_dense = states_count * 2 > infos.len();
+    let ahead_behind_is_dense = is_dense_for_non_primary(ahead_behind_count, non_primary_count);
+    let working_diff_is_dense = is_dense_for_all_rows(working_diff_count, infos.len());
+    let branch_diff_is_dense = is_dense_for_non_primary(branch_diff_count, non_primary_count);
+    let upstream_is_dense = is_dense_for_all_rows(upstream_count, infos.len());
+    let states_is_dense = is_dense_for_all_rows(states_count, infos.len());
 
     // Calculate ideal column widths
     let ideal_widths = calculate_column_widths(infos);
@@ -194,10 +214,7 @@ pub fn calculate_responsive_layout(infos: &[WorktreeInfo]) -> LayoutConfig {
     };
 
     // Time column (high priority, ~15 chars)
-    if remaining >= ideal_widths.time + spacing {
-        widths.time = ideal_widths.time;
-        remaining = remaining.saturating_sub(ideal_widths.time + spacing);
-    }
+    widths.time = try_allocate(&mut remaining, ideal_widths.time, spacing);
 
     // Message column (flexible, 20-50 chars)
     let max_message_len = if remaining >= 50 + spacing {
@@ -220,44 +237,28 @@ pub fn calculate_responsive_layout(infos: &[WorktreeInfo]) -> LayoutConfig {
     }
 
     // Ahead/behind column (only if dense and fits)
-    if ahead_behind_is_dense
-        && ideal_widths.ahead_behind > 0
-        && remaining >= ideal_widths.ahead_behind + spacing
-    {
-        widths.ahead_behind = ideal_widths.ahead_behind;
-        remaining = remaining.saturating_sub(ideal_widths.ahead_behind + spacing);
+    if ahead_behind_is_dense {
+        widths.ahead_behind = try_allocate(&mut remaining, ideal_widths.ahead_behind, spacing);
     }
 
     // Working diff column (only if dense and fits)
-    if working_diff_is_dense
-        && ideal_widths.working_diff > 0
-        && remaining >= ideal_widths.working_diff + spacing
-    {
-        widths.working_diff = ideal_widths.working_diff;
-        remaining = remaining.saturating_sub(ideal_widths.working_diff + spacing);
+    if working_diff_is_dense {
+        widths.working_diff = try_allocate(&mut remaining, ideal_widths.working_diff, spacing);
     }
 
     // Branch diff column (only if dense and fits)
-    if branch_diff_is_dense
-        && ideal_widths.branch_diff > 0
-        && remaining >= ideal_widths.branch_diff + spacing
-    {
-        widths.branch_diff = ideal_widths.branch_diff;
-        remaining = remaining.saturating_sub(ideal_widths.branch_diff + spacing);
+    if branch_diff_is_dense {
+        widths.branch_diff = try_allocate(&mut remaining, ideal_widths.branch_diff, spacing);
     }
 
     // Upstream column (only if dense and fits)
-    if upstream_is_dense
-        && ideal_widths.upstream > 0
-        && remaining >= ideal_widths.upstream + spacing
-    {
-        widths.upstream = ideal_widths.upstream;
-        remaining = remaining.saturating_sub(ideal_widths.upstream + spacing);
+    if upstream_is_dense {
+        widths.upstream = try_allocate(&mut remaining, ideal_widths.upstream, spacing);
     }
 
     // States column (only if dense and fits)
-    if states_is_dense && ideal_widths.states > 0 && remaining >= ideal_widths.states + spacing {
-        widths.states = ideal_widths.states;
+    if states_is_dense {
+        widths.states = try_allocate(&mut remaining, ideal_widths.states, spacing);
     }
 
     LayoutConfig {
