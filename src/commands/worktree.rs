@@ -56,8 +56,7 @@ pub fn handle_switch(
         .to_str()
         .ok_or_else(|| GitError::CommandFailed("Invalid UTF-8 in path".to_string()))?;
 
-    let worktree_name = config.format_path(repo_name, branch);
-    let worktree_path = repo_root.join(worktree_name);
+    let worktree_path = repo_root.join(config.format_path(repo_name, branch));
 
     // Create the worktree
     // Build git worktree add command
@@ -159,6 +158,60 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
     Ok(())
 }
 
+/// Check for conflicting uncommitted changes in target worktree
+fn check_worktree_conflicts(
+    repo: &Repository,
+    target_worktree: &Option<std::path::PathBuf>,
+    target_branch: &str,
+) -> Result<(), GitError> {
+    let Some(wt_path) = target_worktree else {
+        return Ok(());
+    };
+
+    let wt_repo = Repository::at(wt_path);
+    if !wt_repo.is_dirty()? {
+        return Ok(());
+    }
+
+    // Get files changed in the push
+    let push_files = repo.changed_files(target_branch, "HEAD")?;
+
+    // Get files changed in the worktree
+    let wt_status_output = wt_repo.run_command(&["status", "--porcelain"])?;
+
+    let wt_files: Vec<String> = wt_status_output
+        .lines()
+        .filter_map(|line| {
+            // Parse porcelain format: "XY filename"
+            line.split_once(' ')
+                .map(|(_, filename)| filename.trim().to_string())
+        })
+        .collect();
+
+    // Find overlapping files
+    let overlapping: Vec<String> = push_files
+        .iter()
+        .filter(|f| wt_files.contains(f))
+        .cloned()
+        .collect();
+
+    if !overlapping.is_empty() {
+        eprintln!(
+            "{}",
+            format_error("Cannot push: conflicting uncommitted changes in:")
+        );
+        for file in &overlapping {
+            eprintln!("  - {}", file);
+        }
+        return Err(GitError::CommandFailed(format!(
+            "Commit or stash changes in {} first",
+            wt_path.display()
+        )));
+    }
+
+    Ok(())
+}
+
 pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), GitError> {
     let repo = Repository::current();
 
@@ -204,50 +257,9 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
             .map_err(|e| GitError::CommandFailed(e.to_string()))?;
     }
 
-    // Find worktree for target branch
+    // Check for conflicting changes in target worktree
     let target_worktree = repo.worktree_for_branch(&target_branch)?;
-
-    if let Some(ref wt_path) = target_worktree {
-        // Check if target worktree is dirty
-        let wt_repo = Repository::at(wt_path);
-        if wt_repo.is_dirty()? {
-            // Get files changed in the push
-            let push_files = repo.changed_files(&target_branch, "HEAD")?;
-
-            // Get files changed in the worktree
-            let wt_status_output = wt_repo.run_command(&["status", "--porcelain"])?;
-
-            let wt_files: Vec<String> = wt_status_output
-                .lines()
-                .filter_map(|line| {
-                    // Parse porcelain format: "XY filename"
-                    line.split_once(' ')
-                        .map(|(_, filename)| filename.trim().to_string())
-                })
-                .collect();
-
-            // Find overlapping files
-            let overlapping: Vec<String> = push_files
-                .iter()
-                .filter(|f| wt_files.contains(f))
-                .cloned()
-                .collect();
-
-            if !overlapping.is_empty() {
-                eprintln!(
-                    "{}",
-                    format_error("Cannot push: conflicting uncommitted changes in:")
-                );
-                for file in &overlapping {
-                    eprintln!("  - {}", file);
-                }
-                return Err(GitError::CommandFailed(format!(
-                    "Commit or stash changes in {} first",
-                    wt_path.display()
-                )));
-            }
-        }
-    }
+    check_worktree_conflicts(&repo, &target_worktree, &target_branch)?;
 
     // Count commits and show info
     let commit_count = repo.count_commits(&target_branch, "HEAD")?;
