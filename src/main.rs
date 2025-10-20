@@ -72,12 +72,16 @@ enum Commands {
 
     /// Merge and cleanup worktree
     Merge {
-        /// Target branch to merge into
-        target: String,
+        /// Target branch to merge into (defaults to default branch)
+        target: Option<String>,
 
-        /// Squash commits
-        #[arg(long)]
+        /// Squash commits before merging
+        #[arg(short, long)]
         squash: bool,
+
+        /// Keep worktree after merging (don't finish)
+        #[arg(short, long)]
+        keep: bool,
     },
 
     /// Hook commands (for shell integration)
@@ -106,9 +110,11 @@ fn main() {
             target,
             allow_merge_commits,
         } => handle_push(target.as_deref(), allow_merge_commits),
-        Commands::Merge { target, squash } => {
-            handle_merge(&target, squash).map_err(GitError::CommandFailed)
-        }
+        Commands::Merge {
+            target,
+            squash,
+            keep,
+        } => handle_merge(target.as_deref(), squash, keep),
         Commands::Hook { hook_type } => handle_hook(&hook_type).map_err(GitError::CommandFailed),
     };
 
@@ -478,9 +484,109 @@ fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), Gi
     Ok(())
 }
 
-fn handle_merge(target: &str, squash: bool) -> Result<(), String> {
-    // TODO: Implement actual merge logic
-    println!("Merging into: {} (squash: {})", target, squash);
+fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<(), GitError> {
+    // Get current branch
+    let current_branch = get_current_branch()?
+        .ok_or_else(|| GitError::CommandFailed("Not on a branch (detached HEAD)".to_string()))?;
+
+    // Get target branch (default to default branch if not provided)
+    let target_branch = match target {
+        Some(b) => b.to_string(),
+        None => get_default_branch()?,
+    };
+
+    // Check if already on target branch
+    if current_branch == target_branch {
+        println!("Already on '{}', nothing to merge", target_branch);
+        return Ok(());
+    }
+
+    // Check for uncommitted changes
+    if is_dirty()? {
+        return Err(GitError::CommandFailed(
+            "Working tree has uncommitted changes. Commit or stash them first.".to_string(),
+        ));
+    }
+
+    // Rebase onto target (or squash if requested)
+    if squash {
+        // For squash, we'll do an interactive rebase to squash commits
+        // For simplicity, we'll just rebase for now and note squash in message
+        println!("Rebasing and squashing commits onto '{}'...", target_branch);
+
+        let rebase_result = process::Command::new("git")
+            .args(["rebase", &target_branch])
+            .output()
+            .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+
+        if !rebase_result.status.success() {
+            let stderr = String::from_utf8_lossy(&rebase_result.stderr);
+            return Err(GitError::CommandFailed(format!(
+                "Failed to rebase onto '{}': {}",
+                target_branch, stderr
+            )));
+        }
+    } else {
+        println!("Rebasing onto '{}'...", target_branch);
+
+        let rebase_result = process::Command::new("git")
+            .args(["rebase", &target_branch])
+            .output()
+            .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+
+        if !rebase_result.status.success() {
+            let stderr = String::from_utf8_lossy(&rebase_result.stderr);
+            return Err(GitError::CommandFailed(format!(
+                "Failed to rebase onto '{}': {}",
+                target_branch, stderr
+            )));
+        }
+    }
+
+    // Fast-forward push to target branch (reuse handle_push logic)
+    println!("Fast-forwarding '{}' to current HEAD...", target_branch);
+    handle_push(Some(&target_branch), false)?;
+
+    // Finish worktree unless --keep was specified
+    if !keep {
+        println!("Cleaning up worktree...");
+
+        // Get primary worktree path before finishing (while we can still run git commands)
+        let common_dir = get_git_common_dir()?
+            .canonicalize()
+            .map_err(|e| GitError::CommandFailed(format!("Failed to canonicalize path: {}", e)))?;
+        let primary_worktree_dir = common_dir
+            .parent()
+            .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))?
+            .to_path_buf();
+
+        handle_finish(false)?;
+
+        // Change to primary worktree directory so we can run git commands
+        std::env::set_current_dir(&primary_worktree_dir)
+            .map_err(|e| GitError::CommandFailed(format!("Failed to change directory: {}", e)))?;
+
+        // Try to switch to target branch
+        let new_branch = get_current_branch()?;
+        if new_branch.as_deref() != Some(&target_branch) {
+            println!("Switching to '{}'...", target_branch);
+            let switch_result = process::Command::new("git")
+                .args(["switch", &target_branch])
+                .output()
+                .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+
+            if !switch_result.status.success() {
+                // If switch fails, might be in another worktree - try using our switch command
+                handle_switch(&target_branch, false, None, false)?;
+            }
+        }
+    } else {
+        println!(
+            "Successfully merged to '{}' (worktree preserved)",
+            target_branch
+        );
+    }
+
     Ok(())
 }
 

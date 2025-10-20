@@ -1,0 +1,28 @@
+---
+source: tests/integration_tests/merge.rs
+info:
+  program: wt
+  args:
+    - merge
+    - main
+    - "--keep"
+  env:
+    GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
+    GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
+    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
+    LANG: C
+    LC_ALL: C
+    SOURCE_DATE_EPOCH: "1704067200"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Rebasing onto 'main'...
+Fast-forwarding 'main' to current HEAD...
+Pushing 1 commit to 'main'
+Successfully pushed to 'main'
+Successfully merged to 'main' (worktree preserved)
+
+----- stderr -----
