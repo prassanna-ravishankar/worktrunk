@@ -1,6 +1,6 @@
 use clap::{CommandFactory, Parser, Subcommand};
 use std::process;
-use worktrunk::config::load_config;
+use worktrunk::config::WorktrunkConfig;
 use worktrunk::git::GitError;
 
 mod commands;
@@ -117,17 +117,9 @@ fn main() {
             create,
             base,
             internal,
-        } => load_config()
+        } => WorktrunkConfig::load()
             .map_err(|e| GitError::CommandFailed(format!("Failed to load config: {}", e)))
-            .and_then(|config| {
-                handle_switch(
-                    &branch,
-                    create,
-                    base.as_deref(),
-                    internal,
-                    &config.worktree_path,
-                )
-            }),
+            .and_then(|config| handle_switch(&branch, create, base.as_deref(), internal, &config)),
         Commands::Remove { internal } => handle_remove(internal),
         Commands::Push {
             target,

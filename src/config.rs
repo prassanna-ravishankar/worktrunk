@@ -66,31 +66,61 @@ impl Default for WorktrunkConfig {
     }
 }
 
-fn get_config_path() -> Option<PathBuf> {
-    ProjectDirs::from("", "", "worktrunk").map(|dirs| dirs.config_dir().join("config.toml"))
-}
+impl WorktrunkConfig {
+    /// Load configuration from config file and environment variables.
+    ///
+    /// Configuration is loaded in the following order (later sources override earlier ones):
+    /// 1. Default values
+    /// 2. Config file (~/.config/worktrunk/config.toml on Linux/macOS)
+    /// 3. Environment variables (WORKTRUNK_*)
+    pub fn load() -> Result<Self, ConfigError> {
+        let defaults = Self::default();
 
-pub fn load_config() -> Result<WorktrunkConfig, ConfigError> {
-    let defaults = WorktrunkConfig::default();
+        let mut builder = Config::builder()
+            .set_default("worktree-path", defaults.worktree_path)?
+            .set_default("llm.command", defaults.llm.command.unwrap_or_default())?
+            .set_default("llm.args", defaults.llm.args)?;
 
-    let mut builder = Config::builder()
-        .set_default("worktree-path", defaults.worktree_path)?
-        .set_default("llm.command", defaults.llm.command.unwrap_or_default())?
-        .set_default("llm.args", defaults.llm.args)?;
+        // Add config file if it exists
+        if let Some(config_path) = get_config_path()
+            && config_path.exists()
+        {
+            builder = builder.add_source(File::from(config_path));
+        }
 
-    // Add config file if it exists
-    if let Some(config_path) = get_config_path()
-        && config_path.exists()
-    {
-        builder = builder.add_source(File::from(config_path));
+        // Add environment variables with WORKTRUNK prefix
+        builder = builder.add_source(config::Environment::with_prefix("WORKTRUNK").separator("_"));
+
+        let config: Self = builder.build()?.try_deserialize()?;
+        validate_worktree_path(&config.worktree_path)?;
+        Ok(config)
     }
 
-    // Add environment variables with WORKTRUNK prefix
-    builder = builder.add_source(config::Environment::with_prefix("WORKTRUNK").separator("_"));
+    /// Format a worktree path using this configuration's template.
+    ///
+    /// # Arguments
+    /// * `repo` - Repository name (replaces {repo} in template)
+    /// * `branch` - Branch name (replaces {branch} in template, slashes sanitized to dashes)
+    ///
+    /// # Examples
+    /// ```
+    /// use worktrunk::config::WorktrunkConfig;
+    ///
+    /// let config = WorktrunkConfig::default();
+    /// let path = config.format_path("myproject", "feature/foo");
+    /// assert_eq!(path, "../myproject.feature-foo");
+    /// ```
+    pub fn format_path(&self, repo: &str, branch: &str) -> String {
+        // Sanitize branch name by replacing path separators to prevent directory traversal
+        let safe_branch = branch.replace(['/', '\\'], "-");
+        self.worktree_path
+            .replace("{repo}", repo)
+            .replace("{branch}", &safe_branch)
+    }
+}
 
-    let config: WorktrunkConfig = builder.build()?.try_deserialize()?;
-    validate_worktree_path(&config.worktree_path)?;
-    Ok(config)
+fn get_config_path() -> Option<PathBuf> {
+    ProjectDirs::from("", "", "worktrunk").map(|dirs| dirs.config_dir().join("config.toml"))
 }
 
 fn validate_worktree_path(template: &str) -> Result<(), ConfigError> {
@@ -109,14 +139,6 @@ fn validate_worktree_path(template: &str) -> Result<(), ConfigError> {
     }
 
     Ok(())
-}
-
-pub fn format_worktree_path(template: &str, repo: &str, branch: &str) -> String {
-    // Sanitize branch name by replacing path separators to prevent directory traversal
-    let safe_branch = branch.replace(['/', '\\'], "-");
-    template
-        .replace("{repo}", repo)
-        .replace("{branch}", &safe_branch)
 }
 
 #[cfg(test)]
@@ -140,47 +162,64 @@ mod tests {
     #[test]
     fn test_load_config_defaults() {
         // Without a config file or env vars, should return defaults
-        let config = load_config().unwrap();
+        let config = WorktrunkConfig::load().unwrap();
         assert_eq!(config.worktree_path, "../{repo}.{branch}");
     }
 
     #[test]
     fn test_format_worktree_path() {
+        let config = WorktrunkConfig {
+            worktree_path: "{repo}.{branch}".to_string(),
+            llm: LlmConfig::default(),
+        };
         assert_eq!(
-            format_worktree_path("{repo}.{branch}", "myproject", "feature-x"),
+            config.format_path("myproject", "feature-x"),
             "myproject.feature-x"
         );
     }
 
     #[test]
     fn test_format_worktree_path_custom_template() {
+        let config = WorktrunkConfig {
+            worktree_path: "{repo}-{branch}".to_string(),
+            llm: LlmConfig::default(),
+        };
         assert_eq!(
-            format_worktree_path("{repo}-{branch}", "myproject", "feature-x"),
+            config.format_path("myproject", "feature-x"),
             "myproject-feature-x"
         );
     }
 
     #[test]
     fn test_format_worktree_path_only_branch() {
-        assert_eq!(
-            format_worktree_path("{branch}", "myproject", "feature-x"),
-            "feature-x"
-        );
+        let config = WorktrunkConfig {
+            worktree_path: "{branch}".to_string(),
+            llm: LlmConfig::default(),
+        };
+        assert_eq!(config.format_path("myproject", "feature-x"), "feature-x");
     }
 
     #[test]
     fn test_format_worktree_path_with_slashes() {
         // Slashes should be replaced with dashes to prevent directory traversal
+        let config = WorktrunkConfig {
+            worktree_path: "{repo}.{branch}".to_string(),
+            llm: LlmConfig::default(),
+        };
         assert_eq!(
-            format_worktree_path("{repo}.{branch}", "myproject", "feature/foo"),
+            config.format_path("myproject", "feature/foo"),
             "myproject.feature-foo"
         );
     }
 
     #[test]
     fn test_format_worktree_path_with_multiple_slashes() {
+        let config = WorktrunkConfig {
+            worktree_path: "{branch}".to_string(),
+            llm: LlmConfig::default(),
+        };
         assert_eq!(
-            format_worktree_path("{branch}", "myproject", "feature/sub/task"),
+            config.format_path("myproject", "feature/sub/task"),
             "feature-sub-task"
         );
     }
@@ -188,8 +227,12 @@ mod tests {
     #[test]
     fn test_format_worktree_path_with_backslashes() {
         // Windows-style path separators should also be sanitized
+        let config = WorktrunkConfig {
+            worktree_path: "{branch}".to_string(),
+            llm: LlmConfig::default(),
+        };
         assert_eq!(
-            format_worktree_path("{branch}", "myproject", "feature\\foo"),
+            config.format_path("myproject", "feature\\foo"),
             "feature-foo"
         );
     }

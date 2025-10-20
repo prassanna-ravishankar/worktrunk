@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::process;
-use worktrunk::config::format_worktree_path;
+use worktrunk::config::WorktrunkConfig;
 use worktrunk::error_format::{format_error, format_error_with_bold, format_hint};
 use worktrunk::git::{GitError, Repository, run_git_command};
 
@@ -9,7 +9,7 @@ pub fn handle_switch(
     create: bool,
     base: Option<&str>,
     internal: bool,
-    worktree_path_template: &str,
+    config: &WorktrunkConfig,
 ) -> Result<(), GitError> {
     let repo = Repository::current();
 
@@ -55,7 +55,7 @@ pub fn handle_switch(
         .to_str()
         .ok_or_else(|| GitError::CommandFailed("Invalid UTF-8 in path".to_string()))?;
 
-    let worktree_name = format_worktree_path(worktree_path_template, repo_name, branch);
+    let worktree_name = config.format_path(repo_name, branch);
     let worktree_path = repo_root.join(worktree_name);
 
     // Create the worktree

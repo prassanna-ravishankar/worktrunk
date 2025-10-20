@@ -1,4 +1,4 @@
-use worktrunk::config::load_config;
+use worktrunk::config::WorktrunkConfig;
 use worktrunk::error_format::format_error;
 use worktrunk::git::{GitError, Repository, run_git_command};
 
@@ -123,7 +123,7 @@ fn handle_squash(target_branch: &str) -> Result<(), GitError> {
     let subjects = repo.commit_subjects(&range)?;
 
     // Load config and generate commit message
-    let config = load_config()
+    let config = WorktrunkConfig::load()
         .map_err(|e| GitError::CommandFailed(format!("Failed to load config: {}", e)))?;
     let commit_message = crate::llm::generate_squash_message(target_branch, &subjects, &config.llm);
 
