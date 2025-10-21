@@ -24,31 +24,34 @@ pub struct WorktreeInfo {
 
 impl WorktreeInfo {
     /// Create WorktreeInfo from a Worktree, enriching it with git metadata
-    fn from_worktree(wt: worktrunk::git::Worktree, primary: &worktrunk::git::Worktree) -> Self {
+    fn from_worktree(
+        wt: &worktrunk::git::Worktree,
+        primary: &worktrunk::git::Worktree,
+    ) -> Result<Self, GitError> {
         let wt_repo = Repository::at(&wt.path);
         let is_primary = wt.path == primary.path;
 
         // Get commit timestamp
-        let timestamp = wt_repo.commit_timestamp(&wt.head).unwrap_or(0);
+        let timestamp = wt_repo.commit_timestamp(&wt.head)?;
 
         // Get commit message
-        let commit_message = wt_repo.commit_message(&wt.head).unwrap_or_default();
+        let commit_message = wt_repo.commit_message(&wt.head)?;
 
         // Calculate ahead/behind relative to primary branch (only if primary has a branch)
         let (ahead, behind) = if is_primary {
             (0, 0)
         } else if let Some(pb) = primary.branch.as_deref() {
-            wt_repo.ahead_behind(pb, &wt.head).unwrap_or((0, 0))
+            wt_repo.ahead_behind(pb, &wt.head)?
         } else {
             (0, 0)
         };
-        let working_tree_diff = wt_repo.working_tree_diff_stats().unwrap_or((0, 0));
+        let working_tree_diff = wt_repo.working_tree_diff_stats()?;
 
         // Get branch diff stats (downstream of primary, only if primary has a branch)
         let branch_diff = if is_primary {
             (0, 0)
         } else if let Some(pb) = primary.branch.as_deref() {
-            wt_repo.branch_diff_stats(pb, &wt.head).unwrap_or((0, 0))
+            wt_repo.branch_diff_stats(pb, &wt.head)?
         } else {
             (0, 0)
         };
@@ -66,19 +69,17 @@ impl WorktreeInfo {
                     .map(|(remote, _)| remote)
                     .unwrap_or("origin")
                     .to_string();
-                let (ahead, behind) = wt_repo
-                    .ahead_behind(&upstream_branch, &wt.head)
-                    .unwrap_or((0, 0));
+                let (ahead, behind) = wt_repo.ahead_behind(&upstream_branch, &wt.head)?;
                 (Some(remote), ahead, behind)
             }
             None => (None, 0, 0),
         };
 
         // Get worktree state (merge/rebase/etc)
-        let worktree_state = wt_repo.worktree_state().unwrap_or(None);
+        let worktree_state = wt_repo.worktree_state()?;
 
-        WorktreeInfo {
-            worktree: wt,
+        Ok(WorktreeInfo {
+            worktree: wt.clone(),
             timestamp,
             commit_message,
             ahead,
@@ -90,7 +91,7 @@ impl WorktreeInfo {
             upstream_ahead,
             upstream_behind,
             worktree_state,
-        }
+        })
     }
 }
 
@@ -123,15 +124,15 @@ pub fn handle_list() -> Result<(), GitError> {
     let mut infos: Vec<WorktreeInfo> = if std::env::var("WT_SEQUENTIAL").is_ok() {
         // Sequential iteration (for benchmarking)
         worktrees
-            .into_iter()
+            .iter()
             .map(|wt| WorktreeInfo::from_worktree(wt, &primary))
-            .collect()
+            .collect::<Result<Vec<_>, _>>()?
     } else {
         // Parallel iteration (default)
         worktrees
-            .into_par_iter()
+            .par_iter()
             .map(|wt| WorktreeInfo::from_worktree(wt, &primary))
-            .collect()
+            .collect::<Result<Vec<_>, _>>()?
     };
 
     // Sort by most recent commit (descending)

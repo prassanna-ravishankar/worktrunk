@@ -48,7 +48,12 @@ pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<()
         // Get primary worktree path before finishing (while we can still run git commands)
         let primary_worktree_dir = repo.repo_root()?;
 
-        handle_remove(false)?;
+        let result = handle_remove()?;
+
+        // Display user-facing output
+        if let Some(output) = result.format_user_output() {
+            println!("{}", output);
+        }
 
         // Check if we need to switch to target branch
         let primary_repo = Repository::at(&primary_worktree_dir);

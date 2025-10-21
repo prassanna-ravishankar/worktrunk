@@ -1,15 +1,118 @@
+use std::path::PathBuf;
 use std::process;
 use worktrunk::config::WorktrunkConfig;
 use worktrunk::git::{GitError, Repository};
 use worktrunk::styling::{format_error, format_error_with_bold, format_hint};
 
+/// Result of a worktree switch operation
+pub enum SwitchResult {
+    /// Switched to existing worktree at the given path
+    ExistingWorktree(PathBuf),
+    /// Created new worktree at the given path
+    CreatedWorktree { path: PathBuf, created_branch: bool },
+}
+
+impl SwitchResult {
+    /// Format the result for display (non-internal mode)
+    pub fn format_user_output(&self, branch: &str) -> Option<String> {
+        match self {
+            SwitchResult::ExistingWorktree(_) => None,
+            SwitchResult::CreatedWorktree {
+                path,
+                created_branch,
+            } => {
+                let msg = if *created_branch {
+                    format!(
+                        "Created new branch and worktree for '{}' at {}",
+                        branch,
+                        path.display()
+                    )
+                } else {
+                    format!(
+                        "Added worktree for existing branch '{}' at {}",
+                        branch,
+                        path.display()
+                    )
+                };
+                Some(format!(
+                    "{}\nNote: Use 'wt switch' (with shell integration) for automatic cd",
+                    msg
+                ))
+            }
+        }
+    }
+
+    /// Format the result for shell integration (internal mode)
+    pub fn format_internal_output(&self, branch: &str) -> Option<String> {
+        match self {
+            SwitchResult::ExistingWorktree(path) => {
+                Some(format!("__WORKTRUNK_CD__{}", path.display()))
+            }
+            SwitchResult::CreatedWorktree {
+                path,
+                created_branch,
+            } => {
+                let msg = if *created_branch {
+                    format!("Created new branch and worktree for '{}'", branch)
+                } else {
+                    format!("Added worktree for existing branch '{}'", branch)
+                };
+                Some(format!(
+                    "__WORKTRUNK_CD__{}\n{} at {}",
+                    path.display(),
+                    msg,
+                    path.display()
+                ))
+            }
+        }
+    }
+}
+
+/// Result of a worktree remove operation
+pub enum RemoveResult {
+    /// Already on default branch, no action taken
+    AlreadyOnDefault(String),
+    /// Removed worktree and returned to primary
+    RemovedWorktree { primary_path: PathBuf },
+    /// Switched to default branch in main repo
+    SwitchedToDefault(String),
+}
+
+impl RemoveResult {
+    /// Format the result for display (non-internal mode)
+    pub fn format_user_output(&self) -> Option<String> {
+        match self {
+            RemoveResult::AlreadyOnDefault(branch) => {
+                Some(format!("Already on default branch '{}'", branch))
+            }
+            RemoveResult::RemovedWorktree { primary_path } => Some(format!(
+                "Moved to primary worktree and removed worktree\nPath: {}\nNote: Use 'wt remove' (with shell integration) for automatic cd",
+                primary_path.display()
+            )),
+            RemoveResult::SwitchedToDefault(branch) => {
+                Some(format!("Switched to default branch '{}'", branch))
+            }
+        }
+    }
+
+    /// Format the result for shell integration (internal mode)
+    pub fn format_internal_output(&self) -> Option<String> {
+        match self {
+            RemoveResult::AlreadyOnDefault(_) => None,
+            RemoveResult::RemovedWorktree { primary_path } => {
+                Some(format!("__WORKTRUNK_CD__{}", primary_path.display()))
+            }
+            RemoveResult::SwitchedToDefault(_) => None,
+        }
+    }
+}
+
 pub fn handle_switch(
     branch: &str,
     create: bool,
     base: Option<&str>,
-    internal: bool,
     config: &WorktrunkConfig,
-) -> Result<(), GitError> {
+) -> Result<SwitchResult, GitError> {
     let repo = Repository::current();
 
     // Check for conflicting conditions
@@ -32,10 +135,7 @@ pub fn handle_switch(
     // Check if worktree already exists for this branch
     match repo.worktree_for_branch(branch)? {
         Some(existing_path) if existing_path.exists() => {
-            if internal {
-                println!("__WORKTRUNK_CD__{}", existing_path.display());
-            }
-            return Ok(());
+            return Ok(SwitchResult::ExistingWorktree(existing_path));
         }
         Some(_) => {
             return Err(GitError::CommandFailed(format_error_with_bold(
@@ -74,27 +174,13 @@ pub fn handle_switch(
     repo.run_command(&args)
         .map_err(|e| GitError::CommandFailed(format!("Failed to create worktree: {}", e)))?;
 
-    // Output success message
-    let success_msg = if create {
-        format!(
-            "Created new branch and worktree for '{}' at {}",
-            branch,
-            worktree_path.display()
-        )
-    } else {
-        format!(
-            "Added worktree for existing branch '{}' at {}",
-            branch,
-            worktree_path.display()
-        )
-    };
-
-    output_with_cd(internal, &worktree_path, &success_msg, "switch");
-
-    Ok(())
+    Ok(SwitchResult::CreatedWorktree {
+        path: worktree_path,
+        created_branch: create,
+    })
 }
 
-pub fn handle_remove(internal: bool) -> Result<(), GitError> {
+pub fn handle_remove() -> Result<RemoveResult, GitError> {
     let repo = Repository::current();
 
     // Check for uncommitted changes
@@ -107,20 +193,13 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
 
     // If we're on default branch and not in a worktree, nothing to do
     if !in_worktree && current_branch.as_deref() == Some(&default_branch) {
-        if !internal {
-            println!("Already on default branch '{}'", default_branch);
-        }
-        return Ok(());
+        return Ok(RemoveResult::AlreadyOnDefault(default_branch));
     }
 
     if in_worktree {
         // In worktree: navigate to primary worktree and remove this one
         let worktree_root = repo.worktree_root()?;
         let primary_worktree_dir = repo.repo_root()?;
-
-        if internal {
-            println!("__WORKTRUNK_CD__{}", primary_worktree_dir.display());
-        }
 
         // Schedule worktree removal (synchronous for now, could be async later)
         let remove_result = process::Command::new("git")
@@ -137,10 +216,9 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
             );
         }
 
-        if !internal {
-            println!("Moved to primary worktree and removed worktree");
-            print_worktree_info(&primary_worktree_dir, "remove");
-        }
+        Ok(RemoveResult::RemovedWorktree {
+            primary_path: primary_worktree_dir,
+        })
     } else {
         // In main repo but not on default branch: switch to default
         repo.run_command(&["switch", &default_branch])
@@ -148,12 +226,8 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
                 GitError::CommandFailed(format!("Failed to switch to '{}': {}", default_branch, e))
             })?;
 
-        if !internal {
-            println!("Switched to default branch '{}'", default_branch);
-        }
+        Ok(RemoveResult::SwitchedToDefault(default_branch))
     }
-
-    Ok(())
 }
 
 /// Check for conflicting uncommitted changes in target worktree
@@ -282,31 +356,6 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
     Ok(())
 }
 
-fn print_worktree_info(path: &std::path::Path, command: &str) {
-    println!("Path: {}", path.display());
-    println!(
-        "Note: Use 'wt {}' (with shell integration) for automatic cd",
-        command
-    );
-}
-
 fn format_warning(msg: &str) -> String {
     worktrunk::styling::format_warning(msg)
-}
-
-/// Output message with optional CD directive for internal mode.
-///
-/// In internal mode: prints CD directive and message
-/// In normal mode: prints message and shell integration note
-fn output_with_cd(internal: bool, path: &std::path::Path, message: &str, command: &str) {
-    if internal {
-        println!("__WORKTRUNK_CD__{}", path.display());
-        println!("{}", message);
-    } else {
-        println!("{}", message);
-        println!(
-            "Note: Use 'wt {}' (with shell integration) for automatic cd",
-            command
-        );
-    }
 }

@@ -119,8 +119,30 @@ fn main() {
             internal,
         } => WorktrunkConfig::load()
             .map_err(|e| GitError::CommandFailed(format!("Failed to load config: {}", e)))
-            .and_then(|config| handle_switch(&branch, create, base.as_deref(), internal, &config)),
-        Commands::Remove { internal } => handle_remove(internal),
+            .and_then(|config| {
+                handle_switch(&branch, create, base.as_deref(), &config).map(|result| {
+                    if internal {
+                        if let Some(output) = result.format_internal_output(&branch) {
+                            println!("{}", output);
+                        }
+                    } else {
+                        if let Some(output) = result.format_user_output(&branch) {
+                            println!("{}", output);
+                        }
+                    }
+                })
+            }),
+        Commands::Remove { internal } => handle_remove().map(|result| {
+            if internal {
+                if let Some(output) = result.format_internal_output() {
+                    println!("{}", output);
+                }
+            } else {
+                if let Some(output) = result.format_user_output() {
+                    println!("{}", output);
+                }
+            }
+        }),
         Commands::Push {
             target,
             allow_merge_commits,
