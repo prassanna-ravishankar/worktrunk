@@ -1,7 +1,7 @@
 use std::process;
 use worktrunk::config::WorktrunkConfig;
-use worktrunk::error_format::{format_error, format_error_with_bold, format_hint};
 use worktrunk::git::{GitError, Repository};
+use worktrunk::styling::{format_error, format_error_with_bold, format_hint};
 
 pub fn handle_switch(
     branch: &str,
@@ -291,7 +291,7 @@ fn print_worktree_info(path: &std::path::Path, command: &str) {
 }
 
 fn format_warning(msg: &str) -> String {
-    worktrunk::error_format::format_warning(msg)
+    worktrunk::styling::format_warning(msg)
 }
 
 /// Output message with optional CD directive for internal mode.

@@ -1,6 +1,6 @@
 use worktrunk::config::WorktrunkConfig;
-use worktrunk::error_format::format_error;
 use worktrunk::git::{GitError, Repository};
+use worktrunk::styling::format_error;
 
 use super::worktree::handle_push;
 use super::worktree::handle_remove;

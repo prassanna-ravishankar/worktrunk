@@ -1,90 +1,13 @@
-use anstyle::Style;
+//! Display utilities for terminal output.
+//!
+//! This module provides utility functions for:
+//! - Relative time formatting
+//! - Path manipulation and shortening
+//! - Text truncation with word boundaries
+//! - Terminal width detection
+
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-use unicode_width::UnicodeWidthStr;
-
-/// A piece of text with an optional style
-#[derive(Clone, Debug)]
-pub struct StyledString {
-    pub text: String,
-    pub style: Option<Style>,
-}
-
-impl StyledString {
-    pub fn new(text: impl Into<String>, style: Option<Style>) -> Self {
-        Self {
-            text: text.into(),
-            style,
-        }
-    }
-
-    pub fn raw(text: impl Into<String>) -> Self {
-        Self::new(text, None)
-    }
-
-    pub fn styled(text: impl Into<String>, style: Style) -> Self {
-        Self::new(text, Some(style))
-    }
-
-    /// Returns the visual width (unicode-aware, no ANSI codes)
-    pub fn width(&self) -> usize {
-        self.text.width()
-    }
-
-    /// Renders to a string with ANSI escape codes
-    pub fn render(&self) -> String {
-        if let Some(style) = &self.style {
-            format!("{}{}{}", style.render(), self.text, style.render_reset())
-        } else {
-            self.text.clone()
-        }
-    }
-}
-
-/// A line composed of multiple styled strings
-#[derive(Clone, Debug, Default)]
-pub struct StyledLine {
-    pub segments: Vec<StyledString>,
-}
-
-impl StyledLine {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Add a raw (unstyled) segment
-    pub fn push_raw(&mut self, text: impl Into<String>) {
-        self.segments.push(StyledString::raw(text));
-    }
-
-    /// Add a styled segment
-    pub fn push_styled(&mut self, text: impl Into<String>, style: Style) {
-        self.segments.push(StyledString::styled(text, style));
-    }
-
-    /// Add a segment (StyledString)
-    pub fn push(&mut self, segment: StyledString) {
-        self.segments.push(segment);
-    }
-
-    /// Pad with spaces to reach a specific width
-    pub fn pad_to(&mut self, target_width: usize) {
-        let current_width = self.width();
-        if current_width < target_width {
-            self.push_raw(" ".repeat(target_width - current_width));
-        }
-    }
-
-    /// Returns the total visual width
-    pub fn width(&self) -> usize {
-        self.segments.iter().map(|s| s.width()).sum()
-    }
-
-    /// Renders the entire line with ANSI escape codes
-    pub fn render(&self) -> String {
-        self.segments.iter().map(|s| s.render()).collect()
-    }
-}
 
 pub fn format_relative_time(timestamp: i64) -> String {
     let now = SystemTime::now()
@@ -192,83 +115,4 @@ pub fn get_terminal_width() -> usize {
     terminal_size::terminal_size()
         .map(|(terminal_size::Width(w), _)| w as usize)
         .unwrap_or(80)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_styled_string_width() {
-        // ASCII strings
-        let s = StyledString::raw("hello");
-        assert_eq!(s.width(), 5);
-
-        // Unicode arrows
-        let s = StyledString::raw("↑3 ↓2");
-        assert_eq!(
-            s.width(),
-            5,
-            "↑3 ↓2 should have width 5, not {}",
-            s.text.len()
-        );
-
-        // Mixed Unicode
-        let s = StyledString::raw("日本語");
-        assert_eq!(s.width(), 6); // CJK characters are typically width 2
-
-        // Emoji
-        let s = StyledString::raw("🎉");
-        assert_eq!(s.width(), 2); // Emoji are typically width 2
-    }
-
-    #[test]
-    fn test_styled_line_width() {
-        let mut line = StyledLine::new();
-        line.push_raw("Branch");
-        line.push_raw("  ");
-        line.push_raw("↑3 ↓2");
-
-        // "Branch" (6) + "  " (2) + "↑3 ↓2" (5) = 13
-        assert_eq!(line.width(), 13, "Line width should be 13");
-    }
-
-    #[test]
-    fn test_styled_line_padding() {
-        let mut line = StyledLine::new();
-        line.push_raw("test");
-        assert_eq!(line.width(), 4);
-
-        line.pad_to(10);
-        assert_eq!(line.width(), 10, "After padding to 10, width should be 10");
-
-        // Padding when already at target should not change width
-        line.pad_to(10);
-        assert_eq!(line.width(), 10, "Padding again should not change width");
-    }
-
-    #[test]
-    fn test_sparse_column_padding() {
-        // Build simplified lines to test sparse column padding
-        let mut line1 = StyledLine::new();
-        line1.push_raw(format!("{:8}", "branch-a"));
-        line1.push_raw("  ");
-        // Has ahead/behind
-        line1.push_raw(format!("{:5}", "↑3 ↓2"));
-        line1.push_raw("  ");
-
-        let mut line2 = StyledLine::new();
-        line2.push_raw(format!("{:8}", "branch-b"));
-        line2.push_raw("  ");
-        // No ahead/behind, should pad with spaces
-        line2.push_raw(" ".repeat(5));
-        line2.push_raw("  ");
-
-        // Both lines should have same width up to this point
-        assert_eq!(
-            line1.width(),
-            line2.width(),
-            "Rows with and without sparse column data should have same width"
-        );
-    }
 }

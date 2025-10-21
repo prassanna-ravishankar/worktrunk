@@ -1,5 +1,8 @@
-use crate::display::{StyledLine, format_relative_time, shorten_path, truncate_at_word_boundary};
-use worktrunk::theme::Theme;
+use crate::display::{format_relative_time, shorten_path, truncate_at_word_boundary};
+use worktrunk::styling::{
+    StyledLine, addition_style, current_style, deletion_style, dim_style, neutral_style,
+    primary_style,
+};
 
 use super::WorktreeInfo;
 use super::layout::LayoutConfig;
@@ -39,20 +42,18 @@ pub fn format_all_states(info: &WorktreeInfo) -> String {
 
 pub fn format_header_line(layout: &LayoutConfig) {
     let widths = &layout.widths;
-    let theme = Theme::new();
-    let dim_style = theme.dim;
-
     let mut line = StyledLine::new();
+    let dim = dim_style();
 
     // Branch
     let header = format!("{:width$}", "Branch", width = widths.branch);
-    line.push_styled(header, dim_style);
+    line.push_styled(header, dim);
     line.push_raw("  ");
 
     // Age (Time)
     if widths.time > 0 {
         let header = format!("{:width$}", "Age", width = widths.time);
-        line.push_styled(header, dim_style);
+        line.push_styled(header, dim);
         line.push_raw("  ");
     }
 
@@ -63,7 +64,7 @@ pub fn format_header_line(layout: &LayoutConfig) {
             "Cmts",
             width = layout.ideal_widths.ahead_behind
         );
-        line.push_styled(header, dim_style);
+        line.push_styled(header, dim);
         line.push_raw("  ");
     }
 
@@ -74,7 +75,7 @@ pub fn format_header_line(layout: &LayoutConfig) {
             "Cmt +/-",
             width = layout.ideal_widths.branch_diff
         );
-        line.push_styled(header, dim_style);
+        line.push_styled(header, dim);
         line.push_raw("  ");
     }
 
@@ -85,37 +86,37 @@ pub fn format_header_line(layout: &LayoutConfig) {
             "WT +/-",
             width = layout.ideal_widths.working_diff
         );
-        line.push_styled(header, dim_style);
+        line.push_styled(header, dim);
         line.push_raw("  ");
     }
 
     // Upstream
     if layout.ideal_widths.upstream > 0 {
         let header = format!("{:width$}", "Remote", width = layout.ideal_widths.upstream);
-        line.push_styled(header, dim_style);
+        line.push_styled(header, dim);
         line.push_raw("  ");
     }
 
     // Commit (fixed width: 8 chars)
-    line.push_styled("Commit  ", dim_style);
+    line.push_styled("Commit  ", dim);
     line.push_raw("  ");
 
     // Message
     if widths.message > 0 {
         let header = format!("{:width$}", "Message", width = widths.message);
-        line.push_styled(header, dim_style);
+        line.push_styled(header, dim);
         line.push_raw("  ");
     }
 
     // States
     if layout.ideal_widths.states > 0 {
         let header = format!("{:width$}", "State", width = layout.ideal_widths.states);
-        line.push_styled(header, dim_style);
+        line.push_styled(header, dim);
         line.push_raw("  ");
     }
 
     // Path
-    line.push_styled("Path", dim_style);
+    line.push_styled("Path", dim);
 
     println!("{}", line.render());
 }
@@ -126,13 +127,12 @@ pub fn format_worktree_line(
     current_worktree_path: Option<&std::path::PathBuf>,
 ) {
     let widths = &layout.widths;
-    let theme = Theme::new();
-    let primary_style = theme.primary;
-    let current_style = theme.current;
-    let green_style = theme.addition;
-    let red_style = theme.deletion;
-    let yellow_style = theme.neutral;
-    let dim_style = theme.dim;
+    let primary = primary_style();
+    let current = current_style();
+    let green = addition_style();
+    let red = deletion_style();
+    let yellow = neutral_style();
+    let dim = dim_style();
 
     let branch_display = info.worktree.branch.as_deref().unwrap_or("(detached)");
     let short_head = &info.worktree.head[..8.min(info.worktree.head.len())];
@@ -142,8 +142,8 @@ pub fn format_worktree_line(
         .map(|p| p == &info.worktree.path)
         .unwrap_or(false);
     let text_style = match (is_current, info.is_primary) {
-        (true, _) => Some(current_style),
-        (_, true) => Some(primary_style),
+        (true, _) => Some(current),
+        (_, true) => Some(primary),
         _ => None,
     };
 
@@ -166,7 +166,7 @@ pub fn format_worktree_line(
             format_relative_time(info.timestamp),
             width = widths.time
         );
-        line.push_styled(time_str, dim_style);
+        line.push_styled(time_str, dim);
         line.push_raw("  ");
     }
 
@@ -178,7 +178,7 @@ pub fn format_worktree_line(
                 format!("↑{} ↓{}", info.ahead, info.behind),
                 width = layout.ideal_widths.ahead_behind
             );
-            line.push_styled(ahead_behind_text, yellow_style);
+            line.push_styled(ahead_behind_text, yellow);
         } else {
             // No data for this row: pad with spaces
             line.push_raw(" ".repeat(layout.ideal_widths.ahead_behind));
@@ -193,9 +193,9 @@ pub fn format_worktree_line(
             if br_added > 0 || br_deleted > 0 {
                 // Build the diff as a mini styled line
                 let mut diff_segment = StyledLine::new();
-                diff_segment.push_styled(format!("+{}", br_added), green_style);
+                diff_segment.push_styled(format!("+{}", br_added), green);
                 diff_segment.push_raw(" ");
-                diff_segment.push_styled(format!("-{}", br_deleted), red_style);
+                diff_segment.push_styled(format!("-{}", br_deleted), red);
                 diff_segment.pad_to(layout.ideal_widths.branch_diff);
                 // Append all segments from diff_segment to main line
                 for segment in diff_segment.segments {
@@ -218,9 +218,9 @@ pub fn format_worktree_line(
         if wt_added > 0 || wt_deleted > 0 {
             // Build the diff as a mini styled line
             let mut diff_segment = StyledLine::new();
-            diff_segment.push_styled(format!("+{}", wt_added), green_style);
+            diff_segment.push_styled(format!("+{}", wt_added), green);
             diff_segment.push_raw(" ");
-            diff_segment.push_styled(format!("-{}", wt_deleted), red_style);
+            diff_segment.push_styled(format!("-{}", wt_deleted), red);
             diff_segment.pad_to(layout.ideal_widths.working_diff);
             // Append all segments from diff_segment to main line
             for segment in diff_segment.segments {
@@ -239,11 +239,11 @@ pub fn format_worktree_line(
             let remote_name = info.upstream_remote.as_deref().unwrap_or("origin");
             // Build the upstream as a mini styled line
             let mut upstream_segment = StyledLine::new();
-            upstream_segment.push_styled(remote_name, dim_style);
+            upstream_segment.push_styled(remote_name, dim);
             upstream_segment.push_raw(" ");
-            upstream_segment.push_styled(format!("↑{}", info.upstream_ahead), green_style);
+            upstream_segment.push_styled(format!("↑{}", info.upstream_ahead), green);
             upstream_segment.push_raw(" ");
-            upstream_segment.push_styled(format!("↓{}", info.upstream_behind), red_style);
+            upstream_segment.push_styled(format!("↓{}", info.upstream_behind), red);
             upstream_segment.pad_to(layout.ideal_widths.upstream);
             // Append all segments from upstream_segment to main line
             for segment in upstream_segment.segments {
@@ -271,7 +271,7 @@ pub fn format_worktree_line(
             truncate_at_word_boundary(&info.commit_message, layout.max_message_len),
             width = widths.message
         );
-        line.push_styled(msg, dim_style);
+        line.push_styled(msg, dim);
         line.push_raw("  ");
     }
 
@@ -304,8 +304,9 @@ mod tests {
     use super::*;
     use crate::commands::list::WorktreeInfo;
     use crate::commands::list::layout::{ColumnWidths, LayoutConfig};
-    use crate::display::{StyledLine, shorten_path};
+    use crate::display::shorten_path;
     use std::path::PathBuf;
+    use worktrunk::styling::StyledLine;
 
     #[test]
     fn test_column_alignment_with_all_columns() {
