@@ -109,6 +109,15 @@ _arguments "${_arguments_options[@]}" : \
 ':shell -- Shell to generate code for (bash, fish, zsh):_default' \
 && ret=0
 ;;
+(configure-shell)
+_arguments "${_arguments_options[@]}" : \
+'--shell=[Specific shell to configure (default\: all shells with existing config files)]:SHELL:(bash elvish fish nushell oil powershell xonsh zsh)' \
+'--cmd=[Command prefix (default\: wt)]:CMD:_default' \
+'--dry-run[Show what would be done without making changes]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
 (list)
 _arguments "${_arguments_options[@]}" : \
 '--format=[Output format]:FORMAT:((table\:"Human-readable table format"
@@ -178,6 +187,7 @@ esac
 _wt_commands() {
     local commands; commands=(
 'init:Generate shell integration code' \
+'configure-shell:Configure shell by writing to config files' \
 'list:List all worktrees' \
 'switch:Switch to a worktree' \
 'remove:Finish current worktree, returning to primary if current' \
@@ -197,6 +207,11 @@ _wt__complete_commands() {
 _wt__completion_commands() {
     local commands; commands=()
     _describe -t commands 'wt completion commands' commands "$@"
+}
+(( $+functions[_wt__configure-shell_commands] )) ||
+_wt__configure-shell_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt configure-shell commands' commands "$@"
 }
 (( $+functions[_wt__init_commands] )) ||
 _wt__init_commands() {

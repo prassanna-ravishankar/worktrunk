@@ -95,6 +95,9 @@ _wt() {
             wt,completion)
                 cmd="wt__completion"
                 ;;
+            wt,configure-shell)
+                cmd="wt__configure__shell"
+                ;;
             wt,init)
                 cmd="wt__init"
                 ;;
@@ -120,7 +123,7 @@ _wt() {
 
     case "${cmd}" in
         wt)
-            opts="-h -V --help --version init list switch remove push merge completion complete"
+            opts="-h -V --help --version init configure-shell list switch remove push merge completion complete"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -154,6 +157,28 @@ _wt() {
                 return 0
             fi
             case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        wt__configure__shell)
+            opts="-h --shell --cmd --dry-run --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --shell)
+                    COMPREPLY=($(compgen -W "bash elvish fish nushell oil powershell xonsh zsh" -- "${cur}"))
+                    return 0
+                    ;;
+                --cmd)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;

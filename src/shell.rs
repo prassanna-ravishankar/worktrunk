@@ -1,5 +1,6 @@
 use askama::Template;
 use std::fmt;
+use std::path::PathBuf;
 
 /// Supported shells
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
@@ -51,6 +52,93 @@ impl Shell {
     /// Returns true if this shell supports completion generation
     pub fn supports_completion(&self) -> bool {
         matches!(self, Self::Bash | Self::Fish | Self::Zsh | Self::Oil)
+    }
+
+    /// Returns the standard config file paths for this shell
+    ///
+    /// Returns paths in order of preference. The first existing file should be used.
+    /// For Fish, the cmd_prefix is used to name the conf.d file.
+    pub fn config_paths(&self, cmd_prefix: &str) -> Vec<PathBuf> {
+        let home = PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()));
+
+        match self {
+            Self::Bash => {
+                // macOS uses .bash_profile, Linux typically uses .bashrc
+                if cfg!(target_os = "macos") {
+                    vec![home.join(".bash_profile"), home.join(".profile")]
+                } else {
+                    vec![home.join(".bashrc"), home.join(".bash_profile")]
+                }
+            }
+            Self::Zsh => {
+                let zdotdir = std::env::var("ZDOTDIR")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|_| home.clone());
+                vec![zdotdir.join(".zshrc")]
+            }
+            Self::Fish => {
+                // For fish, we write to conf.d/ which is auto-sourced
+                // Use cmd_prefix in the filename
+                vec![
+                    home.join(".config")
+                        .join("fish")
+                        .join("conf.d")
+                        .join(format!("{}.fish", cmd_prefix)),
+                ]
+            }
+            Self::Nushell => {
+                vec![home.join(".config").join("nushell").join("config.nu")]
+            }
+            Self::Powershell => {
+                if cfg!(target_os = "windows") {
+                    let userprofile = PathBuf::from(
+                        std::env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string()),
+                    );
+                    vec![
+                        userprofile
+                            .join("Documents")
+                            .join("PowerShell")
+                            .join("Microsoft.PowerShell_profile.ps1"),
+                    ]
+                } else {
+                    vec![
+                        home.join(".config")
+                            .join("powershell")
+                            .join("Microsoft.PowerShell_profile.ps1"),
+                    ]
+                }
+            }
+            Self::Oil => {
+                vec![home.join(".config").join("oil").join("oshrc")]
+            }
+            Self::Elvish => {
+                vec![home.join(".config").join("elvish").join("rc.elv")]
+            }
+            Self::Xonsh => {
+                vec![home.join(".xonshrc")]
+            }
+        }
+    }
+
+    /// Returns the line to add to the config file for shell integration
+    ///
+    /// For most shells, this is an eval statement. For Fish, this returns
+    /// the full integration code since it goes into a separate conf.d/ file.
+    pub fn config_line(&self, cmd_prefix: &str) -> String {
+        match self {
+            Self::Fish => {
+                // Fish uses a separate file in conf.d/, so we generate the full content
+                ShellInit::new(*self, cmd_prefix.to_string())
+                    .generate()
+                    .unwrap_or_else(|_| {
+                        format!("# Error generating fish config for {}", cmd_prefix)
+                    })
+            }
+            _ => {
+                // All other shells use eval pattern
+                format!("eval \"$({} init {})\"", cmd_prefix, self)
+            }
+        }
     }
 }
 

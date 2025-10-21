@@ -97,6 +97,7 @@ end
 complete -c wt -n "__fish_wt_needs_command" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_needs_command" -s V -l version -d 'Print version'
 complete -c wt -n "__fish_wt_needs_command" -f -a "init" -d 'Generate shell integration code'
+complete -c wt -n "__fish_wt_needs_command" -f -a "configure-shell" -d 'Configure shell by writing to config files'
 complete -c wt -n "__fish_wt_needs_command" -f -a "list" -d 'List all worktrees'
 complete -c wt -n "__fish_wt_needs_command" -f -a "switch" -d 'Switch to a worktree'
 complete -c wt -n "__fish_wt_needs_command" -f -a "remove" -d 'Finish current worktree, returning to primary if current'
@@ -104,6 +105,17 @@ complete -c wt -n "__fish_wt_needs_command" -f -a "push" -d 'Push changes betwee
 complete -c wt -n "__fish_wt_needs_command" -f -a "merge" -d 'Merge worktree into target branch'
 complete -c wt -n "__fish_wt_using_subcommand init" -l cmd -d 'Command prefix (default: wt)' -r
 complete -c wt -n "__fish_wt_using_subcommand init" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand configure-shell" -l shell -d 'Specific shell to configure (default: all shells with existing config files)' -r -f -a "bash\t''
+elvish\t''
+fish\t''
+nushell\t''
+oil\t''
+powershell\t''
+xonsh\t''
+zsh\t''"
+complete -c wt -n "__fish_wt_using_subcommand configure-shell" -l cmd -d 'Command prefix (default: wt)' -r
+complete -c wt -n "__fish_wt_using_subcommand configure-shell" -l dry-run -d 'Show what would be done without making changes'
+complete -c wt -n "__fish_wt_using_subcommand configure-shell" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand list" -l format -d 'Output format' -r -f -a "table\t'Human-readable table format'
 json\t'JSON format'"
 complete -c wt -n "__fish_wt_using_subcommand list" -s h -l help -d 'Print help (see more with \'--help\')'

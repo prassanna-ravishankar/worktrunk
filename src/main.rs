@@ -8,8 +8,8 @@ mod display;
 mod llm;
 
 use commands::{
-    Shell, handle_complete, handle_completion, handle_init, handle_list, handle_merge, handle_push,
-    handle_remove, handle_switch,
+    Shell, handle_complete, handle_completion, handle_configure_shell, handle_init, handle_list,
+    handle_merge, handle_push, handle_remove, handle_switch,
 };
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
@@ -40,6 +40,21 @@ enum Commands {
         /// Command prefix (default: wt)
         #[arg(long, default_value = "wt")]
         cmd: String,
+    },
+
+    /// Configure shell by writing to config files
+    ConfigureShell {
+        /// Specific shell to configure (default: all shells with existing config files)
+        #[arg(long, value_enum)]
+        shell: Option<Shell>,
+
+        /// Command prefix (default: wt)
+        #[arg(long, default_value = "wt")]
+        cmd: String,
+
+        /// Show what would be done without making changes
+        #[arg(long)]
+        dry_run: bool,
     },
 
     /// List all worktrees
@@ -123,6 +138,22 @@ fn main() {
             let mut cli_cmd = Cli::command();
             handle_init(&shell, &cmd, &mut cli_cmd).map_err(GitError::CommandFailed)
         }
+        Commands::ConfigureShell {
+            shell,
+            cmd,
+            dry_run,
+        } => handle_configure_shell(shell, &cmd, dry_run)
+            .map(|results| {
+                for result in results {
+                    println!(
+                        "{:12} {} {}",
+                        result.action.description(),
+                        result.shell,
+                        result.path.display()
+                    );
+                }
+            })
+            .map_err(GitError::CommandFailed),
         Commands::List { format } => handle_list(format),
         Commands::Switch {
             branch,
