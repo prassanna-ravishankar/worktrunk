@@ -36,20 +36,39 @@ pub fn handle_init(shell_name: &str, cmd_name: &str, cli_cmd: &mut Command) -> R
     };
     generate(completion_shell, cli_cmd, "wt", &mut completion_output);
 
-    // Filter out lines for hidden commands (completion, complete)
+    // Filter out lines for hidden commands (completion, complete) and hidden flags (--internal)
     let completion_str = String::from_utf8_lossy(&completion_output);
-    let filtered: Vec<&str> = completion_str
-        .lines()
-        .filter(|line| {
-            // Remove lines that complete the hidden commands
-            !(line.contains("\"completion\"")
-                || line.contains("\"complete\"")
-                || line.contains("-a \"completion\"")
-                || line.contains("-a \"complete\""))
-        })
-        .collect();
 
-    for line in filtered {
+    for line in completion_str.lines() {
+        // Skip lines that complete the hidden commands
+        if line.contains("\"completion\"")
+            || line.contains("\"complete\"")
+            || line.contains("-a \"completion\"")
+            || line.contains("-a \"complete\"")
+        {
+            continue;
+        }
+
+        // Skip lines that are specifically for completing --internal flag
+        // But DON'T skip opts= lines that just mention --internal in the list
+        if line.contains("-l internal") && !line.contains("opts=") {
+            // Fish: complete -c wt ... -l internal ...
+            continue;
+        }
+        if line.contains("'--internal[") {
+            // Zsh: '--internal[Use internal mode]'
+            continue;
+        }
+
+        // For bash opts= lines and zsh argument specs, remove --internal from the string
+        let line = if line.contains("--internal") {
+            // Bash: opts="-c -b --create --base --internal --help"
+            // Remove --internal and -internal from opts strings
+            line.replace(" --internal", "").replace("--internal ", "")
+        } else {
+            line.to_string()
+        };
+
         println!("{}", line);
     }
 

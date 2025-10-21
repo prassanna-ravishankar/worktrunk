@@ -132,7 +132,6 @@ _arguments "${_arguments_options[@]}" : \
 '--base=[Base branch to create from (only with --create)]:BASE:_default' \
 '-c[Create a new branch]' \
 '--create[Create a new branch]' \
-'--internal[Use internal mode (outputs directives for shell wrapper)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ':branch -- Branch name or worktree path:_default' \
@@ -140,7 +139,6 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (remove)
 _arguments "${_arguments_options[@]}" : \
-'--internal[Use internal mode (outputs directives for shell wrapper)]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0

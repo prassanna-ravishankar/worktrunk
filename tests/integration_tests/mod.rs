@@ -1,4 +1,5 @@
 pub mod completion;
+pub mod completion_validation;
 pub mod configure_shell;
 pub mod default_branch;
 pub mod directives;

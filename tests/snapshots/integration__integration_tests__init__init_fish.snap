@@ -65,7 +65,6 @@ end
 complete -c wt -n '__fish_seen_subcommand_from switch' -f -a '(__wt_complete)' -d 'Branch'
 complete -c wt -n '__fish_seen_subcommand_from push' -f -a '(__wt_complete)' -d 'Target branch'
 complete -c wt -n '__fish_seen_subcommand_from merge' -f -a '(__wt_complete)' -d 'Target branch'
-complete -c wt -l base -f -a '(__wt_complete)' -d 'Base branch'
 
 # Static completions (commands and flags)
 # Print an optspec for argparse to handle cmd's options that are independent of any subcommand.
@@ -121,9 +120,7 @@ json\t'JSON format'"
 complete -c wt -n "__fish_wt_using_subcommand list" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c wt -n "__fish_wt_using_subcommand switch" -s b -l base -d 'Base branch to create from (only with --create)' -r
 complete -c wt -n "__fish_wt_using_subcommand switch" -s c -l create -d 'Create a new branch'
-complete -c wt -n "__fish_wt_using_subcommand switch" -l internal -d 'Use internal mode (outputs directives for shell wrapper)'
 complete -c wt -n "__fish_wt_using_subcommand switch" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand remove" -l internal -d 'Use internal mode (outputs directives for shell wrapper)'
 complete -c wt -n "__fish_wt_using_subcommand remove" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand push" -l allow-merge-commits -d 'Allow pushing merge commits (non-linear history)'
 complete -c wt -n "__fish_wt_using_subcommand push" -s h -l help -d 'Print help'
