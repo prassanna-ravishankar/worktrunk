@@ -22,7 +22,6 @@ exit_code: 0
 ✅ [32mSwitched to worktree for [1m[32mfeature-z[0m[0m
 
 
-
 To enable automatic cd, run: wt configure-shell
 
 ----- stderr -----

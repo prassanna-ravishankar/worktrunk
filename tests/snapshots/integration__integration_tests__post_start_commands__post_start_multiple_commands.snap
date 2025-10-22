@@ -13,7 +13,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpwTEnNd
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp5RmQcF
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -25,6 +25,7 @@ First
 Second
 ✅ [32mCreated new worktree for [1m[32mfeature[0m[0m
   [2mPath: [REPO].feature[0m
+
 
 To enable automatic cd, run: wt configure-shell
 

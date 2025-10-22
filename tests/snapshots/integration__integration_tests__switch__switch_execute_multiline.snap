@@ -5,9 +5,9 @@ info:
   args:
     - switch
     - "--create"
-    - "--base"
-    - main
-    - feature-with-base
+    - multiline-test
+    - "--execute"
+    - "echo 'line1'\necho 'line2'\necho 'line3'"
   env:
     CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
@@ -22,10 +22,11 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-✅ [32mCreated new worktree for [1m[32mfeature-with-base[0m[0m
-  [2mPath: [REPO].feature-with-base[0m
+✅ [32mCreated new worktree for [1m[32mmultiline-test[0m[0m
+  [2mPath: [REPO].multiline-test[0m
 
-
-To enable automatic cd, run: wt configure-shell
+line1
+line2
+line3
 
 ----- stderr -----

@@ -22,6 +22,9 @@ info:
 success: false
 exit_code: 1
 ----- stdout -----
+✅ [32mCreated new worktree for [1m[32mfail-test[0m[0m
+  [2mPath: [REPO].fail-test[0m
+
 
 ----- stderr -----
 Command 'exit 1' failed with exit code 1

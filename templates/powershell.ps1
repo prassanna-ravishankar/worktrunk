@@ -2,7 +2,12 @@
 
 # Only initialize if wt is available
 if (Get-Command wt -ErrorAction SilentlyContinue) {
+    # Use WORKTRUNK_BIN if set, otherwise default to 'wt'
+    # This allows testing development builds: $env:WORKTRUNK_BIN = "./target/debug/wt"
+    $script:_WORKTRUNK_CMD = if ($env:WORKTRUNK_BIN) { $env:WORKTRUNK_BIN } else { "wt" }
+
     # Helper function to parse wt output and handle directives
+    # Directives are NUL-terminated to support multi-line commands
     function _wt_exec {
         param(
             [Parameter(ValueFromRemainingArguments=$true)]
@@ -10,18 +15,29 @@ if (Get-Command wt -ErrorAction SilentlyContinue) {
         )
 
         # Capture output and exit code
-        $output = & wt @Arguments 2>&1
+        $output = & $script:_WORKTRUNK_CMD @Arguments 2>&1 | Out-String
         $exitCode = $LASTEXITCODE
+        $execCmd = ""
 
-        # Parse output line by line
-        foreach ($line in $output) {
-            if ($line -match '^__WORKTRUNK_CD__(.+)$') {
-                # Extract path and change directory
-                Set-Location $matches[1]
-            } else {
-                # Regular output - write it
-                Write-Output $line
+        # Split output on NUL bytes, process each chunk
+        foreach ($chunk in ($output -split "`0")) {
+            if ($chunk -match '^__WORKTRUNK_CD__') {
+                # CD directive - extract path and change directory
+                $path = $chunk -replace '^__WORKTRUNK_CD__', ''
+                Set-Location $path
+            } elseif ($chunk -match '^__WORKTRUNK_EXEC__') {
+                # EXEC directive - extract command (may contain newlines)
+                $execCmd = $chunk -replace '^__WORKTRUNK_EXEC__', ''
+            } elseif ($chunk) {
+                # Regular output - write it (preserving newlines)
+                # TODO: Use Write-Output instead of Write-Host for redirectable output
+                Write-Host -NoNewline $chunk
             }
+        }
+
+        # Execute command if one was specified
+        if ($execCmd) {
+            Invoke-Expression $execCmd
         }
 
         # Return the exit code
@@ -36,7 +52,7 @@ if (Get-Command wt -ErrorAction SilentlyContinue) {
         )
 
         if ($Arguments.Count -eq 0) {
-            & wt
+            & $script:_WORKTRUNK_CMD
             return $LASTEXITCODE
         }
 
@@ -51,7 +67,7 @@ if (Get-Command wt -ErrorAction SilentlyContinue) {
             }
             default {
                 # All other commands pass through directly
-                & wt @Arguments
+                & $script:_WORKTRUNK_CMD @Arguments
                 return $LASTEXITCODE
             }
         }

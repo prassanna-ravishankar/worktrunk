@@ -97,6 +97,29 @@ fn test_switch_existing_worktree_internal() {
 }
 
 #[test]
+fn test_switch_internal_with_execute() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    #[cfg(not(target_os = "windows"))]
+    let execute_cmd = "echo 'line1'\necho 'line2'";
+    #[cfg(target_os = "windows")]
+    let execute_cmd = "echo line1 && echo line2";
+
+    snapshot_switch(
+        "switch_internal_with_execute",
+        &repo,
+        &[
+            "--create",
+            "--internal",
+            "exec-internal",
+            "--execute",
+            execute_cmd,
+        ],
+    );
+}
+
+#[test]
 fn test_switch_error_missing_worktree_directory() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
@@ -171,5 +194,23 @@ fn test_switch_execute_with_existing_worktree() {
         "switch_execute_existing",
         &repo,
         &["existing-exec", "--execute", create_file_cmd],
+    );
+}
+
+#[test]
+fn test_switch_execute_multiline() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Test multi-line command execution
+    #[cfg(target_os = "windows")]
+    let multiline_cmd = "echo line1\r\necho line2\r\necho line3";
+    #[cfg(not(target_os = "windows"))]
+    let multiline_cmd = "echo 'line1'\necho 'line2'\necho 'line3'";
+
+    snapshot_switch(
+        "switch_execute_multiline",
+        &repo,
+        &["--create", "multiline-test", "--execute", multiline_cmd],
     );
 }

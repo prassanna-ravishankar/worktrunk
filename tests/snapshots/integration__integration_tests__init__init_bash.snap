@@ -23,22 +23,52 @@ exit_code: 0
 
 # Only initialize if wt is available
 if command -v wt >/dev/null 2>&1; then
-    # Helper function to parse wt output and handle directives
-    _wt_exec() {
-        local output line exit_code
-        output="$(command wt "$@" 2>&1)"
-        exit_code=$?
+    # Use WORKTRUNK_BIN if set, otherwise default to 'wt'
+    # This allows testing development builds: export WORKTRUNK_BIN=./target/debug/wt
+    _WORKTRUNK_CMD="${WORKTRUNK_BIN:-wt}"
 
-        # Parse output line by line
-        while IFS= read -r line; do
-            if [[ "$line" == __WORKTRUNK_CD__* ]]; then
-                # Extract path and change directory
-                \cd "${line#__WORKTRUNK_CD__}"
+    # Helper function to parse wt output and handle directives
+    # Directives are NUL-terminated to support multi-line commands
+    _wt_exec() {
+        local exec_cmd="" chunk exit_code
+        local exit_code_file
+        exit_code_file=$(mktemp) || { echo "Failed to create temp file" >&2; return 1; }
+
+        # Parse output directly from wt (command substitution strips NUL bytes!)
+        # Use process substitution to preserve NUL bytes
+        # Write exit code to temp file since it can't be captured from process substitution
+        # The || [[ -n "$chunk" ]] handles non-NUL-terminated output (e.g., error messages)
+        while IFS= read -r -d '' chunk || [[ -n "$chunk" ]]; do
+            if [[ "$chunk" == __WORKTRUNK_CD__* ]]; then
+                # CD directive - extract path and change directory
+                local path="${chunk#__WORKTRUNK_CD__}"
+                \cd "$path"
+            elif [[ "$chunk" == __WORKTRUNK_EXEC__* ]]; then
+                # EXEC directive - extract command (may contain newlines)
+                exec_cmd="${chunk#__WORKTRUNK_EXEC__}"
             else
-                # Regular output - print it
-                echo "$line"
+                # Regular output - print it (preserving newlines)
+                printf '%s' "$chunk"
             fi
-        done <<< "$output"
+        done < <(command "$_WORKTRUNK_CMD" "$@" 2>&1; echo "$?" > "$exit_code_file")
+
+        # Read exit code from temp file
+        exit_code=$(cat "$exit_code_file" 2>/dev/null || echo 0)
+
+        # Cleanup temp file
+        \rm -f "$exit_code_file"
+
+        # Execute command if one was specified
+        # Security: Command is user-provided from -x flag; eval is intentional.
+        # NUL-termination allows multi-line commands.
+        # Exit code semantics: Returns wt's exit code, not the executed command's.
+        # This allows detecting wt failures (e.g., branch creation errors).
+        # The executed command runs for side effects; its failure is logged but doesn't affect exit code.
+        if [[ -n "$exec_cmd" ]]; then
+            if ! eval "$exec_cmd"; then
+                echo "Warning: Command execution failed (exit code $?)" >&2
+            fi
+        fi
 
         return $exit_code
     }
@@ -55,7 +85,7 @@ if command -v wt >/dev/null 2>&1; then
                 ;;
             *)
                 # All other commands pass through directly
-                command wt "$@"
+                command "$_WORKTRUNK_CMD" "$@"
                 ;;
         esac
     }
@@ -65,7 +95,7 @@ if command -v wt >/dev/null 2>&1; then
         local cur="${COMP_WORDS[COMP_CWORD]}"
 
         # Call wt complete with current command line
-        local completions=$(command wt complete "${COMP_WORDS[@]}" 2>/dev/null)
+        local completions=$(command "$_WORKTRUNK_CMD" complete "${COMP_WORDS[@]}" 2>/dev/null)
         COMPREPLY=($(compgen -W "$completions" -- "$cur"))
     }
 

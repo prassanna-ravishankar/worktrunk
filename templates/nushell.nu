@@ -2,21 +2,36 @@
 
 # Only initialize if wt is available
 if (which wt | is-not-empty) {
-    # Helper function to parse wt output and handle directives
-    export def --env _wt_exec [...args] {
-        let result = (do { ^wt ...$args } | complete)
+    # Use WORKTRUNK_BIN if set, otherwise default to 'wt'
+    # This allows testing development builds: $env.WORKTRUNK_BIN = ./target/debug/wt
+    let _WORKTRUNK_CMD = (if ($env.WORKTRUNK_BIN? | is-not-empty) { $env.WORKTRUNK_BIN } else { "wt" })
 
-        # Parse output line by line
-        let lines = ($result.stdout | lines)
-        for line in $lines {
-            if ($line | str starts-with "__WORKTRUNK_CD__") {
-                # Extract path and change directory
-                let path = ($line | str substring 16..)
+    # Helper function to parse wt output and handle directives
+    # Directives are NUL-terminated to support multi-line commands
+    export def --env _wt_exec [...args] {
+        let result = (do { ^$_WORKTRUNK_CMD ...$args } | complete)
+        mut exec_cmd = ""
+
+        # Split output on NUL bytes, process each chunk
+        for chunk in ($result.stdout | split row "\u{0000}") {
+            if ($chunk | str starts-with "__WORKTRUNK_CD__") {
+                # CD directive - extract path and change directory
+                # TODO: Use str replace instead of hard-coded offset (fragile if prefix changes)
+                let path = ($chunk | str substring 16..)
                 cd $path
-            } else {
-                # Regular output - print it
-                print $line
+            } else if ($chunk | str starts-with "__WORKTRUNK_EXEC__") {
+                # EXEC directive - extract command (may contain newlines)
+                # TODO: Use str replace instead of hard-coded offset (fragile if prefix changes)
+                $exec_cmd = ($chunk | str substring 18..)
+            } else if ($chunk | str length) > 0 {
+                # Regular output - print it (preserving newlines)
+                print -n $chunk
             }
+        }
+
+        # Execute command if one was specified
+        if ($exec_cmd != "") {
+            nu -c $exec_cmd
         }
 
         # Return the exit code
@@ -38,7 +53,7 @@ if (which wt | is-not-empty) {
             }
             _ => {
                 # All other commands pass through directly
-                ^wt ...$rest
+                ^$_WORKTRUNK_CMD ...$rest
             }
         }
     }
