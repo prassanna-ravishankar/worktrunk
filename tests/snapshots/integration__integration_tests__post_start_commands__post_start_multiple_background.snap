@@ -13,7 +13,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpF0Nd0x
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpdjrX9R
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -21,11 +21,13 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-Setup complete
 ✅ [32mCreated new worktree for [1m[32mfeature[0m[0m
   [2mPath: [REPO].feature[0m
 
 To enable automatic cd, run: wt configure-shell
 
 ----- stderr -----
-🔄 [36mExecuting: echo 'Setup complete'[0m
+🔄 [36mStarting (background): echo 'Task 1 running' > task1.txt[0m
+  [2m→ Logs: .git/wt-logs/post-start-[NAME]-[TIMESTAMP].log[0m
+🔄 [36mStarting (background): echo 'Task 2 running' > task2.txt[0m
+  [2m→ Logs: .git/wt-logs/post-start-[NAME]-[TIMESTAMP].log[0m

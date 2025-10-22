@@ -3,6 +3,7 @@ pub mod configure_shell;
 pub mod init;
 pub mod list;
 pub mod merge;
+pub mod process;
 pub mod worktree;
 
 pub use completion::{handle_complete, handle_completion};

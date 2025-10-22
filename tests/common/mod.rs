@@ -373,6 +373,13 @@ pub fn setup_snapshot_settings(repo: &TestRepo) -> insta::Settings {
     settings.add_filter(r"\b[0-9a-f]{7,40}\b", "[SHA]");
     settings.add_filter(r"\\", "/");
 
+    // Normalize timestamps in log filenames (format: YYYYMMDD-HHMMSS)
+    // The SHA filter runs first, so we match: post-start-NAME-[SHA]-HHMMSS.log
+    settings.add_filter(
+        r"post-start-[^-]+-\[SHA\]-\d{6}\.log",
+        "post-start-[NAME]-[TIMESTAMP].log",
+    );
+
     settings
 }
 

@@ -13,7 +13,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpQmUBXp
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpdoot33
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -21,11 +21,13 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
+Installing deps
+Running setup
 ✅ [32mCreated new worktree for [1m[32mfeature[0m[0m
   [2mPath: [REPO].feature[0m
 
 To enable automatic cd, run: wt configure-shell
 
 ----- stderr -----
-🔄 [36mExecuting: exit 1[0m
-🟡 [33mCommand failed: Command 'exit 1' failed with exit code 1[0m
+🔄 [36mExecuting (post-create): echo 'Installing deps'[0m
+🔄 [36mExecuting (post-create): echo 'Running setup'[0m

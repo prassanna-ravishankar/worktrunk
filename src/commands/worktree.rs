@@ -109,6 +109,7 @@ use worktrunk::styling::{
     AnstyleStyle, ERROR, ERROR_EMOJI, HINT, HINT_EMOJI, WARNING, WARNING_EMOJI, eprintln, println,
 };
 
+use crate::commands::process::spawn_detached;
 use crate::output::execute_command_in_worktree;
 
 /// Result of a worktree switch operation
@@ -217,8 +218,11 @@ pub fn handle_switch(
         .canonicalize()
         .unwrap_or_else(|_| worktree_path.clone());
 
-    // Execute post-start commands from project config
-    execute_post_start_commands(&canonical_path, &repo, config, branch, repo_name, force)?;
+    // Execute post-create commands (sequential, blocking)
+    execute_post_create_commands(&canonical_path, &repo, config, branch, repo_name, force)?;
+
+    // Spawn post-start commands (parallel, background)
+    spawn_post_start_commands(&canonical_path, &repo, config, branch, repo_name, force)?;
 
     Ok(SwitchResult::CreatedWorktree {
         path: canonical_path,
@@ -378,21 +382,12 @@ fn prompt_for_approval(command: &str, project_id: &str) -> io::Result<bool> {
     Ok(response == "y" || response == "yes")
 }
 
-/// Execute post-start commands from project config
-fn execute_post_start_commands(
-    worktree_path: &std::path::Path,
-    repo: &Repository,
-    config: &WorktrunkConfig,
-    branch: &str,
-    repo_name: &str,
-    force: bool,
-) -> Result<(), GitError> {
-    // Load project config
+/// Helper to load project config with error handling
+fn load_project_config(repo: &Repository) -> Result<Option<ProjectConfig>, GitError> {
     let repo_root = repo.repo_root()?;
     let config_path = repo_root.join(".config").join("wt.toml");
-    let project_config = match ProjectConfig::load(&repo_root) {
-        Ok(Some(cfg)) => cfg,
-        Ok(None) => return Ok(()), // No project config
+    match ProjectConfig::load(&repo_root) {
+        Ok(cfg) => Ok(cfg),
         Err(e) => {
             eprintln!(
                 "{WARNING_EMOJI} {WARNING}Failed to load project config from {}{WARNING:#}",
@@ -400,85 +395,195 @@ fn execute_post_start_commands(
             );
             eprintln!("{HINT_EMOJI} {HINT}Error details: {e}{HINT:#}");
             eprintln!(
-                "{HINT_EMOJI} {HINT}Skipping post-start commands. Check TOML syntax if file exists.{HINT:#}"
+                "{HINT_EMOJI} {HINT}Skipping commands. Check TOML syntax if file exists.{HINT:#}"
             );
-            return Ok(());
+            Ok(None)
         }
+    }
+}
+
+/// Convert CommandConfig to a vector of (name, command) pairs
+fn command_config_to_vec(config: &worktrunk::config::CommandConfig) -> Vec<(String, String)> {
+    use worktrunk::config::CommandConfig;
+    match config {
+        CommandConfig::Single(cmd) => vec![("default".to_string(), cmd.clone())],
+        CommandConfig::Multiple(cmds) => cmds
+            .iter()
+            .enumerate()
+            .map(|(i, cmd)| (format!("cmd-{}", i), cmd.clone()))
+            .collect(),
+        CommandConfig::Named(map) => {
+            let mut pairs: Vec<_> = map.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+            // Sort by name for deterministic iteration order
+            pairs.sort_by(|a, b| a.0.cmp(&b.0));
+            pairs
+        }
+    }
+}
+
+/// Execute post-create commands sequentially (blocking)
+fn execute_post_create_commands(
+    worktree_path: &std::path::Path,
+    repo: &Repository,
+    config: &WorktrunkConfig,
+    branch: &str,
+    repo_name: &str,
+    force: bool,
+) -> Result<(), GitError> {
+    let project_config = match load_project_config(repo)? {
+        Some(cfg) => cfg,
+        None => return Ok(()),
     };
 
-    if project_config.post_start_commands.is_empty() {
+    let Some(post_create_config) = &project_config.post_create_command else {
+        return Ok(());
+    };
+
+    let commands = command_config_to_vec(post_create_config);
+    if commands.is_empty() {
         return Ok(());
     }
 
-    // Get project identifier
     let project_id = repo.project_identifier()?;
+    let repo_root = repo.repo_root()?;
 
-    // Execute each command
-    for command in &project_config.post_start_commands {
-        // Check if command is already approved or if force flag is set
-        let approved = if force || config.is_command_approved(&project_id, command) {
-            true
-        } else {
-            // Prompt for approval
-            match prompt_for_approval(command, &project_id) {
-                Ok(true) => {
-                    // Reload config and save approval
-                    match WorktrunkConfig::load() {
-                        Ok(mut fresh_config) => {
-                            if let Err(e) =
-                                fresh_config.approve_command(project_id.clone(), command.clone())
-                            {
-                                eprintln!(
-                                    "{WARNING_EMOJI} {WARNING}Failed to save command approval: {e}{WARNING:#}"
-                                );
-                                eprintln!("You will be prompted again next time.");
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "{WARNING_EMOJI} {WARNING}Failed to reload config for saving approval: {e}{WARNING:#}"
-                            );
-                            eprintln!("You will be prompted again next time.");
-                        }
-                    }
-                    true
-                }
-                Ok(false) => {
-                    let dim = AnstyleStyle::new().dimmed();
-                    eprintln!("{dim}Skipping command: {command}{dim:#}");
-                    false
-                }
-                Err(e) => {
-                    eprintln!("{WARNING_EMOJI} {WARNING}Failed to read user input: {e}{WARNING:#}");
-                    false
-                }
-            }
-        };
+    // Execute each command sequentially
+    for (name, command) in commands {
+        if !check_and_approve_command(&project_id, &command, config, force)? {
+            let dim = AnstyleStyle::new().dimmed();
+            eprintln!("{dim}Skipping command: {command}{dim:#}");
+            continue;
+        }
 
-        if approved {
-            // Expand template variables in the command
-            let expanded_command =
-                expand_command_template(command, repo_name, branch, worktree_path, &repo_root);
+        let expanded_command =
+            expand_command_template(&command, repo_name, branch, worktree_path, &repo_root);
 
-            use anstyle::{AnsiColor, Color};
-            use std::io::Write;
-            let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-            eprintln!("🔄 {cyan}Executing: {expanded_command}{cyan:#}");
-            // Flush stderr to ensure message is displayed before command execution
-            let _ = std::io::stderr().flush();
-            if let Err(e) = execute_command_in_worktree(worktree_path, &expanded_command) {
-                eprintln!("{WARNING_EMOJI} {WARNING}Command failed: {e}{WARNING:#}");
-                // Continue with other commands even if one fails
-            }
+        use anstyle::{AnsiColor, Color};
+        use std::io::Write;
+        let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
+        eprintln!("🔄 {cyan}Executing (post-create): {expanded_command}{cyan:#}");
+        let _ = std::io::stderr().flush();
+
+        if let Err(e) = execute_command_in_worktree(worktree_path, &expanded_command) {
+            eprintln!("{WARNING_EMOJI} {WARNING}Command '{name}' failed: {e}{WARNING:#}");
+            // Continue with other commands even if one fails
         }
     }
 
-    // Flush all output before returning to ensure proper display order
     use std::io::Write;
     let _ = std::io::stdout().flush();
     let _ = std::io::stderr().flush();
 
     Ok(())
+}
+
+/// Spawn post-start commands in parallel as background processes (non-blocking)
+fn spawn_post_start_commands(
+    worktree_path: &std::path::Path,
+    repo: &Repository,
+    config: &WorktrunkConfig,
+    branch: &str,
+    repo_name: &str,
+    force: bool,
+) -> Result<(), GitError> {
+    let project_config = match load_project_config(repo)? {
+        Some(cfg) => cfg,
+        None => return Ok(()),
+    };
+
+    let Some(post_start_config) = &project_config.post_start_command else {
+        return Ok(());
+    };
+
+    let commands = command_config_to_vec(post_start_config);
+    if commands.is_empty() {
+        return Ok(());
+    }
+
+    let project_id = repo.project_identifier()?;
+    let repo_root = repo.repo_root()?;
+
+    // Spawn each command as a detached background process
+    for (name, command) in commands {
+        if !check_and_approve_command(&project_id, &command, config, force)? {
+            let dim = AnstyleStyle::new().dimmed();
+            eprintln!("{dim}Skipping command: {command}{dim:#}");
+            continue;
+        }
+
+        let expanded_command =
+            expand_command_template(&command, repo_name, branch, worktree_path, &repo_root);
+
+        use anstyle::{AnsiColor, Color};
+        use std::io::Write;
+        let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
+        eprintln!("🔄 {cyan}Starting (background): {expanded_command}{cyan:#}");
+        let _ = std::io::stderr().flush();
+
+        match spawn_detached(worktree_path, &expanded_command, &name) {
+            Ok(log_path) => {
+                let dim = AnstyleStyle::new().dimmed();
+                // Show relative path from worktree/.git/wt-logs/
+                let display_path = if let Some(filename) = log_path.file_name() {
+                    format!(".git/wt-logs/{}", filename.to_string_lossy())
+                } else {
+                    log_path.display().to_string()
+                };
+                eprintln!("  {dim}→ Logs: {}{dim:#}", display_path);
+            }
+            Err(e) => {
+                eprintln!("{WARNING_EMOJI} {WARNING}Failed to spawn '{name}': {e}{WARNING:#}");
+            }
+        }
+    }
+
+    use std::io::Write;
+    let _ = std::io::stdout().flush();
+    let _ = std::io::stderr().flush();
+
+    Ok(())
+}
+
+/// Check if command is approved and prompt if needed
+fn check_and_approve_command(
+    project_id: &str,
+    command: &str,
+    config: &WorktrunkConfig,
+    force: bool,
+) -> Result<bool, GitError> {
+    if force || config.is_command_approved(project_id, command) {
+        return Ok(true);
+    }
+
+    match prompt_for_approval(command, project_id) {
+        Ok(true) => {
+            // Reload config and save approval
+            match WorktrunkConfig::load() {
+                Ok(mut fresh_config) => {
+                    if let Err(e) =
+                        fresh_config.approve_command(project_id.to_string(), command.to_string())
+                    {
+                        eprintln!(
+                            "{WARNING_EMOJI} {WARNING}Failed to save command approval: {e}{WARNING:#}"
+                        );
+                        eprintln!("You will be prompted again next time.");
+                    }
+                }
+                Err(e) => {
+                    eprintln!(
+                        "{WARNING_EMOJI} {WARNING}Failed to reload config for saving approval: {e}{WARNING:#}"
+                    );
+                    eprintln!("You will be prompted again next time.");
+                }
+            }
+            Ok(true)
+        }
+        Ok(false) => Ok(false),
+        Err(e) => {
+            eprintln!("{WARNING_EMOJI} {WARNING}Failed to read user input: {e}{WARNING:#}");
+            Ok(false)
+        }
+    }
 }
 
 pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), GitError> {

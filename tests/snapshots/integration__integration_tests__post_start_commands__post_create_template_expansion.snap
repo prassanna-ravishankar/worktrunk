@@ -13,7 +13,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpxHBIw9
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpB5F27p
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -27,7 +27,7 @@ exit_code: 0
 To enable automatic cd, run: wt configure-shell
 
 ----- stderr -----
-🔄 [36mExecuting: echo 'Repo: main' > info.txt[0m
-🔄 [36mExecuting: echo 'Branch: feature-test' >> info.txt[0m
-🔄 [36mExecuting: echo 'Worktree: [REPO].feature-test' >> info.txt[0m
-🔄 [36mExecuting: echo 'Root: [REPO]' >> info.txt[0m
+🔄 [36mExecuting (post-create): echo 'Repo: main' > info.txt[0m
+🔄 [36mExecuting (post-create): echo 'Branch: feature-test' >> info.txt[0m
+🔄 [36mExecuting (post-create): echo 'Worktree: [REPO].feature-test' >> info.txt[0m
+🔄 [36mExecuting (post-create): echo 'Root: [REPO]' >> info.txt[0m

@@ -6,6 +6,7 @@ pub mod configure_shell;
 pub mod default_branch;
 pub mod directives;
 pub mod e2e_shell;
+pub mod e2e_shell_post_start;
 pub mod init;
 pub mod list;
 pub mod merge;

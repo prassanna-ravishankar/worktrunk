@@ -65,9 +65,27 @@ pub struct LlmConfig {
 /// Project-specific configuration (stored in .config/wt.toml within the project)
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ProjectConfig {
-    /// Commands to execute after creating a new worktree
-    #[serde(default, rename = "post-start-commands")]
-    pub post_start_commands: Vec<String>,
+    /// Commands to execute sequentially before worktree is ready (blocking)
+    /// Supports string (single command), array (sequential), or table (named, sequential)
+    #[serde(default, rename = "post-create-command")]
+    pub post_create_command: Option<CommandConfig>,
+
+    /// Commands to execute in parallel as background processes (non-blocking)
+    /// Supports string (single), array (parallel), or table (named, parallel)
+    #[serde(default, rename = "post-start-command")]
+    pub post_start_command: Option<CommandConfig>,
+}
+
+/// Configuration for commands - supports multiple formats
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum CommandConfig {
+    /// Single command as a string
+    Single(String),
+    /// Multiple commands as an array
+    Multiple(Vec<String>),
+    /// Named commands as a table (map)
+    Named(std::collections::HashMap<String, String>),
 }
 
 /// Approved command for automatic execution
@@ -395,29 +413,63 @@ mod tests {
     #[test]
     fn test_project_config_default() {
         let config = ProjectConfig::default();
-        assert!(config.post_start_commands.is_empty());
+        assert!(config.post_create_command.is_none());
+        assert!(config.post_start_command.is_none());
     }
 
     #[test]
-    fn test_project_config_serialization() {
-        let config = ProjectConfig {
-            post_start_commands: vec!["npm install".to_string(), "npm test".to_string()],
-        };
-        let toml = toml::to_string(&config).unwrap();
-        assert!(toml.contains("post-start-commands"));
-        assert!(toml.contains("npm install"));
-        assert!(toml.contains("npm test"));
+    fn test_command_config_single() {
+        let toml = r#"post-create-command = "npm install""#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        assert!(matches!(
+            config.post_create_command,
+            Some(CommandConfig::Single(_))
+        ));
     }
 
     #[test]
-    fn test_project_config_deserialization() {
+    fn test_command_config_multiple() {
+        let toml = r#"post-create-command = ["npm install", "npm test"]"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        match config.post_create_command {
+            Some(CommandConfig::Multiple(cmds)) => {
+                assert_eq!(cmds.len(), 2);
+                assert_eq!(cmds[0], "npm install");
+                assert_eq!(cmds[1], "npm test");
+            }
+            _ => panic!("Expected Multiple variant"),
+        }
+    }
+
+    #[test]
+    fn test_command_config_named() {
         let toml = r#"
-            post-start-commands = ["npm install", "npm test"]
+            [post-start-command]
+            server = "npm run dev"
+            watch = "npm run watch"
         "#;
         let config: ProjectConfig = toml::from_str(toml).unwrap();
-        assert_eq!(config.post_start_commands.len(), 2);
-        assert_eq!(config.post_start_commands[0], "npm install");
-        assert_eq!(config.post_start_commands[1], "npm test");
+        match config.post_start_command {
+            Some(CommandConfig::Named(cmds)) => {
+                assert_eq!(cmds.len(), 2);
+                assert_eq!(cmds.get("server"), Some(&"npm run dev".to_string()));
+                assert_eq!(cmds.get("watch"), Some(&"npm run watch".to_string()));
+            }
+            _ => panic!("Expected Named variant"),
+        }
+    }
+
+    #[test]
+    fn test_project_config_both_commands() {
+        let toml = r#"
+            post-create-command = ["npm install"]
+
+            [post-start-command]
+            server = "npm run dev"
+        "#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        assert!(config.post_create_command.is_some());
+        assert!(config.post_start_command.is_some());
     }
 
     #[test]
