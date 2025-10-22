@@ -486,17 +486,21 @@ fn expand_command_template(
 
 /// Prompt the user to approve a command for execution
 fn prompt_for_approval(command: &str, project_id: &str) -> io::Result<bool> {
+    use anstyle::Style;
+
+    // Extract project name from project_id (e.g., "worktrunk" from "github.com/max-sixty/worktrunk")
+    let project_name = project_id.split('/').last().unwrap_or(project_id);
+    let bold = Style::new().bold();
+    let dim = Style::new().dimmed();
+
     eprintln!();
-    eprintln!("{WARNING_EMOJI} {WARNING}Project '{project_id}' wants to run a command:{WARNING:#}");
+    eprintln!("{WARNING_EMOJI} {WARNING}Permission required to execute in worktree{WARNING:#}");
     eprintln!();
-    eprintln!("    {}", command);
+    eprintln!("{bold}{project_name}{bold:#} ({project_id}) wants to execute:");
     eprintln!();
-    eprintln!(
-        "{WARNING}WARNING: This will execute with FULL SHELL ACCESS in the new worktree.{WARNING:#}"
-    );
-    eprintln!("   The command can read/write files, access network, run arbitrary code.");
+    eprintln!("    {dim}{command}{dim:#}");
     eprintln!();
-    eprint!("Approve and remember for this project? [y/N] ");
+    eprint!("Allow and remember? [y/N] ");
     io::stderr().flush()?;
 
     let mut input = String::new();
