@@ -334,6 +334,7 @@ fn configure_fish_file(
 
 fn prompt_for_confirmation(results: &[ConfigureResult]) -> Result<bool, String> {
     use anstyle::{AnsiColor, Color, Style};
+    use worktrunk::styling::{HINT_EMOJI, eprint};
 
     let cyan = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
     let cyan_bold = cyan.bold();
@@ -365,7 +366,8 @@ fn prompt_for_confirmation(results: &[ConfigureResult]) -> Result<bool, String> 
     }
 
     eprintln!();
-    eprint!("💡 Proceed? [y/N] ");
+    let bold = Style::new().bold();
+    eprint!("{HINT_EMOJI} Proceed? {bold}[y/N]{bold:#} ");
     io::stderr().flush().map_err(|e| e.to_string())?;
 
     let mut input = String::new();

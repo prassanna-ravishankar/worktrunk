@@ -488,6 +488,7 @@ fn expand_command_template(
 /// Prompt the user to approve a command for execution
 fn prompt_for_approval(command: &str, project_id: &str) -> io::Result<bool> {
     use anstyle::Style;
+    use worktrunk::styling::{HINT_EMOJI, eprint};
 
     // Extract project name from project_id (e.g., "worktrunk" from "github.com/max-sixty/worktrunk")
     let project_name = project_id.split('/').next_back().unwrap_or(project_id);
@@ -501,7 +502,7 @@ fn prompt_for_approval(command: &str, project_id: &str) -> io::Result<bool> {
     eprintln!();
     eprintln!("    {dim}{command}{dim:#}");
     eprintln!();
-    eprint!("Allow and remember? [y/N] ");
+    eprint!("{HINT_EMOJI} Allow and remember? {bold}[y/N]{bold:#} ");
     io::stderr().flush()?;
 
     let mut input = String::new();
