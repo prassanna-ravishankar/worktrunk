@@ -139,6 +139,8 @@ _arguments "${_arguments_options[@]}" : \
 '--execute=[Execute command after switching]:EXECUTE:_default' \
 '-c[Create a new branch]' \
 '--create[Create a new branch]' \
+'-f[Skip confirmation prompt]' \
+'--force[Skip confirmation prompt]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ':branch -- Branch name or worktree path:_default' \

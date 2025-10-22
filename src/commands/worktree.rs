@@ -238,6 +238,7 @@ pub fn handle_switch(
     create: bool,
     base: Option<&str>,
     execute: Option<&str>,
+    force: bool,
     config: &WorktrunkConfig,
 ) -> Result<SwitchResult, GitError> {
     let repo = Repository::current();
@@ -315,7 +316,7 @@ pub fn handle_switch(
         .unwrap_or_else(|_| worktree_path.clone());
 
     // Execute post-start commands from project config (before -x command)
-    execute_post_start_commands(&canonical_path, &repo, config, branch, repo_name)?;
+    execute_post_start_commands(&canonical_path, &repo, config, branch, repo_name, force)?;
 
     // Execute -x command last (after setup is complete)
     if let Some(cmd) = execute {
@@ -489,7 +490,7 @@ fn prompt_for_approval(command: &str, project_id: &str) -> io::Result<bool> {
     use anstyle::Style;
 
     // Extract project name from project_id (e.g., "worktrunk" from "github.com/max-sixty/worktrunk")
-    let project_name = project_id.split('/').last().unwrap_or(project_id);
+    let project_name = project_id.split('/').next_back().unwrap_or(project_id);
     let bold = Style::new().bold();
     let dim = Style::new().dimmed();
 
@@ -517,6 +518,7 @@ fn execute_post_start_commands(
     config: &WorktrunkConfig,
     branch: &str,
     repo_name: &str,
+    force: bool,
 ) -> Result<(), GitError> {
     // Load project config
     let repo_root = repo.repo_root()?;
@@ -546,8 +548,8 @@ fn execute_post_start_commands(
 
     // Execute each command
     for command in &project_config.post_start_commands {
-        // Check if command is already approved
-        let approved = if config.is_command_approved(&project_id, command) {
+        // Check if command is already approved or if force flag is set
+        let approved = if force || config.is_command_approved(&project_id, command) {
             true
         } else {
             // Prompt for approval
@@ -775,10 +777,10 @@ fn parse_diff_shortstat(output: &str) -> DiffStats {
             if let Some(num_str) = part.split_whitespace().next() {
                 stats.insertions = num_str.parse().ok();
             }
-        } else if part.contains("deletion") {
-            if let Some(num_str) = part.split_whitespace().next() {
-                stats.deletions = num_str.parse().ok();
-            }
+        } else if part.contains("deletion")
+            && let Some(num_str) = part.split_whitespace().next()
+        {
+            stats.deletions = num_str.parse().ok();
         }
     }
 

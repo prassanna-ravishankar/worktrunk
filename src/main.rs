@@ -87,6 +87,10 @@ enum Commands {
         #[arg(short = 'x', long)]
         execute: Option<String>,
 
+        /// Skip confirmation prompt
+        #[arg(short = 'f', long)]
+        force: bool,
+
         /// Use internal mode (outputs directives for shell wrapper)
         #[arg(long, hide = true)]
         internal: bool,
@@ -207,6 +211,7 @@ fn main() {
             create,
             base,
             execute,
+            force,
             internal,
         } => WorktrunkConfig::load()
             .map_err(|e| GitError::CommandFailed(format!("Failed to load config: {}", e)))
@@ -216,6 +221,7 @@ fn main() {
                     create,
                     base.as_deref(),
                     execute.as_deref(),
+                    force,
                     &config,
                 )
                 .map(|result| {

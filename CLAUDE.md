@@ -179,3 +179,22 @@ println!("{}", line.render());
 ```
 
 See `src/commands/list/render.rs` for advanced usage.
+
+## Testing Guidelines
+
+### Testing with --execute Commands
+
+When testing commands that require confirmation (e.g., `wt switch --execute "..."`), use the `--force` flag to skip the interactive prompt:
+
+```bash
+# Good - skips confirmation prompt for testing
+wt switch --create feature --execute "echo test" --force
+
+# Bad - DO NOT pipe 'yes' to stdin, this crashes Claude
+echo yes | wt switch --create feature --execute "echo test"
+```
+
+**Why `--force`?**
+- Non-interactive testing requires automated approval
+- Piping input to stdin interferes with Claude's I/O handling
+- `--force` provides explicit, testable behavior

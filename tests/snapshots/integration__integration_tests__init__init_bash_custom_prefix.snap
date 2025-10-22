@@ -270,7 +270,7 @@ _wt() {
             return 0
             ;;
         wt__switch)
-            opts="-c -b -x -h --create --base --execute --help <BRANCH>"
+            opts="-c -b -x -f -h --create --base --execute --force --help <BRANCH>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
