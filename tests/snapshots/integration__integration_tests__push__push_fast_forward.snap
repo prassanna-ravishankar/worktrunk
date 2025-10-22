@@ -21,10 +21,10 @@ exit_code: 0
 ----- stdout -----
 🔄 [36mPushing 1 commit to [1m[36mmain[0m @ [SHA][0m
 
-* [SHA] (HEAD -> feature) Add test file
+* [33mc2e2bcc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Add test file
 
-[2mtest.txt | 1 +
- 1 file changed, 1 insertion(+)[0m
+test.txt | 1 [32m+[m
+ 1 file changed, 1 insertion(+)
 
 ✅ [32mPushed to [1m[32mmain[0m (1 commit, 1 file, [32m+1[0m)  [0m
 

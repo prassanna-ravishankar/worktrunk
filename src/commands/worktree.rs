@@ -684,9 +684,10 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
         );
         println!();
 
-        // Show the commit graph
+        // Show the commit graph with color
         let log_output = repo.run_command(&[
             "log",
+            "--color=always",
             "--graph",
             "--oneline",
             "--decorate",
@@ -695,13 +696,16 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
         println!("{}", log_output.trim());
         println!();
 
-        // Show diff statistics
-        let diff_stat =
-            repo.run_command(&["diff", "--stat", &format!("{}..HEAD", target_branch)])?;
+        // Show diff statistics with color
+        let diff_stat = repo.run_command(&[
+            "diff",
+            "--color=always",
+            "--stat",
+            &format!("{}..HEAD", target_branch),
+        ])?;
 
         if !diff_stat.trim().is_empty() {
-            let dim = AnstyleStyle::new().dimmed();
-            println!("{dim}{}{dim:#}", diff_stat.trim());
+            println!("{}", diff_stat.trim());
             println!();
         }
     }

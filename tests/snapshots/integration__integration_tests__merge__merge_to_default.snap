@@ -21,10 +21,10 @@ exit_code: 0
 🔄 [36mRebasing onto [1m[36mmain[0m...[0m
 🔄 [36mPushing 1 commit to [1m[36mmain[0m @ [SHA][0m
 
-* [SHA] (HEAD -> feature) Add feature file
+* [33m6551244[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Add feature file
 
-[2mfeature.txt | 1 +
- 1 file changed, 1 insertion(+)[0m
+feature.txt | 1 [32m+[m
+ 1 file changed, 1 insertion(+)
 
 ✅ [32mPushed to [1m[32mmain[0m (1 commit, 1 file, [32m+1[0m)  [0m
 🔄 [36mCleaning up worktree...[0m
@@ -34,9 +34,5 @@ exit_code: 0
 To enable automatic cd, run: wt configure-shell
 
 ✅ [32mMerge complete[0m
-
-  [2m1. Rebased [1m[32mfeature[0m onto [1m[32mmain[0m[0m
-  [2m2. Pushed to [1m[32mmain[0m[0m
-  [2m3. Cleaned up worktree[0m
 
 ----- stderr -----

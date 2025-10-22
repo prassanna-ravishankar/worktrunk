@@ -108,40 +108,14 @@ pub fn handle_merge(
 
 /// Print a comprehensive summary of the merge operation
 fn print_merge_summary(
-    from_branch: &str,
-    to_branch: &str,
-    squashed_count: Option<usize>,
-    cleaned_up: bool,
+    _from_branch: &str,
+    _to_branch: &str,
+    _squashed_count: Option<usize>,
+    _cleaned_up: bool,
 ) {
     let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-    let green_bold = green.bold();
-    let dim = AnstyleStyle::new().dimmed();
 
     println!("✅ {green}Merge complete{green:#}");
-    println!();
-
-    // Summary of operations
-    let mut operations = Vec::new();
-
-    if let Some(count) = squashed_count {
-        operations.push(format!("Squashed {count} commits into 1"));
-    }
-
-    operations.push(format!(
-        "Rebased {green_bold}{from_branch}{green_bold:#} onto {green_bold}{to_branch}{green_bold:#}"
-    ));
-
-    operations.push(format!("Pushed to {green_bold}{to_branch}{green_bold:#}"));
-
-    if cleaned_up {
-        operations.push("Cleaned up worktree".to_string());
-    } else {
-        operations.push("Preserved worktree".to_string());
-    }
-
-    for (i, op) in operations.iter().enumerate() {
-        println!("  {dim}{}. {}{dim:#}", i + 1, op);
-    }
 }
 
 fn handle_squash(target_branch: &str) -> Result<Option<usize>, GitError> {

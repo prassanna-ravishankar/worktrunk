@@ -26,11 +26,11 @@ exit_code: 0
 🔄 [36mRebasing onto [1m[36mmain[0m...[0m
 🔄 [36mPushing 1 commit to [1m[36mmain[0m @ [SHA][0m
 
-* [SHA] (HEAD -> feature) Squash commits from main
+* [33m091f0c5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Squash commits from main
 
-[2mfile1.txt | 1 +
- file2.txt | 1 +
- 2 files changed, 2 insertions(+)[0m
+file1.txt | 1 [32m+[m
+ file2.txt | 1 [32m+[m
+ 2 files changed, 2 insertions(+)
 
 ✅ [32mPushed to [1m[32mmain[0m (1 commit, 2 files, [32m+2[0m)  [0m
 🔄 [36mCleaning up worktree...[0m
@@ -40,11 +40,6 @@ exit_code: 0
 To enable automatic cd, run: wt configure-shell
 
 ✅ [32mMerge complete[0m
-
-  [2m1. Squashed 2 commits into 1[0m
-  [2m2. Rebased [1m[32mfeature[0m onto [1m[32mmain[0m[0m
-  [2m3. Pushed to [1m[32mmain[0m[0m
-  [2m4. Cleaned up worktree[0m
 
 ----- stderr -----
 🟡 [33mLLM generation failed, using deterministic message[0m
