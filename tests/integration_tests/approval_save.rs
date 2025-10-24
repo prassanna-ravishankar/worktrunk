@@ -188,8 +188,8 @@ fn test_force_flag_saves_approval() {
     initial_config.save_to(&config_path).unwrap();
 
     // Simulate the force flag approval flow
-    // In production, check_and_approve_command loads config, adds approval, and saves
-    // We use the test helper that simulates this flow
+    // In production, the approval batch helper loads config, records the command, and saves
+    // We use the test helper that mirrors this process
     WorktrunkConfig::test_save_approval_flow(
         "github.com/test/force-repo",
         "test --force command",

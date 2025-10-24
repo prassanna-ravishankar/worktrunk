@@ -379,9 +379,9 @@ impl WorktrunkConfig {
         command: &str,
         config_path: &std::path::Path,
     ) -> Result<(), ConfigError> {
-        // This simulates what check_and_approve_command does:
+        // This mirrors what the CLI does when batching approvals:
         // 1. Load config (in our case, from the test path)
-        // 2. Add approval
+        // 2. Add approval entry
         // 3. Save back
         let mut config = Self::default();
 

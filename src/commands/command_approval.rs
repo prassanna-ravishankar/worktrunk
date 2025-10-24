@@ -2,7 +2,7 @@
 //!
 //! Shared helpers for approving commands declared in project configuration.
 
-use worktrunk::config::{CommandConfig, WorktrunkConfig};
+use worktrunk::config::{ApprovedCommand, CommandConfig, WorktrunkConfig};
 use worktrunk::git::GitError;
 use worktrunk::styling::{
     AnstyleStyle, HINT_EMOJI, WARNING, WARNING_EMOJI, eprintln, format_with_gutter,
@@ -69,8 +69,19 @@ pub fn approve_command_batch(
     let mut fresh_config = WorktrunkConfig::load()
         .map_err(|e| GitError::CommandFailed(format!("Failed to reload config: {}", e)))?;
 
+    let mut updated = false;
     for (_, command) in needs_approval {
-        if let Err(e) = fresh_config.approve_command(project_id.to_string(), command.to_string()) {
+        if !fresh_config.is_command_approved(project_id, command) {
+            fresh_config.approved_commands.push(ApprovedCommand {
+                project: project_id.to_string(),
+                command: command.to_string(),
+            });
+            updated = true;
+        }
+    }
+
+    if updated {
+        if let Err(e) = fresh_config.save() {
             log_approval_warning("Failed to save command approval", e);
             eprintln!("You will be prompted again next time.");
         }
@@ -79,75 +90,8 @@ pub fn approve_command_batch(
     Ok(true)
 }
 
-/// Check whether a command is approved, prompting and persisting approval if needed.
-///
-/// Returns `Ok(true)` when the command may execute, `Ok(false)` when the user declined,
-/// and `Err` when an unexpected I/O failure occurs.
-///
-/// `from_project_config` should be `true` for commands sourced from `.config/wt.toml`,
-/// which we treat as trusted because they are checked into the repository.
-#[allow(dead_code)]
-pub fn check_and_approve_command(
-    project_id: &str,
-    command: &str,
-    config: &WorktrunkConfig,
-    force: bool,
-    from_project_config: bool,
-) -> Result<bool, GitError> {
-    if from_project_config || force || config.is_command_approved(project_id, command) {
-        return Ok(true);
-    }
-
-    match prompt_for_approval(command, project_id) {
-        Ok(true) => {
-            match WorktrunkConfig::load() {
-                Ok(mut fresh_config) => {
-                    if let Err(e) =
-                        fresh_config.approve_command(project_id.to_string(), command.to_string())
-                    {
-                        log_approval_warning("Failed to save command approval", e);
-                        eprintln!("You will be prompted again next time.");
-                    }
-                }
-                Err(e) => {
-                    log_approval_warning("Failed to reload config for saving approval", e);
-                    eprintln!("You will be prompted again next time.");
-                }
-            }
-            Ok(true)
-        }
-        Ok(false) => Ok(false),
-        Err(e) => {
-            log_approval_warning("Failed to read user input", e);
-            Ok(false)
-        }
-    }
-}
-
 fn log_approval_warning(message: &str, error: impl std::fmt::Display) {
     eprintln!("{WARNING_EMOJI} {WARNING}{message}: {error}{WARNING:#}");
-}
-
-#[allow(dead_code)]
-fn prompt_for_approval(command: &str, project_id: &str) -> std::io::Result<bool> {
-    use std::io::{self, Write};
-
-    let project_name = project_id.split('/').next_back().unwrap_or(project_id);
-    let bold = AnstyleStyle::new().bold();
-    let dim = AnstyleStyle::new().dimmed();
-
-    eprintln!();
-    eprintln!("{WARNING_EMOJI} {WARNING}Permission required to execute in worktree{WARNING:#}");
-    eprintln!();
-    eprintln!("{bold}{project_name}{bold:#} ({dim}{project_id}{dim:#}) wants to execute:");
-    eprint!("{}", format_with_gutter(command, "")); // Gutter at column 0
-    eprintln!();
-    eprint!("{HINT_EMOJI} Allow and remember? {bold}[y/N]{bold:#} ");
-    io::stderr().flush()?;
-
-    let mut response = String::new();
-    io::stdin().read_line(&mut response)?;
-    Ok(response.trim().eq_ignore_ascii_case("y"))
 }
 
 fn prompt_for_batch_approval(
