@@ -1,9 +1,8 @@
 //! Interactive output mode for human users
 
-use anstyle::{AnsiColor, Color};
 use std::io::{self, Write};
 use std::path::Path;
-use worktrunk::styling::{AnstyleStyle, println};
+use worktrunk::styling::{GREEN, println};
 
 /// Interactive output mode for human users
 ///
@@ -20,8 +19,7 @@ impl InteractiveOutput {
     }
 
     pub fn success(&mut self, message: String) -> io::Result<()> {
-        let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-        println!("✅ {green}{message}{green:#}");
+        println!("✅ {GREEN}{message}{GREEN:#}");
         Ok(())
     }
 

@@ -1,7 +1,9 @@
-use anstyle::{AnsiColor, Color};
 use worktrunk::config::{ProjectConfig, WorktrunkConfig, expand_command_template};
 use worktrunk::git::{GitError, Repository};
-use worktrunk::styling::{AnstyleStyle, ERROR, ERROR_EMOJI, HINT, HINT_EMOJI, eprintln, println};
+use worktrunk::styling::{
+    AnstyleStyle, CYAN, CYAN_BOLD, ERROR, ERROR_EMOJI, GREEN, GREEN_BOLD, HINT, HINT_EMOJI,
+    eprintln, println,
+};
 
 use super::command_approval::{approve_command_batch, command_config_to_vec};
 use super::worktree::handle_push;
@@ -32,10 +34,8 @@ pub fn handle_merge(
 
     // Check if already on target branch
     if current_branch == target_branch {
-        let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-        let green_bold = green.bold();
         println!(
-            "✅ {green}Already on {green_bold}{target_branch}{green_bold:#}, nothing to merge{green:#}"
+            "✅ {GREEN}Already on {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}, nothing to merge{GREEN:#}"
         );
         return Ok(());
     }
@@ -76,9 +76,7 @@ pub fn handle_merge(
 
     // Rebase onto target
     if !internal {
-        let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-        let cyan_bold = cyan.bold();
-        println!("🔄 {cyan}Rebasing onto {cyan_bold}{target_branch}{cyan_bold:#}...{cyan:#}");
+        println!("🔄 {CYAN}Rebasing onto {CYAN_BOLD}{target_branch}{CYAN_BOLD:#}...{CYAN:#}");
     }
 
     repo.run_command(&["rebase", &target_branch]).map_err(|e| {
@@ -91,8 +89,7 @@ pub fn handle_merge(
     // Finish worktree unless --keep was specified
     if !keep {
         if !internal {
-            let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-            println!("🔄 {cyan}Cleaning up worktree...{cyan:#}");
+            println!("🔄 {CYAN}Cleaning up worktree...{CYAN:#}");
         }
 
         // Get primary worktree path before finishing (while we can still run git commands)
@@ -108,10 +105,8 @@ pub fn handle_merge(
         let new_branch = primary_repo.current_branch()?;
         if new_branch.as_deref() != Some(&target_branch) {
             if !internal {
-                let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-                let cyan_bold = cyan.bold();
                 println!(
-                    "🔄 {cyan}Switching to {cyan_bold}{target_branch}{cyan_bold:#}...{cyan:#}"
+                    "🔄 {CYAN}Switching to {CYAN_BOLD}{target_branch}{CYAN_BOLD:#}...{CYAN:#}"
                 );
             }
             primary_repo
@@ -195,8 +190,7 @@ fn handle_commit_changes(
 ) -> Result<(), GitError> {
     let repo = Repository::current();
 
-    let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-    println!("🔄 {cyan}Committing uncommitted changes...{cyan:#}");
+    println!("🔄 {CYAN}Committing uncommitted changes...{CYAN:#}");
 
     // Stage all tracked changes (excludes untracked files)
     repo.run_command(&["add", "-u"])
@@ -219,8 +213,7 @@ fn handle_commit_changes(
     repo.run_command(&["commit", "-m", &commit_message])
         .map_err(|e| GitError::CommandFailed(format!("Failed to commit: {}", e)))?;
 
-    let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-    println!("✅ {green}Committed changes{green:#}");
+    println!("✅ {GREEN}Committed changes{GREEN:#}");
 
     Ok(())
 }
@@ -258,12 +251,9 @@ fn handle_squash(target_branch: &str, internal: bool) -> Result<Option<usize>, G
     if commit_count == 1 && !has_staged {
         // Single commit, no staged changes - nothing to do
         if !internal {
-            let cyan_bold = AnstyleStyle::new()
-                .fg_color(Some(Color::Ansi(AnsiColor::Cyan)))
-                .bold();
             let dim = AnstyleStyle::new().dimmed();
             println!(
-                "{dim}Only 1 commit since {cyan_bold}{target_branch}{cyan_bold:#} - no squashing needed{dim:#}"
+                "{dim}Only 1 commit since {CYAN_BOLD}{target_branch}{CYAN_BOLD:#} - no squashing needed{dim:#}"
             );
         }
         return Ok(None);
@@ -271,8 +261,7 @@ fn handle_squash(target_branch: &str, internal: bool) -> Result<Option<usize>, G
 
     // One or more commits (possibly with staged changes) - squash them
     if !internal {
-        let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-        println!("🔄 {cyan}Squashing {commit_count} commits into one...{cyan:#}");
+        println!("🔄 {CYAN}Squashing {commit_count} commits into one...{CYAN:#}");
     }
 
     // Get commit subjects for the squash message
@@ -297,8 +286,7 @@ fn handle_squash(target_branch: &str, internal: bool) -> Result<Option<usize>, G
         .map_err(|e| GitError::CommandFailed(format!("Failed to create squash commit: {}", e)))?;
 
     if !internal {
-        let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-        println!("✅ {green}Squashed {commit_count} commits into one{green:#}");
+        println!("✅ {GREEN}Squashed {commit_count} commits into one{GREEN:#}");
     }
     Ok(Some(commit_count))
 }
@@ -348,8 +336,7 @@ fn run_pre_merge_checks(
 
         if !internal {
             use std::io::Write;
-            let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-            println!("🔄 {cyan}Running pre-merge check '{name}'...{cyan:#}");
+            println!("🔄 {CYAN}Running pre-merge check '{name}'...{CYAN:#}");
             let _ = std::io::stdout().flush();
         }
 

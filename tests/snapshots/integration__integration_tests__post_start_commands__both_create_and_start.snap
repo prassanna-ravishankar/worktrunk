@@ -12,7 +12,8 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp0byrQU
+    GIT_EDITOR: ""
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpg0brXv
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -28,5 +29,6 @@ To enable automatic cd, run: wt configure-shell
 ----- stderr -----
 🔄 [36mExecuting (post-create):[0m
 [40m [0m echo 'Setup done' > setup.txt
-🔄 [36mStarting (background): sleep 0.5 && echo 'Server running' > server.txt[0m
+🔄 [36mStarting (background):[0m
+[40m [0m sleep 0.5 && echo 'Server running' > server.txt
   [2m→ Logs: .git/wt-logs/post-start-[NAME]-[TIMESTAMP].log[0m

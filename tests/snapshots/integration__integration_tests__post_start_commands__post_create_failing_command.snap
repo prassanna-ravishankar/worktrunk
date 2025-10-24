@@ -12,7 +12,8 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpd1DcV0
+    GIT_EDITOR: ""
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpgCT48M
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"

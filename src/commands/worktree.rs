@@ -104,8 +104,8 @@ use std::path::PathBuf;
 use worktrunk::config::{ProjectConfig, WorktrunkConfig, expand_command_template};
 use worktrunk::git::{GitError, Repository};
 use worktrunk::styling::{
-    AnstyleStyle, ERROR, ERROR_EMOJI, HINT, HINT_EMOJI, WARNING, WARNING_EMOJI, eprint, eprintln,
-    format_with_gutter, println,
+    ADDITION, AnstyleStyle, CYAN, CYAN_BOLD, DELETION, ERROR, ERROR_EMOJI, GREEN, GREEN_BOLD, HINT,
+    HINT_EMOJI, WARNING, WARNING_EMOJI, eprint, eprintln, format_with_gutter, println,
 };
 
 use crate::commands::command_approval::{approve_command_batch, command_config_to_vec};
@@ -372,10 +372,8 @@ fn execute_post_create_commands(
         let expanded_command =
             expand_command_template(&command, repo_name, branch, worktree_path, &repo_root, None);
 
-        use anstyle::{AnsiColor, Color};
         use std::io::Write;
-        let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-        eprintln!("🔄 {cyan}Executing (post-create):{cyan:#}");
+        eprintln!("🔄 {CYAN}Executing (post-create):{CYAN:#}");
         eprint!("{}", format_with_gutter(&expanded_command));
         let _ = std::io::stderr().flush();
 
@@ -434,10 +432,9 @@ fn spawn_post_start_commands(
         let expanded_command =
             expand_command_template(&command, repo_name, branch, worktree_path, &repo_root, None);
 
-        use anstyle::{AnsiColor, Color};
         use std::io::Write;
-        let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-        eprintln!("🔄 {cyan}Starting (background): {expanded_command}{cyan:#}");
+        eprintln!("🔄 {CYAN}Starting (background):{CYAN:#}");
+        eprint!("{}", format_with_gutter(&expanded_command));
         let _ = std::io::stderr().flush();
 
         match spawn_detached(worktree_path, &expanded_command, &name) {
@@ -469,8 +466,6 @@ pub fn handle_push(
     allow_merge_commits: bool,
     internal: bool,
 ) -> Result<(), GitError> {
-    use anstyle::{AnsiColor, Color};
-
     let repo = Repository::current();
 
     // Get target branch (default to default branch if not provided)
@@ -529,11 +524,8 @@ pub fn handle_push(
         let head_sha = repo.run_command(&["rev-parse", "--short", "HEAD"])?;
         let head_sha = head_sha.trim();
 
-        let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-        let cyan_bold = cyan.bold();
-
         println!(
-            "🔄 {cyan}Pushing {commit_count} {commit_text} to {cyan_bold}{target_branch}{cyan_bold:#} @ {head_sha}{cyan:#}"
+            "🔄 {CYAN}Pushing {commit_count} {commit_text} to {CYAN_BOLD}{target_branch}{CYAN_BOLD:#} @ {head_sha}{CYAN:#}"
         );
         println!();
 
@@ -576,9 +568,6 @@ pub fn handle_push(
 
     // Build success message with statistics
     if !internal {
-        let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-        let green_bold = green.bold();
-
         if commit_count > 0 {
             // Parse shortstat to extract files/insertions/deletions
             // Example: " 3 files changed, 45 insertions(+), 12 deletions(-)"
@@ -598,20 +587,18 @@ pub fn handle_push(
                 ));
             }
             if stats.insertions > 0 {
-                let addition = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-                summary_parts.push(format!("{addition}+{}{addition:#}", stats.insertions));
+                summary_parts.push(format!("{ADDITION}+{}{ADDITION:#}", stats.insertions));
             }
             if stats.deletions > 0 {
-                let deletion = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
-                summary_parts.push(format!("{deletion}-{}{deletion:#}", stats.deletions));
+                summary_parts.push(format!("{DELETION}-{}{DELETION:#}", stats.deletions));
             }
 
             println!(
-                "✅ {green}Pushed to {green_bold}{target_branch}{green_bold:#} ({})  {green:#}",
+                "✅ {GREEN}Pushed to {GREEN_BOLD}{target_branch}{GREEN_BOLD:#} ({})  {GREEN:#}",
                 summary_parts.join(", ")
             );
         } else {
-            println!("✅ {green}Pushed to {green_bold}{target_branch}{green_bold:#}{green:#}");
+            println!("✅ {GREEN}Pushed to {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN:#}");
         }
     }
 

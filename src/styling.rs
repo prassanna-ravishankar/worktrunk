@@ -59,8 +59,18 @@ pub const DELETION: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Re
 /// Cyan style - use as `{CYAN}text{CYAN:#}`
 pub const CYAN: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
 
+/// Cyan bold style - use as `{CYAN_BOLD}text{CYAN_BOLD:#}`
+pub const CYAN_BOLD: Style = Style::new()
+    .fg_color(Some(Color::Ansi(AnsiColor::Cyan)))
+    .bold();
+
 /// Green style - use as `{GREEN}text{GREEN:#}`
 pub const GREEN: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+
+/// Green bold style - use as `{GREEN_BOLD}text{GREEN_BOLD:#}`
+pub const GREEN_BOLD: Style = Style::new()
+    .fg_color(Some(Color::Ansi(AnsiColor::Green)))
+    .bold();
 
 // ============================================================================
 // Message Emojis

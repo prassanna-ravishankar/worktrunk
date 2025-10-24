@@ -1,8 +1,7 @@
-use anstyle::{AnsiColor, Color};
 use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
 use std::path::PathBuf;
 use worktrunk::git::{GitError, Repository};
-use worktrunk::styling::{AnstyleStyle, HINT, HINT_EMOJI, format_toml, print, println};
+use worktrunk::styling::{AnstyleStyle, GREEN, HINT, HINT_EMOJI, format_toml, print, println};
 
 /// Example configuration file content
 const CONFIG_EXAMPLE: &str = include_str!("../../config.example.toml");
@@ -37,9 +36,8 @@ pub fn handle_config_init() -> Result<(), GitError> {
         .map_err(|e| GitError::CommandFailed(format!("Failed to write config file: {}", e)))?;
 
     // Success message
-    let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
     let bold = AnstyleStyle::new().bold();
-    println!("✅ {green}Created config file{green:#}");
+    println!("✅ {GREEN}Created config file{GREEN:#}");
     println!("   {bold}{}{bold:#}", config_path.display());
     println!();
     println!(
