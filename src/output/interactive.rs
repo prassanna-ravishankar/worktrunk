@@ -2,7 +2,7 @@
 
 use std::io::{self, Write};
 use std::path::Path;
-use worktrunk::styling::{GREEN, SUCCESS_EMOJI, println};
+use worktrunk::styling::{GREEN, SUCCESS_EMOJI, println, stdout, stderr};
 
 /// Interactive output mode for human users
 ///
@@ -20,19 +20,20 @@ impl InteractiveOutput {
 
     pub fn success(&mut self, message: String) -> io::Result<()> {
         println!("{SUCCESS_EMOJI} {GREEN}{message}{GREEN:#}");
+        stdout().flush()?;
         Ok(())
     }
 
     pub fn progress(&mut self, message: String) -> io::Result<()> {
         println!("{message}");
-        io::stdout().flush()?;
+        stdout().flush()?;
         Ok(())
     }
 
     pub fn hint(&mut self, message: String) -> io::Result<()> {
         // Hints are suggestions for interactive users (like "run wt configure-shell")
         println!("{message}");
-        io::stdout().flush()?;
+        stdout().flush()?;
         Ok(())
     }
 
@@ -77,8 +78,8 @@ impl InteractiveOutput {
     }
 
     pub fn flush(&mut self) -> io::Result<()> {
-        io::stdout().flush()?;
-        io::stderr().flush()?;
+        stdout().flush()?;
+        stderr().flush()?;
         Ok(())
     }
 

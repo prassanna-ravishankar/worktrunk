@@ -121,22 +121,57 @@ pub fn execute_command_in_worktree(
     worktree_path: &std::path::Path,
     command: &str,
 ) -> Result<(), GitError> {
+    use std::io::{BufRead, BufReader, Write};
     use std::process::{Command, Stdio};
+    use worktrunk::styling::println;
 
-    // Redirect child's stdout to parent's stderr so all bytes go to a single FD.
-    // This prevents terminal reordering between stdout and stderr writes.
-    // Brace group ensures the redirection applies to the whole command (pipes, &&, etc.)
-    // TODO: Support Windows with appropriate redirect syntax for cmd.exe: ( command ) 1>&2
-    let wrapped = format!("{{ {}; }} 1>&2", command);
+    // Flush stdout before executing command to ensure all our messages appear
+    // before the child process output
+    super::flush()?;
 
-    let status = Command::new("sh")
+    // Spawn the command, capturing stdout and stderr so we can write them in order
+    let mut child = Command::new("sh")
         .arg("-c")
-        .arg(&wrapped)
+        .arg(command)
         .current_dir(worktree_path)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .git_context("Failed to execute command")?;
+
+    // Read and immediately write output line-by-line to maintain interleaving
+    // Both child stdout and stderr go to our stdout (not stderr as before)
+    // This ensures all output goes to the same FD and appears in order
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    // Use threads to read both streams concurrently
+    let stdout_thread = std::thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                println!("{}", line);
+                let _ = worktrunk::styling::stdout().flush();
+            }
+        }
+    });
+
+    let stderr_thread = std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                println!("{}", line);
+                let _ = worktrunk::styling::stdout().flush();
+            }
+        }
+    });
+
+    // Wait for output threads to complete
+    let _ = stdout_thread.join();
+    let _ = stderr_thread.join();
+
+    // Wait for command to complete
+    let status = child.wait().git_context("Failed to wait for command")?;
 
     if !status.success() {
         return Err(GitError::CommandFailed(format!(
@@ -144,6 +179,9 @@ pub fn execute_command_in_worktree(
             status
         )));
     }
+
+    // Flush to ensure all output appears before we continue
+    super::flush()?;
 
     // Terminate output (adds NUL in directive mode, no-op in interactive)
     super::terminate_output()?;
