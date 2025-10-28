@@ -2,4 +2,4 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: normalized.as_ref()
 ---
-Removed worktree for [1mto-remove[0m
+Created new worktree for [1mbash-test[0m at [TMPDIR]/test-repo.bash-test

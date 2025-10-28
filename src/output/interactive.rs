@@ -29,6 +29,13 @@ impl InteractiveOutput {
         Ok(())
     }
 
+    pub fn hint(&mut self, message: String) -> io::Result<()> {
+        // Hints are suggestions for interactive users (like "run wt configure-shell")
+        println!("{message}");
+        io::stdout().flush()?;
+        Ok(())
+    }
+
     pub fn change_directory(&mut self, path: &Path) -> io::Result<()> {
         // In interactive mode, we can't actually change directory
         // Just store the target for execute commands

@@ -2,7 +2,7 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: normalized.as_ref()
 ---
-Created new worktree for fish-multiline at [TMPDIR]/test-repo.fish-multiline
+Created new worktree for [1mfish-multiline[0m at [TMPDIR]/test-repo.fish-multiline
 line 1
 line 2
 line 3

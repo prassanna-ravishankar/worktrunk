@@ -68,16 +68,30 @@ pub fn success(message: impl Into<String>) -> io::Result<()> {
     })
 }
 
-/// Emit a progress message (only shown in interactive mode)
+/// Emit a progress message
 ///
 /// Progress messages are intermediate status updates like "🔄 Cleaning up worktree..."
-/// They are shown to human users but suppressed in directive mode (shell integration).
+/// They are shown to users in both modes (users need to see what's happening).
 pub fn progress(message: impl Into<String>) -> io::Result<()> {
     OUTPUT_CONTEXT.with(|ctx| {
         let msg = message.into();
         match &mut *ctx.borrow_mut() {
             OutputHandler::Interactive(i) => i.progress(msg),
             OutputHandler::Directive(d) => d.progress(msg),
+        }
+    })
+}
+
+/// Emit a hint message (only shown in interactive mode)
+///
+/// Hints are suggestions for interactive users, like "To enable automatic cd, run: wt configure-shell"
+/// They are shown in interactive mode but suppressed in directive mode (where they don't apply).
+pub fn hint(message: impl Into<String>) -> io::Result<()> {
+    OUTPUT_CONTEXT.with(|ctx| {
+        let msg = message.into();
+        match &mut *ctx.borrow_mut() {
+            OutputHandler::Interactive(i) => i.hint(msg),
+            OutputHandler::Directive(d) => d.hint(msg),
         }
     })
 }

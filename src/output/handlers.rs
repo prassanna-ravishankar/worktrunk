@@ -78,8 +78,9 @@ pub fn handle_switch_output(
     if let Some(cmd) = execute {
         super::execute(cmd)?;
     } else {
-        // No execute command: show shell integration hint (only in interactive mode)
-        super::progress(format!("\n{}", shell_integration_hint()))?;
+        // No execute command: show shell integration hint
+        // (suppressed in directive mode since user already has integration)
+        super::hint(format!("\n{}", shell_integration_hint()))?;
     }
 
     // Flush output (important for directive mode)

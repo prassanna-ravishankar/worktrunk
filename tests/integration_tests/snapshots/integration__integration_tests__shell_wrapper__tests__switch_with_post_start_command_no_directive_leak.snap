@@ -2,9 +2,7 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: normalized.as_ref()
 ---
-🔄 Starting (background):
-  echo 'test command executed'
+🔄 [36mStarting (background):[0m
+[40m [0m echo 'test command executed'
 
-Created new worktree for feature-with-hooks at [TMPDIR]/test-repo.feature-with-hooks
-
-To enable automatic cd, run: wt configure-shell
+Created new worktree for [1mfeature-with-hooks[0m at [TMPDIR]/test-repo.feature-with-hooks

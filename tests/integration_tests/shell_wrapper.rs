@@ -372,6 +372,36 @@ command = "echo 'test command executed'"
     }
 
     #[test]
+    fn test_bash_shell_integration_hint_suppressed() {
+        let repo = TestRepo::new();
+        repo.commit("Initial commit");
+
+        // When running through the shell wrapper, the "To enable automatic cd" hint
+        // should NOT appear because the user already has shell integration
+        let output = exec_through_bash_wrapper(&repo, "switch", &["--create", "bash-test"]);
+
+        // Critical: shell integration hint must be suppressed in directive mode
+        assert!(
+            !output.contains("To enable automatic cd"),
+            "Shell integration hint should not appear when running through wrapper. Output:\n{}",
+            output
+        );
+
+        // Should still have the success message
+        assert!(
+            output.contains("Created new worktree"),
+            "Success message missing"
+        );
+
+        // Normalize paths in output for snapshot testing
+        let normalized = regex::Regex::new(r"/private/var/folders/[^/]+/[^/]+/T/\.tmp[^/]+")
+            .unwrap()
+            .replace_all(&output, "[TMPDIR]");
+
+        assert_snapshot!(normalized.as_ref());
+    }
+
+    #[test]
     fn test_wrapper_preserves_progress_messages() {
         let repo = TestRepo::new();
         repo.commit("Initial commit");
@@ -505,6 +535,36 @@ command = "echo 'fish background task'"
         assert!(
             output.contains("fish background task"),
             "Background command content missing from output"
+        );
+
+        // Normalize paths in output for snapshot testing
+        let normalized = regex::Regex::new(r"/private/var/folders/[^/]+/[^/]+/T/\.tmp[^/]+")
+            .unwrap()
+            .replace_all(&output, "[TMPDIR]");
+
+        assert_snapshot!(normalized.as_ref());
+    }
+
+    #[test]
+    fn test_fish_shell_integration_hint_suppressed() {
+        let repo = TestRepo::new();
+        repo.commit("Initial commit");
+
+        // When running through the shell wrapper, the "To enable automatic cd" hint
+        // should NOT appear because the user already has shell integration
+        let output = exec_through_fish_wrapper(&repo, "switch", &["--create", "fish-test"]);
+
+        // Critical: shell integration hint must be suppressed in directive mode
+        assert!(
+            !output.contains("To enable automatic cd"),
+            "Shell integration hint should not appear when running through wrapper. Output:\n{}",
+            output
+        );
+
+        // Should still have the success message
+        assert!(
+            output.contains("Created new worktree"),
+            "Success message missing"
         );
 
         // Normalize paths in output for snapshot testing

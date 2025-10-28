@@ -1,6 +1,5 @@
 //! Directive output mode for shell integration
 
-use anstream::adapter::strip_str;
 use std::io::{self, Write};
 use std::path::Path;
 
@@ -15,17 +14,22 @@ impl DirectiveOutput {
     }
 
     pub fn success(&mut self, message: String) -> io::Result<()> {
-        let plain = strip_str(&message).to_string();
-        write!(io::stdout(), "{}\0", plain)?;
+        // Don't strip colors - users see this output and need styling
+        write!(io::stdout(), "{}\0", message)?;
         io::stdout().flush()
     }
 
     pub fn progress(&mut self, message: String) -> io::Result<()> {
         // Progress messages are for humans - output them just like success messages
-        // The shell wrapper will display these to users
-        let plain = strip_str(&message).to_string();
-        write!(io::stdout(), "{}\0", plain)?;
+        // The shell wrapper will display these to users with colors preserved
+        write!(io::stdout(), "{}\0", message)?;
         io::stdout().flush()
+    }
+
+    pub fn hint(&mut self, _message: String) -> io::Result<()> {
+        // Hints are only for interactive mode - suppress in directive mode
+        // When users run through shell wrapper, they already have integration
+        Ok(())
     }
 
     pub fn change_directory(&mut self, path: &Path) -> io::Result<()> {
@@ -96,9 +100,9 @@ mod tests {
         assert_eq!(nul_count, 3, "Should have exactly 3 NUL terminators");
     }
 
-    /// Test that anstyle formatting is stripped from success messages
+    /// Test that anstyle formatting is preserved in directive output
     #[test]
-    fn test_success_strips_anstyle() {
+    fn test_success_preserves_anstyle() {
         use anstyle::{AnsiColor, Color, Style};
 
         let bold = Style::new().bold();
@@ -107,12 +111,13 @@ mod tests {
         // Create a styled message
         let styled = format!("{cyan}Styled{cyan:#} {bold}message{bold:#}");
 
-        // The strip_str function should remove the ANSI codes
-        let plain = strip_str(&styled).to_string();
-        assert_eq!(plain, "Styled message");
+        // The styled message should contain ANSI escape codes
         assert!(
-            !plain.contains('\x1b'),
-            "Should not contain ANSI escape codes"
+            styled.contains('\x1b'),
+            "Styled message should contain ANSI escape codes"
         );
+
+        // Directive mode preserves styling for users viewing through shell wrapper
+        // (We're not testing actual output here, just documenting the behavior)
     }
 }

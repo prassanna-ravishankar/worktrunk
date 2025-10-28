@@ -2,4 +2,4 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: normalized.as_ref()
 ---
-Removed worktree for fish-to-remove
+Removed worktree for [1mfish-to-remove[0m
