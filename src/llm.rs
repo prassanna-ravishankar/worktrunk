@@ -7,21 +7,21 @@ pub fn generate_commit_message(
     commit_generation_config: &CommitGenerationConfig,
 ) -> Result<String, GitError> {
     // Check if commit generation is configured (non-empty command)
-    if let Some(ref command) = commit_generation_config.command {
-        if !command.trim().is_empty() {
-            // Commit generation is explicitly configured - fail if it doesn't work
-            return try_generate_commit_message(
-                custom_instruction,
-                command,
-                &commit_generation_config.args,
-            )
-            .map_err(|e| {
-                GitError::CommandFailed(format!(
-                    "Commit generation command '{}' failed: {}",
-                    command, e
-                ))
-            });
-        }
+    if let Some(ref command) = commit_generation_config.command
+        && !command.trim().is_empty()
+    {
+        // Commit generation is explicitly configured - fail if it doesn't work
+        return try_generate_commit_message(
+            custom_instruction,
+            command,
+            &commit_generation_config.args,
+        )
+        .map_err(|e| {
+            GitError::CommandFailed(format!(
+                "Commit generation command '{}' failed: {}",
+                command, e
+            ))
+        });
     }
 
     // Fallback: simple deterministic commit message (only when not configured)
@@ -146,16 +146,16 @@ pub fn generate_squash_message(
     commit_generation_config: &CommitGenerationConfig,
 ) -> Result<String, Box<dyn std::error::Error>> {
     // Check if commit generation is configured (non-empty command)
-    if let Some(ref command) = commit_generation_config.command {
-        if !command.trim().is_empty() {
-            // Commit generation is explicitly configured - fail if it doesn't work
-            return try_generate_llm_message(
-                target_branch,
-                subjects,
-                command,
-                &commit_generation_config.args,
-            );
-        }
+    if let Some(ref command) = commit_generation_config.command
+        && !command.trim().is_empty()
+    {
+        // Commit generation is explicitly configured - fail if it doesn't work
+        return try_generate_llm_message(
+            target_branch,
+            subjects,
+            command,
+            &commit_generation_config.args,
+        );
     }
 
     // Fallback: deterministic commit message (only when not configured)

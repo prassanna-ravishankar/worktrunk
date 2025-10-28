@@ -76,19 +76,19 @@ where
 
     let mut prepared = Vec::new();
 
-    if !auto_trust {
-        if !approve_command_batch(
+    if !auto_trust
+        && !approve_command_batch(
             &commands,
             &project_id,
             ctx.config,
             ctx.force,
             approval_context,
-        )? {
-            for (name, command) in &commands {
-                on_skip(name, command);
-            }
-            return Err(GitError::CommandFailed(String::new()));
+        )?
+    {
+        for (name, command) in &commands {
+            on_skip(name, command);
         }
+        return Err(GitError::CommandFailed(String::new()));
     }
 
     for (name, command) in commands {

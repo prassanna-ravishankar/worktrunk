@@ -37,24 +37,16 @@ impl InteractiveOutput {
 
     pub fn execute(&mut self, command: String) -> io::Result<()> {
         // Execute command in the target directory
-        let exec_dir = self
-            .target_dir
-            .as_ref()
-            .map(|p| p.as_path())
-            .unwrap_or_else(|| Path::new("."));
+        let exec_dir = self.target_dir.as_deref().unwrap_or_else(|| Path::new("."));
 
         crate::output::execute_command_in_worktree(exec_dir, &command)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+            .map_err(|e| io::Error::other(e.to_string()))
     }
 
     pub fn flush(&mut self) -> io::Result<()> {
         io::stdout().flush()?;
         io::stderr().flush()?;
         Ok(())
-    }
-
-    pub fn is_interactive(&self) -> bool {
-        true
     }
 }
 

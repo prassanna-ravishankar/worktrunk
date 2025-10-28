@@ -54,10 +54,6 @@ impl DirectiveOutput {
         io::stdout().flush()?;
         io::stderr().flush()
     }
-
-    pub fn is_interactive(&self) -> bool {
-        false
-    }
 }
 
 impl Default for DirectiveOutput {

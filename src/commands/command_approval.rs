@@ -80,11 +80,9 @@ pub fn approve_command_batch(
         }
     }
 
-    if updated {
-        if let Err(e) = fresh_config.save() {
-            log_approval_warning("Failed to save command approval", e);
-            eprintln!("You will be prompted again next time.");
-        }
+    if updated && let Err(e) = fresh_config.save() {
+        log_approval_warning("Failed to save command approval", e);
+        eprintln!("You will be prompted again next time.");
     }
 
     Ok(true)

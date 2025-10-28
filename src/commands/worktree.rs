@@ -105,7 +105,7 @@ use worktrunk::config::{ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, Repository};
 use worktrunk::styling::{
     ADDITION, AnstyleStyle, CYAN, CYAN_BOLD, DELETION, ERROR, ERROR_EMOJI, GREEN, GREEN_BOLD, HINT,
-    HINT_EMOJI, WARNING, WARNING_EMOJI, eprint, eprintln, format_with_gutter, println,
+    HINT_EMOJI, WARNING, WARNING_EMOJI, eprint, eprintln, format_with_gutter,
 };
 
 use super::command_executor::{CommandContext, prepare_project_commands};

@@ -138,7 +138,7 @@ fn format_merge_summary(
     let bold = AnstyleStyle::new().bold();
     let dim = AnstyleStyle::new().dimmed();
 
-    let mut output = format!("Merge complete\n\n");
+    let mut output = "Merge complete\n\n".to_string();
 
     // Show what was merged
     output.push_str(&format!(
