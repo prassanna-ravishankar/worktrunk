@@ -109,32 +109,34 @@ pub fn handle_remove_output(result: &RemoveResult) -> Result<(), GitError> {
 }
 
 /// Execute a command in a worktree directory
+///
+/// Uses Stdio::inherit() for real-time streaming output in both modes.
+/// Calls terminate_output() after completion to handle mode-specific cleanup
+/// (NUL terminator in directive mode, no-op in interactive mode).
 pub fn execute_command_in_worktree(
     worktree_path: &std::path::Path,
     command: &str,
 ) -> Result<(), GitError> {
-    use std::process::Command;
+    use std::process::{Command, Stdio};
 
-    let output = Command::new("sh")
+    let status = Command::new("sh")
         .arg("-c")
         .arg(command)
         .current_dir(worktree_path)
-        .output()
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
         .map_err(|e| GitError::CommandFailed(format!("Failed to execute command: {}", e)))?;
 
-    if !output.status.success() {
+    if !status.success() {
         return Err(GitError::CommandFailed(format!(
             "Command failed with exit code: {}",
-            output.status
+            status
         )));
     }
 
-    // Print command output through the framework
-    super::command_output(
-        &String::from_utf8_lossy(&output.stdout),
-        &String::from_utf8_lossy(&output.stderr),
-    )
-    .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+    // Terminate output (adds NUL in directive mode, no-op in interactive)
+    super::terminate_output().map_err(|e| GitError::CommandFailed(e.to_string()))?;
 
     Ok(())
 }

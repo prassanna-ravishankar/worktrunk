@@ -112,15 +112,14 @@ pub fn flush() -> io::Result<()> {
     })
 }
 
-/// Emit command output (stdout/stderr from external processes)
+/// Terminate command output
 ///
-/// In directive mode, ensures output is NUL-terminated so subsequent directives
-/// are in separate chunks for the shell wrapper to parse correctly.
-/// In interactive mode, prints output normally with colors.
-pub fn command_output(stdout: &str, stderr: &str) -> io::Result<()> {
+/// In directive mode, writes a NUL terminator to separate command output from
+/// subsequent directives. In interactive mode, this is a no-op.
+pub fn terminate_output() -> io::Result<()> {
     OUTPUT_CONTEXT.with(|ctx| match &mut *ctx.borrow_mut() {
-        OutputHandler::Interactive(i) => i.command_output(stdout, stderr),
-        OutputHandler::Directive(d) => d.command_output(stdout, stderr),
+        OutputHandler::Interactive(i) => i.terminate_output(),
+        OutputHandler::Directive(d) => d.terminate_output(),
     })
 }
 

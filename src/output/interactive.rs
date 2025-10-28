@@ -73,14 +73,8 @@ impl InteractiveOutput {
         Ok(())
     }
 
-    pub fn command_output(&mut self, stdout: &str, stderr: &str) -> io::Result<()> {
-        if !stdout.is_empty() {
-            println!("{}", stdout.trim_end());
-        }
-        if !stderr.is_empty() {
-            use worktrunk::styling::eprintln;
-            eprintln!("{}", stderr.trim_end());
-        }
+    pub fn terminate_output(&mut self) -> io::Result<()> {
+        // No-op in interactive mode - no NUL terminators needed
         Ok(())
     }
 }

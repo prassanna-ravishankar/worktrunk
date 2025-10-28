@@ -55,18 +55,10 @@ impl DirectiveOutput {
         io::stderr().flush()
     }
 
-    pub fn command_output(&mut self, stdout: &str, stderr: &str) -> io::Result<()> {
-        // Always write NUL to stderr first, even if empty
-        // This ensures subsequent directives are in separate chunks
-        write!(io::stderr(), "{}\0", stderr.trim_end())?;
-        io::stderr().flush()?;
-
-        // Always write NUL to stdout, even if empty
-        // This maintains consistent chunk boundaries for the shell wrapper
-        write!(io::stdout(), "{}\0", stdout.trim_end())?;
-        io::stdout().flush()?;
-
-        Ok(())
+    pub fn terminate_output(&mut self) -> io::Result<()> {
+        // Write NUL terminator to separate command output from subsequent directives
+        write!(io::stdout(), "\0")?;
+        io::stdout().flush()
     }
 }
 
