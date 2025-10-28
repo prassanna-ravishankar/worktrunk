@@ -20,6 +20,10 @@ pub fn handle_merge(
 ) -> Result<(), GitError> {
     let repo = Repository::current();
 
+    // Show progress for initial validation
+    crate::output::progress(format!("🔄 {CYAN}Validating merge...{CYAN:#}"))
+        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
+
     // Get current branch
     let current_branch = repo.current_branch()?.ok_or(GitError::DetachedHead)?;
 
