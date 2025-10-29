@@ -462,6 +462,7 @@ mod tests {
     /// Test switch --create with post-create-command (blocking) and post-start-command (background)
     #[rstest]
     #[case("bash")]
+    #[case("zsh")]
     #[case("fish")]
     fn test_wrapper_switch_with_hooks(#[case] shell: &str) {
         let repo = TestRepo::new();
@@ -526,6 +527,7 @@ command = "echo 'Watching for file changes'"
     /// Test merge with successful pre-merge-command validation
     #[rstest]
     #[case("bash")]
+    #[case("zsh")]
     #[case("fish")]
     fn test_wrapper_merge_with_pre_merge_success(#[case] shell: &str) {
         let mut repo = TestRepo::new();
@@ -610,6 +612,7 @@ command = "echo '✓ All 47 tests passed in 2.3s'"
     /// Test merge with failing pre-merge-command that aborts the merge
     #[rstest]
     #[case("bash")]
+    #[case("zsh")]
     #[case("fish")]
     fn test_wrapper_merge_with_pre_merge_failure(#[case] shell: &str) {
         let mut repo = TestRepo::new();
