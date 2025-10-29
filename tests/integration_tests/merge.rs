@@ -783,7 +783,7 @@ fn test_merge_auto_commit_and_squash() {
     std::fs::write(feature_wt.join("file1.txt"), "updated content 1")
         .expect("Failed to write file");
 
-    // Merge with --squash - should auto-commit first, then squash all commits including the new one
+    // Merge with --squash - should stage uncommitted changes, then squash all commits including the staged changes
     snapshot_merge_with_env(
         "merge_auto_commit_and_squash",
         &repo,
@@ -791,7 +791,7 @@ fn test_merge_auto_commit_and_squash() {
         Some(&feature_wt),
         &[
             ("WORKTRUNK_COMMIT_GENERATION__COMMAND", "echo"),
-            // First message is for auto-commit
+            // Message is for the final squash commit
             (
                 "WORKTRUNK_COMMIT_GENERATION__ARGS",
                 "fix: update file 1 content",

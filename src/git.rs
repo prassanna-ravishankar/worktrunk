@@ -22,8 +22,6 @@ pub enum GitError {
     DetachedHead,
     /// Working tree has untracked files
     UntrackedFiles,
-    /// Working tree has staged changes but no commits
-    StagedChangesWithoutCommits,
     /// Pre-merge command failed
     PreMergeCommandFailed { command_name: String, error: String },
     /// Working tree has uncommitted changes
@@ -80,14 +78,6 @@ impl std::fmt::Display for GitError {
                 write!(
                     f,
                     "{ERROR_EMOJI} {ERROR}Working tree has untracked files{ERROR:#}\n\n{HINT_EMOJI} {HINT}Add them with 'git add' and try again{HINT:#}"
-                )
-            }
-
-            // Staged changes without commits
-            GitError::StagedChangesWithoutCommits => {
-                write!(
-                    f,
-                    "{ERROR_EMOJI} {ERROR}Staged changes without commits{ERROR:#}\n\n{HINT_EMOJI} {HINT}Please commit them first{HINT:#}"
                 )
             }
 

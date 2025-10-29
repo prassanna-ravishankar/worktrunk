@@ -52,15 +52,23 @@ pub fn handle_merge(
         )?;
     }
 
-    // Auto-commit uncommitted changes if they exist
+    // Handle uncommitted changes depending on whether we're squashing
     // Only do this after pre-merge checks pass
     if repo.is_dirty()? {
-        handle_commit_changes(message, &config.commit_generation)?;
+        if squash {
+            // Just stage - squash will handle committing
+            crate::output::progress(format!("🔄 {CYAN}Staging uncommitted changes...{CYAN:#}"))?;
+            repo.run_command(&["add", "-A"])
+                .git_context("Failed to stage changes")?;
+        } else {
+            // Commit immediately when not squashing
+            handle_commit_changes(message, &config.commit_generation)?;
+        }
     }
 
     // Squash commits if requested
     if squash {
-        handle_squash(&target_branch)?;
+        handle_squash(&target_branch, message, &config.commit_generation)?;
     }
 
     // Rebase onto target
@@ -198,32 +206,22 @@ fn format_commit_message_for_display(message: &str) -> String {
     result
 }
 
-/// Commit uncommitted changes with LLM-generated message
-fn handle_commit_changes(
+/// Commit already-staged changes with an LLM-generated message
+fn commit_with_generated_message(
+    progress_msg: &str,
     custom_instruction: Option<&str>,
     commit_generation_config: &worktrunk::config::CommitGenerationConfig,
 ) -> Result<(), GitError> {
     let repo = Repository::current();
 
-    crate::output::progress(format!(
-        "🔄 {CYAN}Committing uncommitted changes...{CYAN:#}"
-    ))?;
-
-    // Stage all changes including untracked files
-    repo.run_command(&["add", "-A"])
-        .git_context("Failed to stage changes")?;
-
-    // Generate commit message
+    crate::output::progress(format!("🔄 {CYAN}{progress_msg}{CYAN:#}"))?;
     crate::output::progress(format!("🔄 {CYAN}Generating commit message...{CYAN:#}"))?;
 
     let commit_message =
         crate::llm::generate_commit_message(custom_instruction, commit_generation_config)?;
-
-    // Display the generated commit message
     let formatted_message = format_commit_message_for_display(&commit_message);
     crate::output::progress(format_with_gutter(&formatted_message, "", None))?;
 
-    // Commit
     repo.run_command(&["commit", "-m", &commit_message])
         .git_context("Failed to commit")?;
 
@@ -233,7 +231,29 @@ fn handle_commit_changes(
     Ok(())
 }
 
-fn handle_squash(target_branch: &str) -> Result<Option<usize>, GitError> {
+/// Commit uncommitted changes with LLM-generated message
+fn handle_commit_changes(
+    custom_instruction: Option<&str>,
+    commit_generation_config: &worktrunk::config::CommitGenerationConfig,
+) -> Result<(), GitError> {
+    let repo = Repository::current();
+
+    // Stage all changes including untracked files
+    repo.run_command(&["add", "-A"])
+        .git_context("Failed to stage changes")?;
+
+    commit_with_generated_message(
+        "Committing uncommitted changes...",
+        custom_instruction,
+        commit_generation_config,
+    )
+}
+
+fn handle_squash(
+    target_branch: &str,
+    custom_instruction: Option<&str>,
+    commit_generation_config: &worktrunk::config::CommitGenerationConfig,
+) -> Result<Option<usize>, GitError> {
     let repo = Repository::current();
 
     // Get merge base with target branch
@@ -256,8 +276,13 @@ fn handle_squash(target_branch: &str) -> Result<Option<usize>, GitError> {
     }
 
     if commit_count == 0 && has_staged {
-        // Just staged changes, no commits - would need to commit but this shouldn't happen in merge flow
-        return Err(GitError::StagedChangesWithoutCommits);
+        // Just staged changes, no commits - commit them directly (no squashing needed)
+        commit_with_generated_message(
+            "Committing staged changes...",
+            custom_instruction,
+            commit_generation_config,
+        )?;
+        return Ok(None);
     }
 
     if commit_count == 1 && !has_staged {
@@ -268,7 +293,7 @@ fn handle_squash(target_branch: &str) -> Result<Option<usize>, GitError> {
         return Ok(None);
     }
 
-    // One or more commits (possibly with staged changes) - squash them
+    // Either multiple commits OR single commit with staged changes - squash them
     crate::output::progress(format!(
         "🔄 {CYAN}Squashing {commit_count} commits into one...{CYAN:#}"
     ))?;
@@ -277,21 +302,20 @@ fn handle_squash(target_branch: &str) -> Result<Option<usize>, GitError> {
     let range = format!("{}..HEAD", merge_base);
     let subjects = repo.commit_subjects(&range)?;
 
-    // Load config and generate commit message
+    // Generate squash commit message
     crate::output::progress(format!(
         "🔄 {CYAN}Generating squash commit message...{CYAN:#}"
     ))?;
 
-    let config = WorktrunkConfig::load().git_context("Failed to load config")?;
     let commit_message =
-        crate::llm::generate_squash_message(target_branch, &subjects, &config.commit_generation)
+        crate::llm::generate_squash_message(target_branch, &subjects, commit_generation_config)
             .git_context("Failed to generate commit message")?;
 
     // Display the generated commit message
     let formatted_message = format_commit_message_for_display(&commit_message);
     crate::output::progress(format_with_gutter(&formatted_message, "", None))?;
 
-    // Reset to merge base (soft reset stages all changes)
+    // Reset to merge base (soft reset stages all changes, including any already-staged uncommitted changes)
     repo.run_command(&["reset", "--soft", &merge_base])
         .git_context("Failed to reset to merge base")?;
 
