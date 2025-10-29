@@ -199,6 +199,24 @@ impl StyledLine {
 /// Default terminal width fallback if detection fails
 const DEFAULT_TERMINAL_WIDTH: usize = 80;
 
+/// Get terminal width, defaulting to 80 if detection fails
+///
+/// Checks COLUMNS environment variable first (for testing and scripts),
+/// then falls back to actual terminal size detection.
+fn get_terminal_width() -> usize {
+    // Check COLUMNS environment variable first (for testing and scripts)
+    if let Ok(cols) = std::env::var("COLUMNS")
+        && let Ok(width) = cols.parse::<usize>()
+    {
+        return width;
+    }
+
+    // Fall back to actual terminal size
+    terminal_size::terminal_size()
+        .map(|(terminal_size::Width(w), _)| w as usize)
+        .unwrap_or(DEFAULT_TERMINAL_WIDTH)
+}
+
 /// Wraps text at word boundaries to fit within the specified width
 ///
 /// # Arguments
@@ -283,12 +301,8 @@ pub fn format_with_gutter(content: &str, left_margin: &str, max_width: Option<us
     let gutter = Style::new().bg_color(Some(Color::Ansi(AnsiColor::Black)));
     let mut output = String::new();
 
-    // Use provided width or detect terminal width
-    let term_width = max_width.unwrap_or_else(|| {
-        terminal_size::terminal_size()
-            .map(|(w, _)| w.0 as usize)
-            .unwrap_or(DEFAULT_TERMINAL_WIDTH)
-    });
+    // Use provided width or detect terminal width (respects COLUMNS env var)
+    let term_width = max_width.unwrap_or_else(get_terminal_width);
 
     // Account for gutter (1) + space (1) + left_margin
     let left_margin_width = left_margin.width();

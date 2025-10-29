@@ -120,6 +120,11 @@ impl TestRepo {
         cmd.env("CLICOLOR_FORCE", "1");
         // Set isolated config path to prevent polluting user's config
         cmd.env("WORKTRUNK_CONFIG_PATH", &self.test_config_path);
+        // Set consistent terminal width for stable snapshot output
+        // (can be overridden by individual tests that want to test specific widths)
+        if std::env::var("COLUMNS").is_err() {
+            cmd.env("COLUMNS", "150");
+        }
     }
 
     /// Get the root path of the repository
