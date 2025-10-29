@@ -8,6 +8,7 @@ info:
     - "--force"
   env:
     CLICOLOR_FORCE: "1"
+    COLUMNS: "150"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -16,12 +17,11 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpbUwp56/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpDcBPxK/test-config.toml
 ---
 success: false
 exit_code: 1
 ----- stdout -----
-🔄 [36mValidating merge...[0m
 🔄 [36mRunning pre-merge command [1m[36mcmd[0m:[0m
 [40m [0m exit 1
 

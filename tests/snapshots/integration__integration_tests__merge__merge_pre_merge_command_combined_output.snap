@@ -3,7 +3,6 @@ source: tests/integration_tests/merge.rs
 expression: output
 ---
 Exit code: 0
-🔄 [36mValidating merge...[0m
 🔄 [36mRunning pre-merge command [1m[36mfirst[0m:[0m
 [40m [0m echo 'STDOUT-FROM-FIRST' && echo 'STDERR-FROM-FIRST' >&2
 
@@ -15,14 +14,14 @@ STDERR-FROM-FIRST
 STDOUT-FROM-SECOND
 STDERR-FROM-SECOND
 🔄 [36mRebasing onto [1m[36mmain[0m...[0m
-🔄 [36mPushing 1 commit to [1m[36mmain[0m @ [SHA][0m
+🔄 [36mMerging 1 commit to [1m[36mmain[0m @ [SHA][0m
 
 * [SHA][33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Add feature file
 
  feature.txt | 1 [32m+[m
  1 file changed, 1 insertion(+)
 
-✅ [32mPushed to [1m[32mmain[0m (1 commit, 1 file, [32m+1[0m)  [0m
+✅ [32mMerged to [1m[32mmain[0m (1 commit, 1 file, [32m+1[0m)  [0m
 🔄 [36mCleaning up worktree...[0m
 
 ✅ [32mReturned to primary at [REPO][0m

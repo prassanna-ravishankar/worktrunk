@@ -17,9 +17,6 @@ pub fn handle_merge(
 ) -> Result<(), GitError> {
     let repo = Repository::current();
 
-    // Show progress for initial validation
-    crate::output::progress(format!("🔄 {CYAN}Validating merge...{CYAN:#}"))?;
-
     // Get current branch
     let current_branch = repo.current_branch()?.ok_or(GitError::DetachedHead)?;
 
@@ -99,7 +96,7 @@ pub fn handle_merge(
     }
 
     // Fast-forward push to target branch (reuse handle_push logic)
-    handle_push(Some(&target_branch), false)?;
+    handle_push(Some(&target_branch), false, "Merged to")?;
 
     // Execute post-merge commands in the main worktree
     let main_worktree_path = repo.main_worktree_root()?;

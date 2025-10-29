@@ -6,6 +6,7 @@ info:
     - merge
   env:
     CLICOLOR_FORCE: "1"
+    COLUMNS: "150"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -14,12 +15,11 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpry7YzB/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpR6XD8f/test-config.toml
 ---
 success: true
 exit_code: 0
 ----- stdout -----
-🔄 [36mValidating merge...[0m
 ✅ [32mAlready on [1m[32mmain[0m, nothing to merge[0m
 
 ----- stderr -----

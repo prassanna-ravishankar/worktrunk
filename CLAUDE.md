@@ -129,7 +129,7 @@ println!("🔄 {cyan}Rebasing onto main...{cyan:#}");
 
 // Success
 let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
-println!("✅ {green}Pushed to main{green:#}");
+println!("✅ {green}Merged to main{green:#}");
 
 // Error - ALL our output goes to stdout
 println!("{ERROR_EMOJI} {ERROR}Working tree has uncommitted changes{ERROR:#}");

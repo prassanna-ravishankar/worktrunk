@@ -507,7 +507,11 @@ fn spawn_post_start_commands(
     Ok(())
 }
 
-pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), GitError> {
+pub fn handle_push(
+    target: Option<&str>,
+    allow_merge_commits: bool,
+    verb: &str,
+) -> Result<(), GitError> {
     let repo = Repository::current();
 
     // Get target branch (default to default branch if not provided)
@@ -554,8 +558,13 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
         let head_sha = repo.run_command(&["rev-parse", "--short", "HEAD"])?;
         let head_sha = head_sha.trim();
 
+        let verb_ing = if verb.starts_with("Merged") {
+            "Merging"
+        } else {
+            "Pushing"
+        };
         crate::output::progress(format!(
-            "🔄 {CYAN}Pushing {commit_count} {commit_text} to {CYAN_BOLD}{target_branch}{CYAN_BOLD:#} @ {head_sha}{CYAN:#}\n"
+            "🔄 {CYAN}{verb_ing} {commit_count} {commit_text} to {CYAN_BOLD}{target_branch}{CYAN_BOLD:#} @ {head_sha}{CYAN:#}\n"
         ))?;
 
         // Show the commit graph with color
@@ -620,12 +629,12 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
         }
 
         crate::output::progress(format!(
-            "{SUCCESS_EMOJI} {GREEN}Pushed to {GREEN_BOLD}{target_branch}{GREEN_BOLD:#} ({})  {GREEN:#}",
+            "{SUCCESS_EMOJI} {GREEN}{verb} {GREEN_BOLD}{target_branch}{GREEN_BOLD:#} ({})  {GREEN:#}",
             summary_parts.join(", ")
         ))?;
     } else {
         crate::output::progress(format!(
-            "{SUCCESS_EMOJI} {GREEN}Pushed to {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN:#}"
+            "{SUCCESS_EMOJI} {GREEN}{verb} {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN:#}"
         ))?;
     }
 
