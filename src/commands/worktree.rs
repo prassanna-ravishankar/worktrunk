@@ -244,18 +244,12 @@ fn remove_current_worktree(repo: &Repository) -> Result<RemoveResult, GitError> 
     // Check for uncommitted changes in current worktree
     repo.ensure_clean_working_tree()?;
 
-    // Get current state
-    let current_branch = repo.current_branch()?;
-    let default_branch = repo.default_branch()?;
+    // Check if we're in a worktree (fast - just checks git metadata)
     let in_worktree = repo.is_in_worktree()?;
-
-    // If we're on default branch and not in a worktree, nothing to do
-    if !in_worktree && current_branch.as_deref() == Some(&default_branch) {
-        return Ok(RemoveResult::AlreadyOnDefault(default_branch));
-    }
 
     if in_worktree {
         // In worktree: navigate to primary worktree and remove this one
+        // (no need to check default branch in this path)
         let worktree_root = repo.worktree_root()?;
         let primary_worktree_dir = repo.main_worktree_root()?;
 
@@ -267,7 +261,16 @@ fn remove_current_worktree(repo: &Repository) -> Result<RemoveResult, GitError> 
             primary_path: primary_worktree_dir,
         })
     } else {
-        // In main repo but not on default branch: switch to default
+        // In main repo: check if already on default branch
+        // Only fetch default_branch if needed (can be slow - network call)
+        let current_branch = repo.current_branch()?;
+        let default_branch = repo.default_branch()?;
+
+        if current_branch.as_deref() == Some(&default_branch) {
+            return Ok(RemoveResult::AlreadyOnDefault(default_branch));
+        }
+
+        // Switch to default branch
         repo.run_command(&["switch", &default_branch])
             .git_context(&format!("Failed to switch to '{}'", default_branch))?;
 
