@@ -1,9 +1,9 @@
 use askama::Template;
-use std::fmt;
 use std::path::PathBuf;
 
 /// Supported shells
-#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+#[derive(Debug, Clone, Copy, clap::ValueEnum, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase", ascii_case_insensitive)]
 pub enum Shell {
     Bash,
     Elvish,
@@ -13,39 +13,6 @@ pub enum Shell {
     Powershell,
     Xonsh,
     Zsh,
-}
-
-impl std::str::FromStr for Shell {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "bash" => Ok(Shell::Bash),
-            "elvish" => Ok(Shell::Elvish),
-            "fish" => Ok(Shell::Fish),
-            "nushell" => Ok(Shell::Nushell),
-            "oil" => Ok(Shell::Oil),
-            "powershell" => Ok(Shell::Powershell),
-            "xonsh" => Ok(Shell::Xonsh),
-            "zsh" => Ok(Shell::Zsh),
-            _ => Err(format!("Unsupported shell: {}", s)),
-        }
-    }
-}
-
-impl fmt::Display for Shell {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Shell::Bash => write!(f, "bash"),
-            Shell::Elvish => write!(f, "elvish"),
-            Shell::Fish => write!(f, "fish"),
-            Shell::Nushell => write!(f, "nushell"),
-            Shell::Oil => write!(f, "oil"),
-            Shell::Powershell => write!(f, "powershell"),
-            Shell::Xonsh => write!(f, "xonsh"),
-            Shell::Zsh => write!(f, "zsh"),
-        }
-    }
 }
 
 impl Shell {
