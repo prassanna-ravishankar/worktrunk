@@ -61,7 +61,7 @@ pub fn handle_merge(
 
     // Rebase onto target
     crate::output::progress(format!(
-        "🔄 {CYAN}Rebasing onto {CYAN_BOLD}{target_branch}{CYAN_BOLD:#}...{CYAN:#}"
+        "🔄 {CYAN}Rebasing onto {CYAN:#}{CYAN_BOLD}{target_branch}{CYAN_BOLD:#}{CYAN}...{CYAN:#}"
     ))?;
 
     let rebase_result = repo.run_command(&["rebase", &target_branch]);
@@ -127,7 +127,7 @@ pub fn handle_merge(
         let new_branch = primary_repo.current_branch()?;
         if new_branch.as_deref() != Some(&target_branch) {
             crate::output::progress(format!(
-                "🔄 {CYAN}Switching to {CYAN_BOLD}{target_branch}{CYAN_BOLD:#}...{CYAN:#}"
+                "🔄 {CYAN}Switching to {CYAN:#}{CYAN_BOLD}{target_branch}{CYAN_BOLD:#}{CYAN}...{CYAN:#}"
             ))?;
             primary_repo
                 .run_command(&["switch", &target_branch])
@@ -369,7 +369,7 @@ fn handle_squash(
     if commit_count == 1 && !has_staged {
         // Single commit, no staged changes - nothing to do
         crate::output::hint(format!(
-            "{HINT_EMOJI} {HINT}Only 1 commit since {CYAN_BOLD}{target_branch}{CYAN_BOLD:#} - no squashing needed{HINT:#}"
+            "{HINT_EMOJI} {HINT}Only 1 commit since {HINT:#}{CYAN_BOLD}{target_branch}{CYAN_BOLD:#}{HINT} - no squashing needed{HINT:#}"
         ))?;
         return Ok(None);
     }
@@ -432,7 +432,7 @@ fn handle_squash(
     if !repo.has_staged_changes()? {
         use worktrunk::styling::{ERROR, ERROR_EMOJI, HINT, HINT_EMOJI};
         return Err(GitError::CommandFailed(format!(
-            "{ERROR_EMOJI} {ERROR}No changes to commit after squashing {commit_count} commits{ERROR:#}\n\n{HINT_EMOJI} {HINT}The commits resulted in no net changes (e.g., changes were reverted or already in {CYAN_BOLD}{target_branch}{CYAN_BOLD:#}){HINT:#}"
+            "{ERROR_EMOJI} {ERROR}No changes to commit after squashing {commit_count} commits{ERROR:#}\n\n{HINT_EMOJI} {HINT}The commits resulted in no net changes (e.g., changes were reverted or already in {HINT:#}{CYAN_BOLD}{target_branch}{CYAN_BOLD:#}{HINT}){HINT:#}"
         )));
     }
 

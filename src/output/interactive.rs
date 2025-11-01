@@ -78,12 +78,12 @@ impl InteractiveOutput {
 
         if created_branch {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Created new worktree for {green_bold}{branch}{green_bold:#} at {bold}{}{bold:#}{GREEN:#}",
+                "{SUCCESS_EMOJI} {GREEN}Created new worktree for {GREEN:#}{green_bold}{branch}{green_bold:#}{GREEN} at {GREEN:#}{bold}{}{bold:#}",
                 path.display()
             )
         } else {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Switched to worktree for {green_bold}{branch}{green_bold:#} at {bold}{}{bold:#}{GREEN:#}",
+                "{SUCCESS_EMOJI} {GREEN}Switched to worktree for {GREEN:#}{green_bold}{branch}{green_bold:#}{GREEN} at {GREEN:#}{bold}{}{bold:#}",
                 path.display()
             )
         }

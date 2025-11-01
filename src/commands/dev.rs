@@ -1,6 +1,6 @@
 use worktrunk::config::{ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt, Repository};
-use worktrunk::styling::{HINT, HINT_EMOJI};
+use worktrunk::styling::{HINT, HINT_EMOJI, eprintln};
 
 use super::merge::{
     execute_post_merge_commands, run_pre_commit_commands, run_pre_merge_commands,

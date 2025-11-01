@@ -12,10 +12,11 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpkmLMGZ/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp9KO7x2/test-config.toml
 ---
 success: false
 exit_code: 1
@@ -23,4 +24,4 @@ exit_code: 1
 🔄 [36mRemoving worktree for [1m[36mnonexistent[0m...[0m
 
 ----- stderr -----
-❌ [31mNo worktree found for branch [1m[31mnonexistent[0m[0m
+❌ [31mNo worktree found for branch [0m[1m[31mnonexistent[0m

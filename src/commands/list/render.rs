@@ -1,6 +1,6 @@
 use crate::display::{format_relative_time, shorten_path, truncate_at_word_boundary};
 use anstyle::{AnsiColor, Color, Style};
-use worktrunk::styling::{ADDITION, CURRENT, DELETION, StyledLine};
+use worktrunk::styling::{ADDITION, CURRENT, DELETION, StyledLine, println};
 
 use super::ci_status::{CiStatus, PrStatus};
 use super::layout::{DiffWidths, LayoutConfig};

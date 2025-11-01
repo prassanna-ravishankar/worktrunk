@@ -2,6 +2,6 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: output.normalized().as_ref()
 ---
-✅ [32mCreated new worktree for [1m[32mfish-bg[0m, changed directory to [1m[TMPDIR]/test-repo.fish-bg[0m[0m
+✅ [32mCreated new worktree for [0m[1m[32mfish-bg[0m[32m, changed directory to [0m[1m[TMPDIR]/test-repo.fish-bg[0m
 🔄 [36mRunning post-start:[0m
 [40m [0m [1m[34mecho [32m'fish background task'

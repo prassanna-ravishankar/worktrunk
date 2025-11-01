@@ -13,6 +13,7 @@ use render::{
     format_list_item_line,
 };
 use worktrunk::git::{GitError, Repository};
+use worktrunk::styling::println;
 
 /// Helper to enrich common display fields shared between worktrees and branches
 fn enrich_common_fields(
@@ -125,7 +126,6 @@ pub fn handle_list(
 
 fn display_summary(items: &[ListItem], include_branches: bool) {
     use anstyle::Style;
-    use worktrunk::styling::println;
 
     if items.is_empty() {
         println!();

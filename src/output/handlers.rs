@@ -30,23 +30,23 @@ fn format_remove_message(result: &RemoveResult) -> String {
     match result {
         RemoveResult::AlreadyOnDefault(branch) => {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Already on default branch {green_bold}{branch}{green_bold:#}{GREEN:#}"
+                "{SUCCESS_EMOJI} {GREEN}Already on default branch {GREEN:#}{green_bold}{branch}{green_bold:#}"
             )
         }
         RemoveResult::RemovedWorktree { primary_path } => {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Removed worktree, returned to primary at {dim}{}{dim:#}{GREEN:#}",
+                "{SUCCESS_EMOJI} {GREEN}Removed worktree, returned to primary at {GREEN:#}{dim}{}{dim:#}",
                 primary_path.display()
             )
         }
         RemoveResult::SwitchedToDefault(branch) => {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Switched to default branch {green_bold}{branch}{green_bold:#}{GREEN:#}"
+                "{SUCCESS_EMOJI} {GREEN}Switched to default branch {GREEN:#}{green_bold}{branch}{green_bold:#}"
             )
         }
         RemoveResult::RemovedOtherWorktree { branch } => {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Removed worktree for {green_bold}{branch}{green_bold:#}{GREEN:#}"
+                "{SUCCESS_EMOJI} {GREEN}Removed worktree for {GREEN:#}{green_bold}{branch}{green_bold:#}"
             )
         }
     }

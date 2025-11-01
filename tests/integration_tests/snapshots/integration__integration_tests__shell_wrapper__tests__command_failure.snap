@@ -2,6 +2,6 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: output.normalized().as_ref()
 ---
-❌ [31mBranch [1m[31mexisting[0m already exists[0m
+❌ [31mBranch [0m[1m[31mexisting[0m[31m already exists[0m
 
 💡 [2mRemove --create flag to switch to it[0m
