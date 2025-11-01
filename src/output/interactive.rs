@@ -74,16 +74,16 @@ impl InteractiveOutput {
     pub fn format_switch_success(&self, branch: &str, path: &Path, created_branch: bool) -> String {
         use worktrunk::styling::{AnstyleStyle, GREEN, SUCCESS_EMOJI};
         let green_bold = GREEN.bold();
-        let dim = AnstyleStyle::new().dimmed();
+        let bold = AnstyleStyle::new().bold();
 
         if created_branch {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Created new worktree for {green_bold}{branch}{green_bold:#} at {dim}{}{dim:#}{GREEN:#}",
+                "{SUCCESS_EMOJI} {GREEN}Created new worktree for {green_bold}{branch}{green_bold:#} at {bold}{}{bold:#}{GREEN:#}",
                 path.display()
             )
         } else {
             format!(
-                "{SUCCESS_EMOJI} {GREEN}Switched to worktree for {green_bold}{branch}{green_bold:#} at {dim}{}{dim:#}{GREEN:#}",
+                "{SUCCESS_EMOJI} {GREEN}Switched to worktree for {green_bold}{branch}{green_bold:#} at {bold}{}{bold:#}{GREEN:#}",
                 path.display()
             )
         }

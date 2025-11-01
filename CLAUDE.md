@@ -208,14 +208,18 @@ let warning_bold = WARNING.bold();
 
 **Principle: Bold what answers the user's question, dim what provides context.**
 
-Style based on **user intent**, not data type. In messages, branch names are always bold. Paths are bold when they're the answer (`wt config list`), dimmed when they're context (`wt switch` output). Commit hashes are always dimmed (reference info).
+Style based on **user intent**, not data type. In messages, branch names are always bold. When a path is part of an action phrase (e.g., "changed directory to {path}"), it's bold because it answers "where?". When shown as supplementary metadata on a separate line (e.g., "Path: ..."), it's dimmed. Commit hashes are always dimmed (reference info).
 
 ```rust
-// Path as primary answer
+// Path as primary answer (standalone)
 let bold = AnstyleStyle::new().bold();
 println!("Global Config: {bold}{}{bold:#}", path.display());
 
-// Path as secondary context
+// Path embedded in action phrase (part of the message)
+let bold = AnstyleStyle::new().bold();
+println!("✅ Created {bold}{branch}{bold:#}, changed directory to {bold}{}{bold:#}", path.display());
+
+// Path as supplementary metadata (separate line)
 let dim = AnstyleStyle::new().dimmed();
 println!("✅ Created {bold}{branch}{bold:#}\n{dim}Path: {}{dim:#}", path.display());
 ```
@@ -225,7 +229,7 @@ println!("✅ Created {bold}{branch}{bold:#}\n{dim}Path: {}{dim:#}", path.displa
 | Element | Primary (answers question) | Secondary (provides context) |
 |---------|---------------------------|------------------------------|
 | Branch names | **Bold** (always) | **Bold** (always) |
-| File paths | **Bold** (`config list`) | **Dim** (`switch` output) |
+| File paths | **Bold** (standalone or in action phrase) | **Dim** (supplementary metadata) |
 | Config values | Normal | **Dim** |
 | Metadata | Dim | **Dim** |
 

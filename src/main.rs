@@ -418,8 +418,26 @@ fn main() {
         } => WorktrunkConfig::load()
             .git_context("Failed to load config")
             .and_then(|config| {
-                handle_switch(&branch, create, base.as_deref(), force, no_hooks, &config)
-                    .and_then(|result| handle_switch_output(&result, &branch, execute.as_deref()))
+                // Execute switch operation (creates worktree, runs post-create hooks)
+                let result =
+                    handle_switch(&branch, create, base.as_deref(), force, no_hooks, &config)?;
+
+                // Show success message (temporal locality: immediately after worktree creation)
+                handle_switch_output(&result, &branch, execute.as_deref())?;
+
+                // Now spawn post-start hooks (background processes, after success message)
+                if !no_hooks {
+                    let repo = Repository::current();
+                    commands::worktree::spawn_post_start_commands(
+                        result.path(),
+                        &repo,
+                        &config,
+                        &branch,
+                        force,
+                    )?;
+                }
+
+                Ok(())
             }),
         Commands::Remove { worktrees } => {
             if worktrees.is_empty() {

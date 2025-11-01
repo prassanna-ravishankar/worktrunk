@@ -218,10 +218,8 @@ pub fn handle_switch(
         execute_post_create_commands(&worktree_path, &repo, config, branch, force)?;
     }
 
-    // Spawn post-start commands (parallel, background)
-    if !no_hooks {
-        spawn_post_start_commands(&worktree_path, &repo, config, branch, force)?;
-    }
+    // Note: post-start commands are spawned AFTER success message is shown
+    // (see main.rs switch handler for temporal locality)
 
     Ok(SwitchResult::CreatedWorktree {
         path: worktree_path,
@@ -442,7 +440,7 @@ pub fn execute_post_create_commands(
 }
 
 /// Spawn post-start commands in parallel as background processes (non-blocking)
-fn spawn_post_start_commands(
+pub fn spawn_post_start_commands(
     worktree_path: &std::path::Path,
     repo: &Repository,
     config: &WorktrunkConfig,
