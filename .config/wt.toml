@@ -22,11 +22,16 @@ cp -cR {repo_root}/target/. {worktree}/target/
 # Available template variables: {repo}, {branch}, {worktree}, {repo_root}, {target}
 post-merge-command = "cargo install --path ."
 
+# Pre-commit commands
+# These run sequentially before committing changes
+# All commands must exit with code 0 for commit to proceed
+[pre-commit-command]
+pre-commit = "pre-commit run --all-files"
+
 # Pre-merge commands
 # These run sequentially before merging to main
 # All commands must exit with code 0 for merge to proceed
 # Note: This must come AFTER post-merge-command because [pre-merge-command] starts
 # a TOML table section, and everything after it would be inside that section
 [pre-merge-command]
-pre-commit = "pre-commit run --all-files"
 insta = "NEXTEST_STATUS_LEVEL=fail NEXTEST_SUCCESS_OUTPUT=never cargo insta test --test-runner nextest --test-runner-fallback true"
