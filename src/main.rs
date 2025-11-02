@@ -152,22 +152,15 @@ enum Commands {
         #[arg(long)]
         branches: bool,
 
-        /// Fetch CI status from GitHub/GitLab PRs/MRs
+        /// Show all information (CI status, conflict detection, branch diff)
         ///
-        /// Shows colored indicator for each branch: green (passed), blue (running),
-        /// red (failed), yellow (conflicts), gray (no CI). Dimmed = stale (unpushed commits).
+        /// Shows additional columns:
+        /// - CI status: colored indicator (green=passed, blue=running, red=failed, yellow=conflicts, gray=no-ci)
+        /// - Conflicts: ⚠️ indicator for branches with merge conflicts against main
+        /// - Main ±: line diff totals (+added -deleted) in commits vs main
         ///
-        /// Requires gh (GitHub) or glab (GitLab) CLI installed and authenticated.
-        /// WARNING: Slow! Adds ~0.5-2s per branch (makes network requests).
-        #[arg(long)]
-        ci: bool,
-
-        /// Show all information (CI status + conflict detection)
-        ///
-        /// Enables both --ci and conflict detection. Shows ⚠️ indicator for branches
-        /// that would have merge conflicts with main.
-        ///
-        /// WARNING: Slow! Runs git merge-tree for every branch to detect conflicts.
+        /// Requires gh (GitHub) or glab (GitLab) CLI for CI status.
+        /// WARNING: Slow! Makes network requests and runs git merge-tree for conflict detection.
         #[arg(long)]
         full: bool,
     },
@@ -440,13 +433,8 @@ fn main() {
         Commands::List {
             format,
             branches,
-            ci,
             full,
-        } => {
-            let fetch_ci = ci || full;
-            let check_conflicts = full;
-            handle_list(format, branches, fetch_ci, check_conflicts)
-        }
+        } => handle_list(format, branches, full),
         Commands::Switch {
             branch,
             create,

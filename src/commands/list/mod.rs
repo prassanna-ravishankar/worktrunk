@@ -73,14 +73,13 @@ fn enrich_with_display_fields(mut item: ListItem) -> ListItem {
 pub fn handle_list(
     format: crate::OutputFormat,
     show_branches: bool,
-    fetch_ci: bool,
-    check_conflicts: bool,
+    show_full: bool,
 ) -> Result<(), GitError> {
     let repo = Repository::current();
     let Some(ListData {
         items,
         current_worktree_path,
-    }) = gather_list_data(&repo, show_branches, fetch_ci, check_conflicts)?
+    }) = gather_list_data(&repo, show_branches, show_full, show_full)?
     else {
         return Ok(());
     };
@@ -96,7 +95,7 @@ pub fn handle_list(
             println!("{}", json);
         }
         crate::OutputFormat::Table => {
-            let layout = calculate_responsive_layout(&items);
+            let layout = calculate_responsive_layout(&items, show_full);
             format_header_line(&layout);
             for item in &items {
                 format_list_item_line(item, &layout, current_worktree_path.as_ref());

@@ -249,7 +249,7 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
 }
 
 /// Calculate responsive layout based on terminal width
-pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
+pub fn calculate_responsive_layout(items: &[ListItem], show_full: bool) -> LayoutConfig {
     let terminal_width = get_terminal_width();
     let paths: Vec<&Path> = items
         .iter()
@@ -335,14 +335,18 @@ pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
     }
 
     // Branch diff column (work volume in those commits)
-    let allocated_width = try_allocate(
-        &mut remaining,
-        ideal_widths.branch_diff.total,
-        spacing,
-        false,
-    );
-    if allocated_width > 0 {
-        widths.branch_diff = ideal_widths.branch_diff;
+    // Hidden by default - considered too noisy for typical usage.
+    // May reconsider showing by default in future based on user feedback.
+    if show_full {
+        let allocated_width = try_allocate(
+            &mut remaining,
+            ideal_widths.branch_diff.total,
+            spacing,
+            false,
+        );
+        if allocated_width > 0 {
+            widths.branch_diff = ideal_widths.branch_diff;
+        }
     }
 
     // Conflicts column (merge conflicts indicator - critical for mergeability)
@@ -547,7 +551,7 @@ mod tests {
         };
 
         let items = vec![super::ListItem::Worktree(info)];
-        let layout = calculate_responsive_layout(&items);
+        let layout = calculate_responsive_layout(&items, false);
         let pos = &layout.positions;
         let widths = &layout.widths;
 
@@ -630,7 +634,7 @@ mod tests {
         };
 
         let items = vec![super::ListItem::Worktree(info)];
-        let layout = calculate_responsive_layout(&items);
+        let layout = calculate_responsive_layout(&items, false);
         let pos = &layout.positions;
 
         // Branch should be at 0
@@ -693,7 +697,7 @@ mod tests {
         };
 
         let items = vec![super::ListItem::Worktree(info)];
-        let layout = calculate_responsive_layout(&items);
+        let layout = calculate_responsive_layout(&items, false);
         let pos = &layout.positions;
         let widths = &layout.widths;
 
