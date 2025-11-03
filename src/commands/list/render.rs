@@ -236,6 +236,16 @@ pub fn format_all_states(item: &ListItem) -> String {
 
     // Worktree-specific states
     if let Some(info) = item.worktree_info() {
+        // Check for "no commits" state - no commits ahead AND no uncommitted changes
+        if !info.is_primary && item.counts().ahead == 0 && info.working_tree_diff == (0, 0) {
+            states.push("(no commits)".to_string());
+        }
+
+        // Check for "matches main" state - working tree contents identical to main branch
+        if !info.is_primary && info.working_tree_diff_with_main == (0, 0) {
+            states.push("(matches main)".to_string());
+        }
+
         if let Some(state) = info.worktree_state.as_ref() {
             states.push(format!("[{}]", state));
         }
@@ -352,15 +362,38 @@ fn push_header_at(line: &mut StyledLine, label: &str, width: usize, position: us
     }
 }
 
-/// Check if a branch is potentially removable (nothing ahead, no uncommitted changes)
+/// Check if a worktree/branch has marginal information (dim the line)
+///
+/// Dimming principle: A line is dimmed when it provides no marginal information
+/// beyond what's already in the main branch. This helps focus attention on
+/// worktrees that contain work.
+///
+/// Dims when (using OR logic):
+/// - No commits AND clean working tree (ahead == 0 AND working_tree_diff == (0, 0)):
+///   The worktree has no commits ahead and no uncommitted changes
+/// - Working tree matches main (working_tree_diff_with_main == (0, 0)):
+///   The working tree contents are identical to main, regardless of commit history
+///
+/// Either condition alone is sufficient to dim, as both indicate "no unique work here".
 fn is_potentially_removable(item: &ListItem) -> bool {
-    let counts = item.counts();
-    let wt_diff = item
-        .worktree_info()
-        .map(|info| info.working_tree_diff)
-        .unwrap_or((0, 0));
+    if item.is_primary() {
+        return false;
+    }
 
-    !item.is_primary() && counts.ahead == 0 && wt_diff == (0, 0)
+    let counts = item.counts();
+
+    if let Some(info) = item.worktree_info() {
+        // Condition 1: No commits ahead AND no uncommitted changes
+        let no_commits_and_clean = counts.ahead == 0 && info.working_tree_diff == (0, 0);
+
+        // Condition 2: Working tree matches main (regardless of commit history)
+        let matches_main = info.working_tree_diff_with_main == (0, 0);
+
+        no_commits_and_clean || matches_main
+    } else {
+        // For branches without worktrees, just check if no commits ahead
+        counts.ahead == 0
+    }
 }
 
 /// Render a list item (worktree or branch) as a formatted line

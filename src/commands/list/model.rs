@@ -27,6 +27,7 @@ pub struct WorktreeInfo {
     #[serde(flatten)]
     pub counts: AheadBehind,
     pub working_tree_diff: (usize, usize),
+    pub working_tree_diff_with_main: (usize, usize),
     #[serde(flatten)]
     pub branch_diff: BranchDiffTotals,
     pub is_primary: bool,
@@ -318,6 +319,11 @@ impl WorktreeInfo {
         let counts = AheadBehind::compute(&wt_repo, base_branch, &wt.head)?;
 
         let working_tree_diff = wt_repo.working_tree_diff_stats()?;
+        let working_tree_diff_with_main = if let Some(base) = base_branch {
+            wt_repo.working_tree_diff_vs_ref(base)?
+        } else {
+            (0, 0)
+        };
         let branch_diff = BranchDiffTotals::compute(&wt_repo, base_branch, &wt.head)?;
         let upstream = UpstreamStatus::calculate(&wt_repo, wt.branch.as_deref(), &wt.head)?;
 
@@ -347,6 +353,7 @@ impl WorktreeInfo {
             commit,
             counts,
             working_tree_diff,
+            working_tree_diff_with_main,
             branch_diff,
             is_primary,
             upstream,

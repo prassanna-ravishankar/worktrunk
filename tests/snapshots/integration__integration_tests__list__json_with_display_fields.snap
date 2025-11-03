@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp3pOwWk/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpE2ELVC/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -38,6 +38,10 @@ exit_code: 0
     "ahead": 0,
     "behind": 0,
     "working_tree_diff": [
+      0,
+      0
+    ],
+    "working_tree_diff_with_main": [
       0,
       0
     ],
@@ -70,6 +74,10 @@ exit_code: 0
     "behind": 2,
     "working_tree_diff": [
       1,
+      1
+    ],
+    "working_tree_diff_with_main": [
+      2,
       1
     ],
     "branch_diff": [
@@ -105,6 +113,10 @@ exit_code: 0
     "working_tree_diff": [
       0,
       0
+    ],
+    "working_tree_diff_with_main": [
+      1,
+      1
     ],
     "branch_diff": [
       0,

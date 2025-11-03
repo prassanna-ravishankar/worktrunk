@@ -687,6 +687,17 @@ impl Repository {
         parse_numstat(&stdout)
     }
 
+    /// Get line diff statistics between working tree and a specific ref.
+    ///
+    /// This compares the current working tree contents (including uncommitted changes)
+    /// against the specified ref, regardless of what HEAD points to.
+    ///
+    /// Returns (added_lines, deleted_lines).
+    pub fn working_tree_diff_vs_ref(&self, ref_name: &str) -> Result<(usize, usize), GitError> {
+        let stdout = self.run_command(&["diff", "--numstat", ref_name])?;
+        parse_numstat(&stdout)
+    }
+
     /// Get line diff statistics between two refs (using three-dot diff for merge base).
     ///
     /// Returns (added_lines, deleted_lines).

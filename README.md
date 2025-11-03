@@ -101,6 +101,26 @@ These trade manual control for automation. For fine-grained control, use `git wo
 
 See `wt --help` for details.
 
+<details>
+<summary>Worktree states in <code>wt list</code></summary>
+
+The State column shows worktree status. **Dimmed rows** indicate worktrees with no marginal information beyond main (no unique work).
+
+**Dimming logic:** Lines dim when they provide no marginal information - either no commits ahead OR working tree matches main exactly. This focuses attention on worktrees containing work.
+
+| State | Meaning | Dimmed? |
+|-------|---------|---------|
+| **(no commits)** | No commits on top of main AND no uncommitted changes (`ahead == 0` and `working_tree_diff == (0, 0)`). | Yes |
+| **(matches main)** | Working tree contents identical to main branch, regardless of commit history (`working_tree_diff_with_main == (0, 0)`). | Yes |
+| **(conflicts)** | Merge conflicts detected with main | No |
+| **[MERGING]**, **[REBASING]**, etc. | Git operation in progress | No |
+| **(bare)** | Bare worktree (no working directory) | No |
+| **(locked)**, **(prunable)** | Git worktree management states | No |
+
+Both dimming conditions use OR logic: either is sufficient to dim. "(no commits)" means clean worktree with no commits ahead. "(matches main)" means the current working tree state is identical to main, even if commit history differs (e.g., commits were made but later reverted).
+
+</details>
+
 ## Configuration
 
 ```bash
