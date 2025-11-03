@@ -144,23 +144,34 @@ pub const HEADER_MESSAGE: &str = "Message";
 /// This is the general solution for preventing header overflow: pass the header
 /// string and the calculated data width, and this returns the larger of the two.
 ///
-/// Use this for every column width calculation to ensure headers never overflow.
+/// Ensures column width fits header text, unless data_width is 0 (empty column).
+///
+/// CRITICAL: Returns 0 when data_width is 0. This ensures empty columns don't
+/// allocate space for headers, allowing ColumnIdeal to return None, which prevents
+/// allocation even at low priority (12+) due to EMPTY_PENALTY.
 fn fit_header(header: &str, data_width: usize) -> usize {
     use unicode_width::UnicodeWidthStr;
+    if data_width == 0 {
+        // Empty column - don't allocate space for header
+        return 0;
+    }
     data_width.max(header.width())
 }
 
 /// Calculates width for a diff-style column (format: "+added -deleted" or "↑ahead ↓behind").
 ///
 /// Returns DiffWidths with:
-/// - total: width including header minimum ("+{added} -{deleted}")
+/// - total: width including header minimum ("+{added} -{deleted}"), or 0 if no data
 /// - added_digits/deleted_digits: number of digits for each part
+///
+/// Empty columns (both digits = 0) have total = 0, which causes ColumnIdeal::diff()
+/// to return None, preventing allocation even at low priority (12+).
 fn calculate_diff_width(header: &str, added_digits: usize, deleted_digits: usize) -> DiffWidths {
     let has_data = added_digits > 0 || deleted_digits > 0;
     let data_width = if has_data {
         1 + added_digits + 1 + 1 + deleted_digits // "+added -deleted"
     } else {
-        0
+        0 // fit_header will return 0 for empty columns
     };
     let total = fit_header(header, data_width);
 
@@ -775,15 +786,6 @@ mod tests {
             previous_end = column.start + column.width;
         }
 
-        let states_visible = layout
-            .columns
-            .iter()
-            .any(|col| col.kind == ColumnKind::States);
-        assert!(
-            states_visible,
-            "States column should be visible in wide layout"
-        );
-
         let path_column = layout
             .columns
             .iter()
@@ -853,8 +855,8 @@ mod tests {
         .any(|kind| layout.columns.iter().any(|col| &col.kind == kind));
 
         assert!(
-            empty_columns_visible,
-            "At least some empty columns should be visible with sufficient terminal width"
+            !empty_columns_visible,
+            "Empty columns should be hidden (not allocated) when they have no data"
         );
 
         let path_visible = layout

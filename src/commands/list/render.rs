@@ -237,9 +237,14 @@ pub fn format_header_line(layout: &LayoutConfig) {
     let style = Style::new();
     let mut line = StyledLine::new();
 
-    for column in &layout.columns {
+    for (i, column) in layout.columns.iter().enumerate() {
         line.pad_to(column.start);
-        let header = format!("{:width$}", column.header, width = column.width);
+        let is_last = i == layout.columns.len() - 1;
+        let header = if is_last {
+            column.header.to_string()
+        } else {
+            format!("{:width$}", column.header, width = column.width)
+        };
         line.push_styled(header, style);
     }
 
@@ -327,12 +332,18 @@ pub fn format_list_item_line(
     };
 
     let mut line = StyledLine::new();
-    for column in &layout.columns {
+    let num_columns = layout.columns.len();
+    for (i, column) in layout.columns.iter().enumerate() {
         line.pad_to(column.start);
+        let is_last = i == num_columns - 1;
 
         match (column.kind, column.format) {
             (ColumnKind::Branch, _) => {
-                let branch_text = format!("{:width$}", item.branch_name(), width = column.width);
+                let branch_text = if is_last {
+                    item.branch_name().to_string()
+                } else {
+                    format!("{:width$}", item.branch_name(), width = column.width)
+                };
                 if let Some(style) = text_style {
                     line.push_styled(branch_text, style);
                 } else {
@@ -352,7 +363,7 @@ pub fn format_list_item_line(
                         DELETION,
                     );
                     append_line(&mut line, segment);
-                } else {
+                } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
             }
@@ -369,7 +380,7 @@ pub fn format_list_item_line(
                         dim_deletion,
                     );
                     append_line(&mut line, segment);
-                } else {
+                } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
             }
@@ -385,33 +396,41 @@ pub fn format_list_item_line(
                         DELETION,
                     );
                     append_line(&mut line, segment);
-                } else {
+                } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
             }
             (ColumnKind::States, _) => {
                 let states = format_all_states(item);
                 if !states.is_empty() {
-                    let states_text = format!("{:width$}", states, width = column.width);
+                    let states_text = if is_last {
+                        states
+                    } else {
+                        format!("{:width$}", states, width = column.width)
+                    };
                     if let Some(style) = text_style {
                         line.push_styled(states_text, style);
                     } else {
                         line.push_raw(states_text);
                     }
-                } else {
+                } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
             }
             (ColumnKind::Path, _) => {
                 if let Some(info) = worktree_info {
                     let path_str = shorten_path(&info.worktree.path, &layout.common_prefix);
-                    let path_text = format!("{:width$}", path_str, width = column.width);
+                    let path_text = if is_last {
+                        path_str
+                    } else {
+                        format!("{:width$}", path_str, width = column.width)
+                    };
                     if let Some(style) = text_style {
                         line.push_styled(path_text, style);
                     } else {
                         line.push_raw(path_text);
                     }
-                } else {
+                } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
             }
@@ -428,40 +447,54 @@ pub fn format_list_item_line(
                         dim_deletion,
                     );
                     append_line(&mut line, segment);
-                } else {
+                } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
             }
             (ColumnKind::Time, _) => {
-                let time_str = format!(
-                    "{:width$}",
-                    format_relative_time(commit.timestamp),
-                    width = column.width
-                );
+                let time_str = if is_last {
+                    format_relative_time(commit.timestamp)
+                } else {
+                    format!(
+                        "{:width$}",
+                        format_relative_time(commit.timestamp),
+                        width = column.width
+                    )
+                };
                 line.push_styled(time_str, Style::new().dimmed());
             }
             (ColumnKind::CiStatus, _) => {
                 if let Some(pr_status) = item.pr_status() {
                     let mut ci_segment = format_ci_status(pr_status);
-                    ci_segment.pad_to(column.width);
+                    if !is_last {
+                        ci_segment.pad_to(column.width);
+                    }
                     append_line(&mut line, ci_segment);
-                } else {
+                } else if !is_last {
                     push_blank(&mut line, column.width);
                 }
             }
             (ColumnKind::Commit, _) => {
-                let commit_text = format!("{:width$}", short_head, width = column.width);
+                let commit_text = if is_last {
+                    short_head.to_string()
+                } else {
+                    format!("{:width$}", short_head, width = column.width)
+                };
                 line.push_styled(commit_text, Style::new().dimmed());
             }
             (ColumnKind::Message, _) => {
                 let msg = truncate_at_word_boundary(&commit.commit_message, layout.max_message_len);
                 let msg_start = line.width();
                 line.push_styled(msg, Style::new().dimmed());
-                line.pad_to(msg_start + column.width);
+                if !is_last {
+                    line.pad_to(msg_start + column.width);
+                }
             }
             // Fallback for diff columns when format is unexpectedly Text
             (_, _) => {
-                push_blank(&mut line, column.width);
+                if !is_last {
+                    push_blank(&mut line, column.width);
+                }
             }
         }
     }
