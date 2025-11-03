@@ -45,9 +45,28 @@ impl ShellOutput {
         );
     }
 
-    /// Normalize paths in output for snapshot testing
-    fn normalized(&self) -> std::borrow::Cow<'_, str> {
-        TMPDIR_REGEX.replace_all(&self.combined, "[TMPDIR]")
+    /// Normalize paths and ANSI codes in output for snapshot testing
+    fn normalized(&self) -> String {
+        // First normalize paths
+        let path_normalized = TMPDIR_REGEX.replace_all(&self.combined, "[TMPDIR]");
+
+        // Then normalize ANSI codes: remove redundant leading reset codes
+        // This handles differences between macOS and Linux PTY ANSI generation
+        let has_trailing_newline = path_normalized.ends_with('\n');
+        let mut result = path_normalized
+            .lines()
+            .map(|line| {
+                // Strip leading \x1b[0m reset codes (may appear as ESC[0m in the output)
+                line.strip_prefix("\x1b[0m").unwrap_or(line)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        // Preserve trailing newline if it existed
+        if has_trailing_newline {
+            result.push('\n');
+        }
+        result
     }
 }
 
@@ -283,6 +302,10 @@ fn exec_through_wrapper_from(
             "WORKTRUNK_CONFIG_PATH".to_string(),
             repo.test_config_path().to_string_lossy().to_string(),
         ),
+        // Set TERM for consistent terminal behavior across local and CI environments
+        // Without this, macOS and Linux PTYs have different defaults which causes
+        // different ANSI escape sequence generation (different reset placements)
+        ("TERM".to_string(), "xterm".to_string()),
         // Git config from configure_git_cmd
         ("GIT_AUTHOR_NAME".to_string(), "Test User".to_string()),
         (
@@ -372,7 +395,7 @@ mod tests {
 
         // Consolidated snapshot - output should be identical across all shells
         insta::allow_duplicates! {
-            assert_snapshot!("command_failure", output.normalized().as_ref());
+            assert_snapshot!("command_failure", output.normalized());
         }
     }
 
@@ -398,7 +421,7 @@ mod tests {
 
         // Consolidated snapshot - output should be identical across all shells
         insta::allow_duplicates! {
-            assert_snapshot!("switch_create", output.normalized().as_ref());
+            assert_snapshot!("switch_create", output.normalized());
         }
     }
 
@@ -421,7 +444,7 @@ mod tests {
 
         // Consolidated snapshot - output should be identical across all shells
         insta::allow_duplicates! {
-            assert_snapshot!("remove", output.normalized().as_ref());
+            assert_snapshot!("remove", output.normalized());
         }
     }
 
@@ -444,7 +467,7 @@ mod tests {
 
         // Consolidated snapshot - output should be identical across all shells
         insta::allow_duplicates! {
-            assert_snapshot!("merge", output.normalized().as_ref());
+            assert_snapshot!("merge", output.normalized());
         }
     }
 
@@ -482,20 +505,16 @@ mod tests {
 
         // Consolidated snapshot - output should be identical across all shells
         insta::allow_duplicates! {
-            assert_snapshot!("switch_with_execute", output.normalized().as_ref());
+            assert_snapshot!("switch_with_execute", output.normalized());
         }
     }
 
     /// Test switch --create with post-create-command (blocking) and post-start-command (background)
-    // TODO: Fix non-deterministic test - PTY buffering causes inconsistent output ordering
-    // All shells (bash/zsh/fish) have varying output order due to background post-start commands
-    // Fish fails ~50% in CI, bash/zsh also use shell-specific snapshots due to ordering issues
-    // #[rstest]
-    // #[case("bash")]
-    // #[case("zsh")]
-    // #[case("fish")]
-    #[allow(dead_code)]
-    fn test_wrapper_switch_with_hooks(shell: &str) {
+    #[rstest]
+    #[case("bash")]
+    #[case("zsh")]
+    #[case("fish")]
+    fn test_wrapper_switch_with_hooks(#[case] shell: &str) {
         let repo = TestRepo::new();
         repo.commit("Initial commit");
 
@@ -542,21 +561,15 @@ approved-commands = [
         output.assert_no_directive_leaks();
 
         // Shell-specific snapshot - output ordering varies due to PTY buffering
-        assert_snapshot!(
-            format!("switch_with_hooks_{}", shell),
-            output.normalized().as_ref()
-        );
+        assert_snapshot!(format!("switch_with_hooks_{}", shell), output.normalized());
     }
 
     /// Test merge with successful pre-merge-command validation
-    // TODO: Fix non-deterministic test - PTY buffering causes inconsistent output ordering
-    // Shell-specific snapshots exist but still produce inconsistent results across runs
-    // #[rstest]
-    // #[case("bash")]
-    // #[case("zsh")]
-    // #[case("fish")]
-    #[allow(dead_code)]
-    fn test_wrapper_merge_with_pre_merge_success(shell: &str) {
+    #[rstest]
+    #[case("bash")]
+    #[case("zsh")]
+    #[case("fish")]
+    fn test_wrapper_merge_with_pre_merge_success(#[case] shell: &str) {
         let mut repo = TestRepo::new();
         repo.commit("Initial commit");
         repo.setup_remote("main");
@@ -628,19 +641,16 @@ approved-commands = [
         // Shell-specific snapshot - output ordering varies due to PTY buffering
         assert_snapshot!(
             format!("merge_with_pre_merge_success_{}", shell),
-            output.normalized().as_ref()
+            output.normalized()
         );
     }
 
     /// Test merge with failing pre-merge-command that aborts the merge
-    // TODO: Fix non-deterministic test - PTY buffering causes inconsistent output ordering
-    // Shell-specific snapshots exist but still produce inconsistent results across runs
-    // #[rstest]
-    // #[case("bash")]
-    // #[case("zsh")]
-    // #[case("fish")]
-    #[allow(dead_code)]
-    fn test_wrapper_merge_with_pre_merge_failure(shell: &str) {
+    #[rstest]
+    #[case("bash")]
+    #[case("zsh")]
+    #[case("fish")]
+    fn test_wrapper_merge_with_pre_merge_failure(#[case] shell: &str) {
         let mut repo = TestRepo::new();
         repo.commit("Initial commit");
         repo.setup_remote("main");
@@ -709,7 +719,7 @@ approved-commands = [
         // Shell-specific snapshot - output ordering varies due to PTY buffering
         assert_snapshot!(
             format!("merge_with_pre_merge_failure_{}", shell),
-            output.normalized().as_ref()
+            output.normalized()
         );
     }
 
@@ -757,7 +767,7 @@ approved-commands = ["echo 'test command executed'"]
 
         // Normalize paths in output for snapshot testing
         // Snapshot the output
-        assert_snapshot!(output.normalized().as_ref());
+        assert_snapshot!(output.normalized());
     }
 
     #[test]
@@ -792,7 +802,7 @@ approved-commands = ["echo 'test command executed'"]
 
         // Normalize paths in output for snapshot testing
         // Snapshot the output
-        assert_snapshot!(output.normalized().as_ref());
+        assert_snapshot!(output.normalized());
     }
 
     #[test]
@@ -817,7 +827,7 @@ approved-commands = ["echo 'test command executed'"]
             "Success message missing"
         );
 
-        assert_snapshot!(output.normalized().as_ref());
+        assert_snapshot!(output.normalized());
     }
 
     #[test]
@@ -871,7 +881,7 @@ approved-commands = ["echo 'background task'"]
 
         // Normalize paths in output for snapshot testing
         // Snapshot the full output
-        assert_snapshot!(output.normalized().as_ref());
+        assert_snapshot!(output.normalized());
     }
 
     // ============================================================================
@@ -936,7 +946,7 @@ approved-commands = ["echo 'fish background task'"]
             "Background command content missing from output"
         );
 
-        assert_snapshot!(output.normalized().as_ref());
+        assert_snapshot!(output.normalized());
     }
 
     #[test]
@@ -974,7 +984,7 @@ approved-commands = ["echo 'fish background task'"]
         assert!(output.combined.contains("line 3"), "Third line missing");
 
         // Normalize paths in output for snapshot testing
-        assert_snapshot!(output.normalized().as_ref());
+        assert_snapshot!(output.normalized());
     }
 
     #[test]
@@ -998,6 +1008,6 @@ approved-commands = ["echo 'fish background task'"]
         );
 
         // Normalize paths in output for snapshot testing
-        assert_snapshot!(output.normalized().as_ref());
+        assert_snapshot!(output.normalized());
     }
 }
