@@ -233,7 +233,8 @@ pub fn handle_merge(
     )?;
 
     // Get primary worktree path before cleanup (while we can still run git commands)
-    let primary_worktree_dir = repo.main_worktree_root()?;
+    let worktrees = repo.list_worktrees()?;
+    let primary_worktree_dir = worktrees.primary().path.clone();
 
     // Finish worktree unless --no-remove was specified
     if !no_remove {
@@ -484,7 +485,7 @@ pub fn run_pre_merge_commands(
         return Ok(());
     };
 
-    let repo_root = repo.main_worktree_root()?;
+    let repo_root = repo.worktree_base()?;
     let ctx = CommandContext::new(
         repo,
         config,
@@ -601,7 +602,7 @@ pub fn run_pre_commit_commands(
         return Ok(());
     };
 
-    let repo_root = repo.main_worktree_root()?;
+    let repo_root = repo.worktree_base()?;
     let ctx = CommandContext::new(
         repo,
         config,

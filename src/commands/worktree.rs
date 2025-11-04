@@ -201,7 +201,7 @@ pub fn handle_switch(
     }
 
     // No existing worktree, create one
-    let repo_root = repo.main_worktree_root()?;
+    let repo_root = repo.worktree_base()?;
 
     let repo_name = repo_root
         .file_name()
@@ -309,7 +309,8 @@ fn remove_current_worktree(repo: &Repository) -> Result<RemoveResult, GitError> 
         // In worktree: navigate to primary worktree and remove this one
         // (no need to check default branch in this path)
         let worktree_root = repo.worktree_root()?;
-        let primary_worktree_dir = repo.main_worktree_root()?;
+        let worktrees = repo.list_worktrees()?;
+        let primary_worktree_dir = worktrees.primary().path.clone();
 
         // Return paths - deletion will happen in output handler after cd directive is emitted
         Ok(RemoveResult::RemovedWorktree {
@@ -366,8 +367,9 @@ fn remove_worktree_by_name(repo: &Repository, branch_name: &str) -> Result<Remov
 
     // Return paths for all cases - deletion happens in output handler
     let (primary_path, changed_directory) = if removing_current {
-        // Removing current worktree - will cd to main worktree
-        (repo.main_worktree_root()?, true)
+        // Removing current worktree - will cd to primary worktree
+        let worktrees = repo.list_worktrees()?;
+        (worktrees.primary().path.clone(), true)
     } else {
         // Removing different worktree - stay in current location
         (repo.worktree_root()?, false)
@@ -450,7 +452,7 @@ pub fn execute_post_create_commands(
         return Ok(());
     };
 
-    let repo_root = repo.main_worktree_root()?;
+    let repo_root = repo.worktree_base()?;
     let ctx = CommandContext::new(repo, config, branch, worktree_path, &repo_root, force);
     let commands = prepare_project_commands(post_create_config, &ctx, false, &[], "post-create")?;
 
@@ -499,7 +501,7 @@ pub fn spawn_post_start_commands(
         return Ok(());
     };
 
-    let repo_root = repo.main_worktree_root()?;
+    let repo_root = repo.worktree_base()?;
     let ctx = CommandContext::new(repo, config, branch, worktree_path, &repo_root, force);
     let commands = prepare_project_commands(post_start_config, &ctx, false, &[], "post-start")?;
 
@@ -555,7 +557,7 @@ pub fn execute_post_start_commands_sequential(
         return Ok(());
     };
 
-    let repo_root = repo.main_worktree_root()?;
+    let repo_root = repo.worktree_base()?;
     let ctx = CommandContext::new(repo, config, branch, worktree_path, &repo_root, force);
     let commands = prepare_project_commands(post_start_config, &ctx, false, &[], "post-start")?;
 
