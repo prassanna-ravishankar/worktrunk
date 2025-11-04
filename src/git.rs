@@ -1046,7 +1046,7 @@ fn finalize_worktree(mut wt: Worktree) -> Worktree {
     wt
 }
 
-fn parse_worktree_list(output: &str) -> Result<Vec<Worktree>, GitError> {
+pub(crate) fn parse_worktree_list(output: &str) -> Result<Vec<Worktree>, GitError> {
     let mut worktrees = Vec::new();
     let mut current: Option<Worktree> = None;
 
@@ -1132,7 +1132,7 @@ fn parse_worktree_list(output: &str) -> Result<Vec<Worktree>, GitError> {
     Ok(worktrees)
 }
 
-fn parse_local_default_branch(output: &str, remote: &str) -> Result<String, GitError> {
+pub(crate) fn parse_local_default_branch(output: &str, remote: &str) -> Result<String, GitError> {
     let trimmed = output.trim();
 
     // Strip "remote/" prefix if present
@@ -1149,7 +1149,7 @@ fn parse_local_default_branch(output: &str, remote: &str) -> Result<String, GitE
     Ok(branch.to_string())
 }
 
-fn parse_remote_default_branch(output: &str) -> Result<String, GitError> {
+pub(crate) fn parse_remote_default_branch(output: &str) -> Result<String, GitError> {
     output
         .lines()
         .find_map(|line| {
@@ -1164,7 +1164,7 @@ fn parse_remote_default_branch(output: &str) -> Result<String, GitError> {
         })
 }
 
-fn parse_numstat(output: &str) -> Result<(usize, usize), GitError> {
+pub(crate) fn parse_numstat(output: &str) -> Result<(usize, usize), GitError> {
     let mut total_added = 0;
     let mut total_deleted = 0;
 
@@ -1186,12 +1186,13 @@ fn parse_numstat(output: &str) -> Result<(usize, usize), GitError> {
             continue;
         }
 
-        let added: usize = added_str
-            .parse()
-            .map_err(|e| GitError::ParseError(format!("Failed to parse added lines: {}", e)))?;
-        let deleted: usize = deleted_str
-            .parse()
-            .map_err(|e| GitError::ParseError(format!("Failed to parse deleted lines: {}", e)))?;
+        // Skip malformed lines (e.g., missing tabs) by treating parse errors as non-fatal
+        let Ok(added) = added_str.parse::<usize>() else {
+            continue;
+        };
+        let Ok(deleted) = deleted_str.parse::<usize>() else {
+            continue;
+        };
 
         total_added += added;
         total_deleted += deleted;

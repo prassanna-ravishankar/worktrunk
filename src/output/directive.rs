@@ -164,4 +164,147 @@ mod tests {
         // Directive mode preserves styling for users viewing through shell wrapper
         // (We're not testing actual output here, just documenting the behavior)
     }
+
+    #[test]
+    fn test_path_with_special_characters() {
+        // BUG HYPOTHESIS: Paths with newlines or NUL bytes could break directive parsing
+        let mut buffer = Vec::new();
+
+        // Path with newline (shouldn't normally happen, but let's test)
+        let path = PathBuf::from("/test/path\nwith\nnewlines");
+        write!(&mut buffer, "__WORKTRUNK_CD__{}\0", path.display()).unwrap();
+
+        let output = String::from_utf8_lossy(&buffer);
+        // The newlines are preserved - this could break parsing!
+        assert!(output.contains('\n'), "Newlines in path are preserved");
+
+        // Count NUL bytes - should only be at the end
+        let nul_positions: Vec<_> = buffer
+            .iter()
+            .enumerate()
+            .filter(|&(_, &b)| b == 0)
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(
+            nul_positions.len(),
+            1,
+            "Should have exactly 1 NUL terminator"
+        );
+        assert_eq!(
+            nul_positions[0],
+            buffer.len() - 1,
+            "NUL should be at the end"
+        );
+    }
+
+    #[test]
+    fn test_command_with_nul_bytes() {
+        // BUG HYPOTHESIS: Commands with embedded NUL bytes could break parsing
+        let mut buffer = Vec::new();
+
+        let command = "echo test\0extra";
+        write!(&mut buffer, "__WORKTRUNK_EXEC__{}\0", command).unwrap();
+
+        // Count NUL bytes
+        let nul_count = buffer.iter().filter(|&&b| b == 0).count();
+        // We have 2 NUL bytes: one embedded in command, one terminator
+        assert_eq!(
+            nul_count, 2,
+            "Embedded NUL creates extra terminator - breaks parsing!"
+        );
+    }
+
+    #[test]
+    fn test_message_with_nul_bytes() {
+        // What if success message contains NUL bytes?
+        let mut buffer = Vec::new();
+
+        let message = "Part1\0Part2";
+        write!(&mut buffer, "{}\0", message).unwrap();
+
+        let nul_count = buffer.iter().filter(|&&b| b == 0).count();
+        // Embedded NUL plus terminator = 2 NUL bytes
+        assert_eq!(nul_count, 2, "Embedded NUL creates parsing ambiguity!");
+    }
+
+    #[test]
+    fn test_color_reset_on_empty_style() {
+        // BUG HYPOTHESIS from CLAUDE.md (lines 154-177):
+        // Using {:#} on Style::new() produces empty string, not reset code
+        use anstyle::Style;
+
+        let empty_style = Style::new();
+        let output = format!("{:#}", empty_style);
+
+        // This is the bug: {:#} on empty style produces empty string!
+        assert_eq!(
+            output, "",
+            "BUG: Empty style reset produces empty string, not \\x1b[0m"
+        );
+
+        // This means colors can leak: "text in color{:#}" where # is on empty Style
+        // doesn't actually reset, it just removes the style prefix!
+    }
+
+    #[test]
+    fn test_proper_reset_with_anstyle_reset() {
+        // The correct way to reset ALL styles is anstyle::Reset
+        use anstyle::Reset;
+
+        let output = format!("{}", Reset);
+
+        // This should produce the actual reset escape code
+        assert!(
+            output.contains("\x1b[0m") || output == "\x1b[0m",
+            "Reset should produce actual ANSI reset code"
+        );
+    }
+
+    #[test]
+    fn test_nested_style_resets_leak_color() {
+        // BUG HYPOTHESIS from CLAUDE.md:
+        // Nested style resets can leak colors
+        use anstyle::{AnsiColor, Color, Style};
+
+        let warning = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
+        let bold = Style::new().bold();
+
+        // BAD pattern: nested reset
+        let bad_output = format!("{warning}Text with {bold}nested{bold:#} styles{warning:#}");
+
+        // When {bold:#} resets, it might also reset the warning color!
+        // We can't easily test the actual ANSI codes here, but document the issue
+        println!(
+            "Nested reset output: {}",
+            bad_output.replace('\x1b', "\\x1b")
+        );
+
+        // GOOD pattern: compose styles
+        let warning_bold = warning.bold();
+        let good_output =
+            format!("{warning}Text with {warning_bold}composed{warning_bold:#} styles{warning:#}");
+        println!("Composed output: {}", good_output.replace('\x1b', "\\x1b"));
+
+        // The good pattern maintains color through the bold section
+    }
+
+    #[test]
+    fn test_path_with_ansi_codes() {
+        // BUG HYPOTHESIS: What if a path somehow contains ANSI codes?
+        // (This could happen with crafted directory names)
+        let mut buffer = Vec::new();
+
+        let path = PathBuf::from("/test/\x1b[31mred\x1b[0m/path");
+        write!(&mut buffer, "__WORKTRUNK_CD__{}\0", path.display()).unwrap();
+
+        let output = String::from_utf8_lossy(&buffer);
+        // ANSI codes are preserved in the directive!
+        assert!(
+            output.contains('\x1b'),
+            "ANSI codes in path leak into directive"
+        );
+
+        // This could cause the shell to display colored output when parsing the directive
+        // or interfere with directive parsing
+    }
 }

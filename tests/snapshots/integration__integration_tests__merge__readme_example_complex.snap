@@ -16,9 +16,9 @@ info:
     GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
-    PATH: "/private/var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpRAGvvU/test-repo/.bin:/Users/maximilian/.cargo/bin:/Users/maximilian/.local/bin:/Users/maximilian/.bun/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    PATH: "/private/var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpeH86uP/test-repo/.bin:/Users/maximilian/.cargo/bin:/Users/maximilian/.local/bin:/Users/maximilian/.bun/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpRAGvvU/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpeH86uP/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -36,11 +36,11 @@ exit_code: 0
 [40m [0m  - Create test suite covering all authentication flows
 
 ✅ [32mSquashed @ [2m[SHA][0m
-🔄 [36mRunning pre-merge: [1mlint[0m[0m
-[40m [0m  [1m[34mcargo[0m clippy[0m
-
 🔄 [36mRunning pre-merge: [1mtest[0m[0m
 [40m [0m  [1m[34mcargo[0m test[0m
+
+🔄 [36mRunning pre-merge: [1mlint[0m[0m
+[40m [0m  [1m[34mcargo[0m clippy[0m
 
 🔄 [36mMerging 1 commit to [1m[36mmain[0m @ [2m[SHA][0m (no rebase needed)
 
@@ -59,8 +59,6 @@ exit_code: 0
 
 
 ----- stderr -----
-[0m    Checking worktrunk v0.1.0
-    Finished dev [unoptimized + debuginfo] target(s) in 1.23s
 [0m    Finished test [unoptimized + debuginfo] target(s) in 0.12s
      Running unittests src/lib.rs (target/debug/deps/worktrunk-abc123)
 
@@ -71,6 +69,8 @@ test auth::tests::test_token_refresh ... ok
 test auth::tests::test_token_validation ... ok
 
 test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+[0m    Checking worktrunk v0.1.0
+    Finished dev [unoptimized + debuginfo] target(s) in 1.23s
 [0m  Installing worktrunk v0.1.0
    Compiling worktrunk v0.1.0
     Finished release [optimized] target(s) in 2.34s

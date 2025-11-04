@@ -37,6 +37,7 @@
 //! "what commands run for this project".
 
 use config::{Config, ConfigError, File};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use toml;
@@ -204,6 +205,10 @@ pub struct ProjectConfig {
 /// - Array: `post-create-command = ["npm install", "npm test"]`
 /// - Named table: `[post-create-command]` followed by `install = "npm install"`
 ///
+/// **Order preservation:** Named commands preserve TOML insertion order (requires
+/// `preserve_order` feature on toml crate and IndexMap for deserialization). This
+/// allows users to control execution order explicitly.
+///
 /// This canonical form eliminates branching at call sites - code just iterates over commands.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CommandConfig {
@@ -228,7 +233,7 @@ impl<'de> Deserialize<'de> for CommandConfig {
         enum CommandConfigToml {
             Single(String),
             Multiple(Vec<String>),
-            Named(std::collections::HashMap<String, String>),
+            Named(IndexMap<String, String>),
         }
 
         let toml = CommandConfigToml::deserialize(deserializer)?;
@@ -240,9 +245,8 @@ impl<'de> Deserialize<'de> for CommandConfig {
                 .map(|(i, cmd)| (Some((i + 1).to_string()), cmd))
                 .collect(),
             CommandConfigToml::Named(map) => {
-                let mut pairs: Vec<_> = map.into_iter().collect();
-                pairs.sort_by(|a, b| a.0.cmp(&b.0));
-                pairs.into_iter().map(|(k, v)| (Some(k), v)).collect()
+                // IndexMap preserves insertion order from TOML
+                map.into_iter().map(|(k, v)| (Some(k), v)).collect()
             }
         };
         Ok(CommandConfig { commands })
@@ -538,11 +542,14 @@ impl ProjectConfig {
             return Ok(None);
         }
 
-        let config = Config::builder()
-            .add_source(File::from(config_path))
-            .build()?;
+        // Load directly with toml crate to preserve insertion order (with preserve_order feature)
+        let contents = std::fs::read_to_string(&config_path)
+            .map_err(|e| ConfigError::Message(format!("Failed to read config file: {}", e)))?;
 
-        Ok(Some(config.try_deserialize()?))
+        let config: ProjectConfig = toml::from_str(&contents)
+            .map_err(|e| ConfigError::Message(format!("Failed to parse TOML: {}", e)))?;
+
+        Ok(Some(config))
     }
 }
 
@@ -845,7 +852,7 @@ mod tests {
         let cmd_config = config.post_start_command.unwrap();
         let commands = cmd_config.commands();
         assert_eq!(commands.len(), 2);
-        // Names are sorted alphabetically
+        // Preserves TOML insertion order
         assert_eq!(
             commands[0],
             (Some("server".to_string()), "npm run dev".to_string())
@@ -853,6 +860,63 @@ mod tests {
         assert_eq!(
             commands[1],
             (Some("watch".to_string()), "npm run watch".to_string())
+        );
+    }
+
+    #[test]
+    fn test_command_config_named_preserves_toml_order() {
+        // Test that named commands preserve TOML order (not alphabetical)
+        let toml = r#"
+            [pre-merge-command]
+            insta = "cargo insta test"
+            doc = "cargo doc"
+            clippy = "cargo clippy"
+        "#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        let cmd_config = config.pre_merge_command.unwrap();
+        let commands = cmd_config.commands();
+
+        // Extract just the names for easier verification
+        let names: Vec<_> = commands
+            .iter()
+            .map(|(n, _)| n.as_deref().unwrap())
+            .collect();
+
+        // Verify TOML insertion order is preserved
+        assert_eq!(names, vec!["insta", "doc", "clippy"]);
+
+        // Verify it's NOT alphabetical (which would be clippy, doc, insta)
+        let mut alphabetical = names.clone();
+        alphabetical.sort();
+        assert_ne!(
+            names, alphabetical,
+            "Order should be TOML insertion order, not alphabetical"
+        );
+    }
+
+    #[test]
+    fn test_command_config_task_order() {
+        // Test exact ordering as used in post_start tests
+        let toml = r#"
+[post-start-command]
+task1 = "echo 'Task 1 running' > task1.txt"
+task2 = "echo 'Task 2 running' > task2.txt"
+"#;
+        let config: ProjectConfig = toml::from_str(toml).unwrap();
+        let cmd_config = config.post_start_command.unwrap();
+        let commands = cmd_config.commands();
+
+        assert_eq!(commands.len(), 2);
+        // Should be in TOML order: task1, task2
+        assert_eq!(
+            commands[0].0.as_deref(),
+            Some("task1"),
+            "First command should be task1"
+        );
+        assert_eq!(
+            commands[1].0.as_deref(),
+            Some("task2"),
+            "Second command should be task2"
         );
     }
 
@@ -908,7 +972,7 @@ mod tests {
         let cmd_config = config.pre_merge_command.unwrap();
         let commands = cmd_config.commands();
         assert_eq!(commands.len(), 3);
-        // Names are sorted alphabetically
+        // Preserves TOML insertion order
         assert_eq!(
             commands[0],
             (
