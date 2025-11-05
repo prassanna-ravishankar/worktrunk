@@ -7,6 +7,29 @@
 //! - Directives are never leaked to users
 //! - Output is properly formatted for humans
 //! - Shell integration works end-to-end as users experience it
+//!
+//! ## Why Manual PTY Execution + File Snapshots (Not insta_cmd)?
+//!
+//! These tests use a pattern that might seem redundant at first glance:
+//! - Manual command execution through PTY (`exec_in_pty`)
+//! - Manual output normalization (`normalized()`)
+//! - File snapshots via `assert_snapshot!(output.normalized())`
+//!
+//! This is the correct approach because:
+//!
+//! 1. **PTY execution is required** - Testing shell wrappers requires real TTY behavior
+//!    (streaming output, ANSI codes, signal handling). `insta_cmd` uses `std::process::Command`
+//!    which doesn't provide a TTY to child processes.
+//!
+//! 2. **File snapshots are appropriate** - The output contains ANSI escape codes and complex
+//!    formatting. File snapshots keep these out of source files (unlike inline snapshots).
+//!
+//! 3. **Full output is valuable** - While specific assertions verify critical properties
+//!    (no directive leaks, correct exit codes), file snapshots make it easy for humans to
+//!    see the complete user experience at a glance.
+//!
+//! In summary: This isn't a case of "should use insta_cmd instead" - the manual execution
+//! is necessary, and file snapshots are the right storage format for escape-code-heavy output.
 
 use crate::common::TestRepo;
 use insta::assert_snapshot;
