@@ -120,7 +120,13 @@ pub fn prepare_project_commands(
 
     // Approve using expanded commands (which have both template and expanded forms)
     if !auto_trust
-        && !approve_command_batch(&expanded_commands, &project_id, ctx.config, ctx.force)?
+        && !approve_command_batch(
+            &expanded_commands,
+            &project_id,
+            ctx.config,
+            ctx.force,
+            false,
+        )?
     {
         return Err(GitError::CommandNotApproved);
     }

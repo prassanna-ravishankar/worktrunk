@@ -391,39 +391,80 @@ pub fn handle_dev_rebase(target: Option<&str>) -> Result<bool, GitError> {
     Ok(true)
 }
 
-/// Handle `wt dev ask-approval` command - test the approval prompt UI
-pub fn handle_dev_ask_approval(force: bool) -> Result<(), GitError> {
+/// Handle `wt dev ask-approvals` command - approve all commands in the project
+pub fn handle_dev_ask_approvals(force: bool, show_all: bool) -> Result<(), GitError> {
     use super::command_approval::approve_command_batch;
-    use worktrunk::config::{Command, CommandPhase, WorktrunkConfig};
-
-    // Create some test commands to show in the approval prompt
-    let test_commands = vec![
-        Command::with_expansion(
-            Some("insta".to_string()),
-            "NEXTEST_STATUS_LEVEL=fail cargo insta test".to_string(),
-            "NEXTEST_STATUS_LEVEL=fail cargo insta test --test-runner nextest".to_string(),
-            CommandPhase::PreMerge,
-        ),
-        Command::with_expansion(
-            Some("doc".to_string()),
-            "RUSTDOCFLAGS='-Dwarnings' cargo doc --no-deps".to_string(),
-            "RUSTDOCFLAGS='-Dwarnings' cargo doc --no-deps".to_string(),
-            CommandPhase::PreMerge,
-        ),
-        Command::with_expansion(
-            None,
-            "cargo install --path .".to_string(),
-            "cargo install --path .".to_string(),
-            CommandPhase::PostMerge,
-        ),
-    ];
+    use worktrunk::config::{CommandPhase, WorktrunkConfig};
+    use worktrunk::styling::INFO_EMOJI;
 
     let repo = Repository::current();
     let project_id = repo.project_identifier()?;
     let config = WorktrunkConfig::load().git_context("Failed to load config")?;
 
+    // Load project config (show helpful error if missing)
+    let project_config = load_project_config(&repo)?;
+
+    // Collect all commands from the project config
+    let mut commands = Vec::new();
+
+    // post-create-command
+    if let Some(cmd_config) = &project_config.post_create_command {
+        commands.extend(cmd_config.commands_with_phase(CommandPhase::PostCreate));
+    }
+
+    // post-start-command
+    if let Some(cmd_config) = &project_config.post_start_command {
+        commands.extend(cmd_config.commands_with_phase(CommandPhase::PostStart));
+    }
+
+    // pre-commit-command
+    if let Some(cmd_config) = &project_config.pre_commit_command {
+        commands.extend(cmd_config.commands_with_phase(CommandPhase::PreCommit));
+    }
+
+    // pre-merge-command
+    if let Some(cmd_config) = &project_config.pre_merge_command {
+        commands.extend(cmd_config.commands_with_phase(CommandPhase::PreMerge));
+    }
+
+    // post-merge-command
+    if let Some(cmd_config) = &project_config.post_merge_command {
+        commands.extend(cmd_config.commands_with_phase(CommandPhase::PostMerge));
+    }
+
+    if commands.is_empty() {
+        let dim = worktrunk::styling::AnstyleStyle::new().dimmed();
+        crate::output::success(format!(
+            "{INFO_EMOJI} {dim}No commands configured in project{dim:#}"
+        ))?;
+        return Ok(());
+    }
+
+    // Filter to only unapproved commands (unless --all is specified)
+    let commands_to_approve = if !show_all {
+        let unapproved: Vec<_> = commands
+            .into_iter()
+            .filter(|cmd| !config.is_command_approved(&project_id, &cmd.template))
+            .collect();
+
+        if unapproved.is_empty() {
+            let dim = worktrunk::styling::AnstyleStyle::new().dimmed();
+            crate::output::success(format!(
+                "{INFO_EMOJI} {dim}All commands already approved{dim:#}"
+            ))?;
+            return Ok(());
+        }
+
+        unapproved
+    } else {
+        commands
+    };
+
     // Call the approval prompt
-    let approved = approve_command_batch(&test_commands, &project_id, &config, force)?;
+    // When show_all=true, we've already included all commands in commands_to_approve
+    // When show_all=false, we've already filtered to unapproved commands
+    // So we pass skip_approval_filter=true to prevent double-filtering
+    let approved = approve_command_batch(&commands_to_approve, &project_id, &config, force, true)?;
 
     // Show result
     if approved {

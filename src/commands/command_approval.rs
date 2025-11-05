@@ -14,16 +14,26 @@ use worktrunk::styling::{
 /// declined, and `Err` if config reload/save fails.
 ///
 /// Shows expanded commands to the user. Templates are saved to config for future approval checks.
+///
+/// # Parameters
+/// - `commands_already_filtered`: If true, commands list is pre-filtered; skip filtering by approval status
 pub fn approve_command_batch(
     commands: &[Command],
     project_id: &str,
     config: &WorktrunkConfig,
     force: bool,
+    commands_already_filtered: bool,
 ) -> Result<bool, GitError> {
-    let needs_approval: Vec<&Command> = commands
-        .iter()
-        .filter(|cmd| !config.is_command_approved(project_id, &cmd.template))
-        .collect();
+    let needs_approval: Vec<&Command> = if commands_already_filtered {
+        // Commands already filtered by caller, use as-is
+        commands.iter().collect()
+    } else {
+        // Filter to only unapproved commands
+        commands
+            .iter()
+            .filter(|cmd| !config.is_command_approved(project_id, &cmd.template))
+            .collect()
+    };
 
     if needs_approval.is_empty() {
         return Ok(true);

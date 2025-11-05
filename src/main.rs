@@ -32,7 +32,7 @@ use commands::worktree::SwitchResult;
 use commands::{
     ConfigAction, Shell, handle_complete, handle_completion, handle_config_help,
     handle_config_init, handle_config_list, handle_config_refresh_cache, handle_configure_shell,
-    handle_dev_ask_approval, handle_dev_commit, handle_dev_push, handle_dev_rebase,
+    handle_dev_ask_approvals, handle_dev_commit, handle_dev_push, handle_dev_rebase,
     handle_dev_run_hook, handle_dev_squash, handle_init, handle_list, handle_merge, handle_remove,
     handle_switch,
 };
@@ -139,11 +139,15 @@ enum DevCommand {
         target: Option<String>,
     },
 
-    /// Test approval prompt UI (for development/debugging)
-    AskApproval {
+    /// Approve commands in the project config (shows unapproved by default)
+    AskApprovals {
         /// Skip command approval prompts
         #[arg(short, long)]
         force: bool,
+
+        /// Show all commands including already-approved ones
+        #[arg(long)]
+        all: bool,
     },
 }
 
@@ -597,7 +601,7 @@ fn main() {
                 allow_merge_commits,
             } => handle_dev_push(target.as_deref(), allow_merge_commits),
             DevCommand::Rebase { target } => handle_dev_rebase(target.as_deref()).map(|_| ()),
-            DevCommand::AskApproval { force } => handle_dev_ask_approval(force),
+            DevCommand::AskApprovals { force, all } => handle_dev_ask_approvals(force, all),
         },
         Commands::List {
             format,

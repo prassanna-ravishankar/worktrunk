@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpBXcTuz/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp4TfyPE/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -199,8 +199,8 @@ _wt() {
             wt__config,shell)
                 cmd="wt__config__shell"
                 ;;
-            wt__dev,ask-approval)
-                cmd="wt__dev__ask__approval"
+            wt__dev,ask-approvals)
+                cmd="wt__dev__ask__approvals"
                 ;;
             wt__dev,commit)
                 cmd="wt__dev__commit"
@@ -354,7 +354,7 @@ _wt() {
             return 0
             ;;
         wt__dev)
-            opts="-v -h --verbose --help run-hook commit squash push rebase ask-approval"
+            opts="-v -h --verbose --help run-hook commit squash push rebase ask-approvals"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -367,8 +367,8 @@ _wt() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        wt__dev__ask__approval)
-            opts="-f -v -h --force --verbose --help"
+        wt__dev__ask__approvals)
+            opts="-f -v -h --force --all --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
