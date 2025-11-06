@@ -80,16 +80,12 @@ pub fn approve_command_batch(
         }
 
         if updated && let Err(e) = fresh_config.save() {
-            log_approval_warning("Failed to save command approval", e);
+            println!("{WARNING_EMOJI} {WARNING}Failed to save command approval: {e}{WARNING:#}");
             println!("{HINT_EMOJI} {HINT}You will be prompted again next time.{HINT:#}");
         }
     }
 
     Ok(true)
-}
-
-fn log_approval_warning(message: &str, error: impl std::fmt::Display) {
-    println!("{WARNING_EMOJI} {WARNING}{message}: {error}{WARNING:#}");
 }
 
 fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> std::io::Result<bool> {

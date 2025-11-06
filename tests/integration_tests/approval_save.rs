@@ -269,3 +269,61 @@ fn test_force_flag_saves_to_new_config_file() {
     approved-commands = ["test command"]
     "#);
 }
+
+/// Test that permission errors when saving config are handled gracefully
+///
+/// This tests the lower-level `approve_command_to()` method fails when permissions
+/// are denied. The higher-level `approve_command_batch()` catches this error and
+/// displays a warning (see src/commands/command_approval.rs:82-85), allowing
+/// commands to execute even when the approval can't be saved.
+#[test]
+fn test_permission_error_prevents_save() {
+    use std::fs::Permissions;
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp_dir = TempDir::new().unwrap();
+    let config_path = temp_dir.path().join("readonly").join("config.toml");
+
+    // Create the directory and initial config file
+    let config_dir = config_path.parent().unwrap();
+    fs::create_dir_all(config_dir).unwrap();
+    let initial_config = WorktrunkConfig::default();
+    initial_config.save_to(&config_path).unwrap();
+
+    // Make the directory read-only (prevents writing new files)
+    #[cfg(unix)]
+    {
+        let readonly_perms = Permissions::from_mode(0o444);
+        fs::set_permissions(config_dir, readonly_perms).unwrap();
+    }
+
+    // Try to save a new approval - this should fail
+    let mut config = WorktrunkConfig::default();
+    let result = config.approve_command_to(
+        "github.com/test/readonly".to_string(),
+        "test command".to_string(),
+        &config_path,
+    );
+
+    // Restore write permissions so temp_dir can be cleaned up
+    #[cfg(unix)]
+    {
+        let writable_perms = Permissions::from_mode(0o755);
+        fs::set_permissions(config_dir, writable_perms).unwrap();
+    }
+
+    // Verify the save failed
+    assert!(
+        result.is_err(),
+        "Expected save to fail due to permissions, but it succeeded"
+    );
+
+    // In the actual code (approve_command_batch), when this error occurs:
+    // 1. It's caught with `if let Err(e) = fresh_config.save()`
+    // 2. Warning is printed: "🟡 Failed to save command approval: {error}"
+    // 3. Hint is printed: "💡 You will be prompted again next time."
+    // 4. Function returns Ok(true) - execution continues!
+    //
+    // The approval succeeds (commands execute) even though saving failed.
+    // This test verifies the save operation correctly fails with permission errors.
+}

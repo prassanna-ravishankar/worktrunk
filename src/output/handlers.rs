@@ -71,10 +71,10 @@ fn format_remove_message(result: &RemoveResult, branch: Option<&str>) -> String 
     }
 }
 
-/// Shell integration hint message
+/// Shell integration hint message (without emoji - hint() adds it automatically)
 fn shell_integration_hint() -> String {
-    use worktrunk::styling::{HINT, HINT_EMOJI};
-    format!("{HINT_EMOJI} {HINT}To enable automatic cd, run: wt config shell{HINT:#}")
+    use worktrunk::styling::HINT;
+    format!("{HINT}To enable automatic cd, run: wt config shell{HINT:#}")
 }
 
 /// Handle output for a switch operation
@@ -92,7 +92,7 @@ pub fn handle_switch_output(
     // If no execute command provided: show shell integration hint
     // (suppressed in directive mode since user already has integration)
     if !has_execute_command {
-        super::hint(format!("\n{}", shell_integration_hint()))?;
+        super::hint(shell_integration_hint())?;
     }
 
     // Flush output (important for directive mode)

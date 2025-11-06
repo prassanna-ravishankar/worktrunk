@@ -458,7 +458,7 @@ pub fn handle_beta_ask_approvals(force: bool, show_all: bool) -> Result<(), GitE
 
     // Show result
     if approved {
-        use worktrunk::styling::{AnstyleStyle, GREEN};
+        use worktrunk::styling::GREEN;
 
         if force {
             // When using --force, commands aren't saved to config
@@ -466,17 +466,10 @@ pub fn handle_beta_ask_approvals(force: bool, show_all: bool) -> Result<(), GitE
                 "{GREEN}Commands approved (not saved with --force){GREEN:#}"
             ))?;
         } else {
-            // Interactive approval - commands were saved to config
+            // Interactive approval - commands were saved to config (unless save failed)
             crate::output::success(format!(
                 "{GREEN}Commands approved and saved to config{GREEN:#}"
             ))?;
-
-            // Show config path as supplementary metadata
-            if let Some(config_path) = worktrunk::config::get_config_path() {
-                use worktrunk::styling::println;
-                let dim = AnstyleStyle::new().dimmed();
-                println!("{dim}Config: {}{dim:#}", config_path.display());
-            }
         }
     } else {
         let dim = worktrunk::styling::AnstyleStyle::new().dimmed();
