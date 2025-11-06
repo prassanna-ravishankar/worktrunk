@@ -210,3 +210,34 @@ fn test_remove_multiple_including_current() {
         Some(&worktree_a),
     );
 }
+
+#[test]
+fn test_remove_branch_not_fully_merged() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree with an unmerged commit
+    let worktree_path = repo.add_worktree("feature-unmerged", "feature-unmerged");
+
+    // Add a commit to the feature branch that's not in main
+    std::fs::write(worktree_path.join("feature.txt"), "new feature")
+        .expect("Failed to create file");
+    repo.git_command(&["add", "feature.txt"])
+        .current_dir(&worktree_path)
+        .output()
+        .expect("Failed to stage file");
+    repo.git_command(&["commit", "-m", "Add feature"])
+        .current_dir(&worktree_path)
+        .output()
+        .expect("Failed to commit");
+
+    // Try to remove it from the main repo
+    // Branch deletion should fail but worktree removal should succeed
+    snapshot_remove(
+        "remove_branch_not_fully_merged",
+        &repo,
+        &["feature-unmerged"],
+        None,
+    );
+}

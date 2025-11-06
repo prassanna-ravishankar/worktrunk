@@ -1,6 +1,6 @@
 ---
 source: tests/integration_tests/shell_wrapper.rs
-expression: output.normalized().as_ref()
+expression: output.normalized()
 ---
 ❌ [31mBranch [1m[31mexisting[0m[31m already exists[0m
 

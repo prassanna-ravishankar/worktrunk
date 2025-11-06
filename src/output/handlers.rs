@@ -23,7 +23,13 @@ fn format_switch_message(result: &SwitchResult, branch: &str) -> String {
 }
 
 /// Format message for remove operation (includes emoji and color for consistency)
-fn format_remove_message(result: &RemoveResult, branch: Option<&str>) -> String {
+///
+/// `branch_deleted` indicates whether branch deletion actually succeeded (not just attempted)
+fn format_remove_message(
+    result: &RemoveResult,
+    branch: Option<&str>,
+    branch_deleted: bool,
+) -> String {
     use worktrunk::styling::{GREEN, GREEN_BOLD};
 
     match result {
@@ -37,8 +43,8 @@ fn format_remove_message(result: &RemoveResult, branch: Option<&str>) -> String 
             no_delete_branch,
             ..
         } => {
-            // Build the action description
-            let action = if *no_delete_branch {
+            // Build the action description based on actual outcome
+            let action = if *no_delete_branch || !branch_deleted {
                 "Removed worktree"
             } else {
                 "Removed worktree & branch"
@@ -116,8 +122,8 @@ pub fn execute_user_command(command: &str) -> Result<(), GitError> {
 
 /// Handle output for a remove operation
 pub fn handle_remove_output(result: &RemoveResult, branch: Option<&str>) -> Result<(), GitError> {
-    // For removed worktree: emit cd directive BEFORE deletion so shell changes directory instantly
-    if let RemoveResult::RemovedWorktree {
+    // Track whether branch was actually deleted (will be computed based on deletion attempt)
+    let branch_deleted = if let RemoveResult::RemovedWorktree {
         primary_path,
         worktree_path,
         changed_directory,
@@ -138,6 +144,7 @@ pub fn handle_remove_output(result: &RemoveResult, branch: Option<&str>) -> Resu
             .git_context("Failed to remove worktree")?;
 
         // 3. Delete the branch (unless --no-delete-branch was specified)
+        // Returns true if branch was successfully deleted, false otherwise
         if !no_delete_branch {
             // Create a Repository instance from the primary path to ensure we're running
             // the command from a valid directory (the worktree we just removed may have
@@ -145,22 +152,38 @@ pub fn handle_remove_output(result: &RemoveResult, branch: Option<&str>) -> Resu
             let primary_repo = worktrunk::git::Repository::at(primary_path);
 
             // Use safe delete (-d) which fails if branch has unmerged commits
-            let result = primary_repo.run_command(&["branch", "-d", branch_name]);
-            if let Err(e) = result {
-                // If branch deletion fails, show a warning but don't error
-                // This matches the user's request: "print a nice message, don't raise some big error"
-                use worktrunk::styling::{WARNING, WARNING_BOLD, WARNING_EMOJI};
-                // Normalize error message to single line to prevent formatting issues
-                let error_msg = e.to_string().replace('\n', " ").trim().to_string();
-                super::progress(format!(
-                    "{WARNING_EMOJI} {WARNING}Could not delete branch {WARNING_BOLD}{branch_name}{WARNING_BOLD:#}: {error_msg}{WARNING:#}"
-                ))?;
+            match primary_repo.run_command(&["branch", "-d", branch_name]) {
+                Ok(_) => true,
+                Err(e) => {
+                    // If branch deletion fails, show a warning but don't error
+                    // This matches the user's request: "print a nice message, don't raise some big error"
+                    use worktrunk::git::GitError;
+                    use worktrunk::styling::{WARNING, WARNING_BOLD, format_with_gutter};
+
+                    // Show the warning message with branch name
+                    super::warning(format!(
+                        "{WARNING}Could not delete branch {WARNING_BOLD}{branch_name}{WARNING_BOLD:#}{WARNING:#}"
+                    ))?;
+
+                    // Show the git error in a gutter-formatted block (raw output, no styling)
+                    // Extract the raw error message without our formatting
+                    let raw_error = match &e {
+                        GitError::CommandFailed(msg) => msg.as_str(),
+                        _ => &e.to_string(),
+                    };
+                    super::gutter(format_with_gutter(raw_error, "", None))?;
+                    false
+                }
             }
+        } else {
+            false
         }
-    }
+    } else {
+        false
+    };
 
     // Show success message (includes emoji and color)
-    super::success(format_remove_message(result, branch))?;
+    super::success(format_remove_message(result, branch, branch_deleted))?;
 
     // Flush output
     super::flush()?;

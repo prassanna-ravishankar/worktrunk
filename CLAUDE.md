@@ -451,9 +451,28 @@ See `src/commands/list/render.rs` for advanced usage.
 
 Use `format_with_gutter()` for quoted content (commands, config). The gutter is a visual separator (colored background) at column 0 - no additional indentation needed.
 
+**CRITICAL: Gutter content must be raw external output without our styling additions.**
+
+When displaying external command output (git errors, shell output, etc.) in gutters:
+- **DO**: Pass the raw output string directly
+- **DON'T**: Add our emojis (❌, 🟡, etc.) or styling to the content
+- **WHY**: Gutters are for quoting external sources verbatim - our visual additions belong in our own messages, not in quotes
+
 ```rust
 use worktrunk::styling::format_with_gutter;
+use worktrunk::git::GitError;
 
+// ✅ GOOD - raw git output in gutter
+let raw_error = match &error {
+    GitError::CommandFailed(msg) => msg.as_str(),  // Extract raw string
+    _ => &error.to_string(),
+};
+super::gutter(format_with_gutter(raw_error, "", None))?;
+
+// ❌ BAD - includes our formatting in gutter
+super::gutter(format_with_gutter(&error.to_string(), "", None))?;  // Adds ❌ emoji
+
+// ✅ GOOD - command output
 print!("{}", format_with_gutter(&command));
 ```
 
@@ -461,6 +480,10 @@ print!("{}", format_with_gutter(&command));
 ```
 🔄 Executing (post-create):
   npm install
+
+🟡 Could not delete branch feature-x
+  error: the branch 'feature-x' is not fully merged
+  hint: If you are sure you want to delete it, run 'git branch -D feature-x'
 ```
 
 The colored space at column 0 provides visual separation from surrounding text. Content starts at column 3 (gutter + 2 spaces) to align with emoji messages where the emoji (2 columns) + space (1 column) also starts content at column 3.
