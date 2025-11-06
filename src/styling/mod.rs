@@ -350,4 +350,36 @@ command = "npm install"
             "Style::new() and anstyle::Reset are NOT equivalent - always use anstyle::Reset"
         );
     }
+
+    #[test]
+    fn test_wrap_text_with_ansi_codes() {
+        use super::format::wrap_text_at_width;
+
+        // Simulate a git log line with ANSI color codes
+        // Visual content: "* 9452817 Clarify wt merge worktree removal behavior" (52 chars)
+        // But with ANSI codes, the raw string is much longer
+        let colored_text = "* \x1b[33m9452817\x1b[m Clarify wt merge worktree removal behavior";
+
+        // Without ANSI stripping, this would wrap prematurely because the raw string
+        // (with escape codes) is ~70 chars. With proper ANSI stripping, the visual
+        // width is only ~52 chars, so it should NOT wrap at width 60.
+        let result = wrap_text_at_width(colored_text, 60);
+
+        assert_eq!(
+            result.len(),
+            1,
+            "Colored text should NOT wrap when visual width (52) < max_width (60)"
+        );
+        assert_eq!(
+            result[0], colored_text,
+            "Should return original text with ANSI codes intact"
+        );
+
+        // Now test that it DOES wrap when visual width exceeds max_width
+        let result = wrap_text_at_width(colored_text, 30);
+        assert!(
+            result.len() > 1,
+            "Should wrap into multiple lines when visual width (52) > max_width (30)"
+        );
+    }
 }

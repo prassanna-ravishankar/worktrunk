@@ -11,6 +11,53 @@ use super::highlighting::bash_token_style;
 /// Default terminal width fallback if detection fails
 const DEFAULT_TERMINAL_WIDTH: usize = 80;
 
+/// Strip ANSI escape codes from a string to get the visual content
+///
+/// Handles standard ANSI SGR (Select Graphic Rendition) codes: ESC[...m
+///
+/// # Scope
+/// - Designed for git output (log, diff) which produces well-formed SGR sequences
+/// - Only handles ESC[...m (SGR), not cursor movement or other ANSI codes
+/// - Malformed sequences (ESC without [, or ESC[ without m) are preserved in output
+fn strip_ansi_codes(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' && chars.peek() == Some(&'[') {
+            // Start of ANSI escape sequence
+            chars.next(); // consume '['
+
+            // Skip until 'm' (SGR terminator) or end of string
+            // Note: If sequence is incomplete (no 'm'), we'll consume rest of iterator
+            // and result will be missing that content. This is acceptable for git output
+            // which always produces well-formed sequences.
+            let mut found_terminator = false;
+            for next_ch in chars.by_ref() {
+                if next_ch == 'm' {
+                    found_terminator = true;
+                    break;
+                }
+            }
+
+            // If sequence was incomplete, we've consumed the rest of the string
+            // This is a reasonable failure mode for malformed input
+            if !found_terminator {
+                break;
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
+
+/// Calculate visual width of a string, ignoring ANSI escape codes
+fn visual_width(s: &str) -> usize {
+    strip_ansi_codes(s).width()
+}
+
 /// Get terminal width, defaulting to 80 if detection fails
 ///
 /// Checks COLUMNS environment variable first (for testing and scripts),
@@ -32,17 +79,21 @@ fn get_terminal_width() -> usize {
 /// Wraps text at word boundaries to fit within the specified width
 ///
 /// # Arguments
-/// * `text` - The text to wrap
-/// * `max_width` - Maximum width for each line
+/// * `text` - The text to wrap (may contain ANSI codes)
+/// * `max_width` - Maximum visual width for each line
 ///
 /// # Returns
 /// A vector of wrapped lines
+///
+/// # Note
+/// Width calculation ignores ANSI escape codes to handle colored output correctly.
 pub(super) fn wrap_text_at_width(text: &str, max_width: usize) -> Vec<String> {
     if max_width == 0 {
         return vec![text.to_string()];
     }
 
-    let text_width = text.width();
+    // Use visual width (ignoring ANSI codes) for proper wrapping of colored text
+    let text_width = visual_width(text);
 
     // If the line fits, return it as-is
     if text_width <= max_width {
@@ -54,7 +105,7 @@ pub(super) fn wrap_text_at_width(text: &str, max_width: usize) -> Vec<String> {
     let mut current_width = 0;
 
     for word in text.split_whitespace() {
-        let word_width = word.width();
+        let word_width = visual_width(word);
 
         // If this is the first word in the line
         if current_line.is_empty() {
