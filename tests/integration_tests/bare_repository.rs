@@ -1,5 +1,5 @@
-use crate::common::TestRepo;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use crate::common::{TestRepo, wt_command};
+use insta_cmd::assert_cmd_snapshot;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -168,7 +168,7 @@ fn test_bare_repo_list_worktrees() {
     test.commit_in_worktree(&feature_worktree, "Work on feature");
 
     // Run wt list from the main worktree
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.arg("list").current_dir(&main_worktree);
 
@@ -184,7 +184,7 @@ fn test_bare_repo_list_shows_no_bare_entry() {
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
     // Run wt list and verify bare repo is NOT shown
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.arg("list").current_dir(&main_worktree);
 
@@ -212,7 +212,7 @@ worktree-path = "{branch}"
     fs::write(test.config_path(), config).expect("Failed to write config");
 
     // Run wt switch --create to create a new worktree
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.args(["switch", "--create", "feature", "--internal"])
         .current_dir(&main_worktree);
@@ -283,7 +283,7 @@ fn test_bare_repo_switch_with_default_naming() {
 
     // Use default naming pattern (should still work with bare repos)
     // Default is "../{main-worktree}.{branch}" which becomes "test-repo.git.feature"
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.args(["switch", "--create", "feature", "--internal"])
         .current_dir(&main_worktree);
@@ -320,7 +320,7 @@ fn test_bare_repo_remove_worktree() {
     test.commit_in_worktree(&feature_worktree, "Feature work");
 
     // Remove feature worktree from main worktree
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.args(["remove", "feature", "--internal"])
         .current_dir(&main_worktree);
@@ -357,7 +357,7 @@ fn test_bare_repo_identifies_primary_correctly() {
     let _feature2 = test.create_worktree("feature2", "test-repo.feature2");
 
     // Run wt list to see which is marked as primary
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.arg("list").current_dir(&main_worktree);
 
@@ -384,7 +384,7 @@ worktree-path = "{branch}"
     fs::write(test.config_path(), config).expect("Failed to write config");
 
     // Create new worktree - should be created relative to bare repo root
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.args(["switch", "--create", "dev", "--internal"])
         .current_dir(&main_worktree);
@@ -430,11 +430,11 @@ worktree-path = "{branch}"
     fs::write(normal_test.test_config_path(), config).expect("Failed to write normal config");
 
     // List worktrees in both - should show similar structure
-    let mut bare_list = Command::new(get_cargo_bin("wt"));
+    let mut bare_list = wt_command();
     bare_test.configure_wt_cmd(&mut bare_list);
     bare_list.arg("list").current_dir(&bare_main);
 
-    let mut normal_list = Command::new(get_cargo_bin("wt"));
+    let mut normal_list = wt_command();
     normal_test.clean_cli_env(&mut normal_list);
     normal_list.arg("list").current_dir(normal_test.root_path());
 

@@ -1,8 +1,7 @@
-use crate::common::TestRepo;
+use crate::common::{TestRepo, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::assert_cmd_snapshot;
 use rstest::rstest;
-use std::process::Command;
 
 /// Helper to create snapshot for init command
 fn snapshot_init(test_name: &str, shell: &str, extra_args: &[&str]) {
@@ -11,7 +10,7 @@ fn snapshot_init(test_name: &str, shell: &str, extra_args: &[&str]) {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("init").arg(shell);
 
@@ -48,7 +47,7 @@ fn test_init_invalid_shell() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("init")
             .arg("invalid-shell")
@@ -73,7 +72,7 @@ fn test_init_invalid_shell() {
 fn test_fish_no_duplicate_base_completion() {
     // Verify that the fish completion doesn't have duplicate entries for --base
     let repo = TestRepo::new();
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
     cmd.arg("init").arg("fish").current_dir(repo.root_path());
 

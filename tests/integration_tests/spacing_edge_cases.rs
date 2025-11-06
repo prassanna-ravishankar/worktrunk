@@ -1,7 +1,6 @@
-use crate::common::TestRepo;
+use crate::common::{TestRepo, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
-use std::process::Command;
+use insta_cmd::assert_cmd_snapshot;
 
 /// Helper to create snapshot with normalized paths and SHAs
 fn snapshot_list(test_name: &str, repo: &TestRepo) {
@@ -22,7 +21,7 @@ fn snapshot_list(test_name: &str, repo: &TestRepo) {
     settings.add_filter(r"\\", "/");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("list").current_dir(repo.root_path());
         assert_cmd_snapshot!(test_name, cmd);
@@ -110,7 +109,7 @@ fn snapshot_list_with_width(test_name: &str, repo: &TestRepo, width: usize) {
     settings.add_filter(r"\\", "/");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("list")
             .current_dir(repo.root_path())

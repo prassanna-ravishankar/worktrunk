@@ -1,8 +1,7 @@
-use crate::common::TestRepo;
+use crate::common::{TestRepo, set_temp_home_env, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::assert_cmd_snapshot;
 use std::fs;
-use std::process::Command;
 use tempfile::TempDir;
 
 /// Test `wt config list` with both global and project configs present
@@ -48,13 +47,10 @@ server = "npm run dev"
     settings.add_filter(r"\\", "/");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
-        cmd.arg("config")
-            .arg("list")
-            .env("HOME", temp_home.path())
-            .env("XDG_CONFIG_HOME", temp_home.path().join(".config"))
-            .current_dir(repo.root_path());
+        cmd.arg("config").arg("list").current_dir(repo.root_path());
+        set_temp_home_env(&mut cmd, temp_home.path());
 
         assert_cmd_snapshot!(cmd, @r#"
         success: true
@@ -103,13 +99,10 @@ fn test_config_list_no_project_config() {
     settings.add_filter(r"\\", "/");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
-        cmd.arg("config")
-            .arg("list")
-            .env("HOME", temp_home.path())
-            .env("XDG_CONFIG_HOME", temp_home.path().join(".config"))
-            .current_dir(repo.root_path());
+        cmd.arg("config").arg("list").current_dir(repo.root_path());
+        set_temp_home_env(&mut cmd, temp_home.path());
 
         assert_cmd_snapshot!(cmd, @r#"
         success: true
@@ -150,13 +143,9 @@ fn test_config_list_outside_git_repo() {
     settings.add_filter(r"\\", "/");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
-        cmd.arg("config")
-            .arg("list")
-            .env("HOME", temp_home.path())
-            .env("XDG_CONFIG_HOME", temp_home.path().join(".config"))
-            .env("CLICOLOR_FORCE", "1")
-            .current_dir(temp_dir.path());
+        let mut cmd = wt_command();
+        cmd.arg("config").arg("list").current_dir(temp_dir.path());
+        set_temp_home_env(&mut cmd, temp_home.path());
 
         assert_cmd_snapshot!(cmd, @r#"
         success: true

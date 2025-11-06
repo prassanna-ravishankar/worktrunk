@@ -5,11 +5,10 @@
 //! 2. Commands that DON'T emit directives work correctly with --internal
 //! 3. The --internal flag can be safely passed to all commands
 
-use crate::common::TestRepo;
+use crate::common::{TestRepo, set_temp_home_env, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::assert_cmd_snapshot;
 use std::fs;
-use std::process::Command;
 use tempfile::TempDir;
 
 /// Test that `list` command works with --internal flag
@@ -28,7 +27,7 @@ fn test_list_with_internal_flag() {
     settings.add_filter(r"/tmp/\.tmp[^\s]+/test-repo", "[REPO]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("list")
@@ -65,13 +64,12 @@ fn test_config_list_with_internal_flag() {
     settings.add_filter(r"\\", "/");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("--internal")
             .arg("config")
             .arg("list")
-            .env("HOME", temp_home.path())
-            .env("XDG_CONFIG_HOME", temp_home.path().join(".config"))
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd);
@@ -93,7 +91,7 @@ fn test_complete_with_internal_flag() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("complete")

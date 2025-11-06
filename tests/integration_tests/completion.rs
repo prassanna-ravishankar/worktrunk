@@ -1,6 +1,6 @@
-use crate::common::TestRepo;
+use crate::common::{TestRepo, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::assert_cmd_snapshot;
 use std::process::Command;
 
 #[test]
@@ -25,7 +25,8 @@ fn test_complete_switch_shows_branches() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "switch", ""]);
         assert_cmd_snapshot!(cmd, @r"
@@ -60,7 +61,8 @@ fn test_complete_switch_shows_all_branches_including_worktrees() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "switch", ""]);
         assert_cmd_snapshot!(cmd, @r"
@@ -95,7 +97,8 @@ fn test_complete_push_shows_all_branches() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "dev", "push", ""]);
         assert_cmd_snapshot!(cmd, @r"
@@ -127,7 +130,8 @@ fn test_complete_base_flag_shows_all_branches() {
         .unwrap();
 
     // Test completion for --base flag (long form)
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args([
@@ -151,7 +155,8 @@ fn test_complete_base_flag_shows_all_branches() {
     assert!(branches.iter().any(|b| b.contains("feature/existing")));
 
     // Test completion for -b flag (short form)
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args([
@@ -181,7 +186,7 @@ fn test_complete_outside_git_repo() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         cmd.current_dir(temp.path())
             .args(["complete", "wt", "switch", ""]);
 
@@ -202,7 +207,8 @@ fn test_complete_empty_repo() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        repo.clean_cli_env(&mut cmd);
         cmd.current_dir(repo.root_path())
             .args(["complete", "wt", "switch", ""]);
 
@@ -224,7 +230,8 @@ fn test_complete_unknown_command() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        repo.clean_cli_env(&mut cmd);
         cmd.current_dir(repo.root_path())
             .args(["complete", "wt", "unknown-command", ""]);
 
@@ -246,7 +253,8 @@ fn test_complete_list_command() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        repo.clean_cli_env(&mut cmd);
         cmd.current_dir(repo.root_path())
             .args(["complete", "wt", "list", ""]);
 
@@ -263,7 +271,7 @@ fn test_complete_list_command() {
 #[test]
 fn test_init_fish_includes_no_file_flag() {
     // Test that fish init includes -f flag to disable file completion
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
     let output = cmd.arg("init").arg("fish").output().unwrap();
 
     assert!(output.status.success());
@@ -302,7 +310,8 @@ fn test_complete_with_partial_prefix() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "switch", "feat"]);
         assert_cmd_snapshot!(cmd, @r"
@@ -329,7 +338,8 @@ fn test_complete_switch_shows_all_branches_even_with_worktrees() {
     temp.add_worktree("hotfix-worktree", "hotfix/bug");
 
     // From the main worktree, test completion - should show all branches
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args(["complete", "wt", "switch", ""])
@@ -399,7 +409,8 @@ fn test_complete_excludes_remote_branches() {
         .unwrap();
 
     // Test completion
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args(["complete", "wt", "switch", ""])
@@ -443,7 +454,8 @@ fn test_complete_merge_shows_branches() {
         .unwrap();
 
     // Test completion for merge (should show ALL branches, including those with worktrees)
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args(["complete", "wt", "merge", ""])
@@ -481,7 +493,8 @@ fn test_complete_with_special_characters_in_branch_names() {
     }
 
     // Test completion
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args(["complete", "wt", "switch", ""])
@@ -523,7 +536,8 @@ fn test_complete_stops_after_branch_provided() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "switch", "feature/one", ""]);
         assert_cmd_snapshot!(cmd, @r"
@@ -539,7 +553,8 @@ fn test_complete_stops_after_branch_provided() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path()).args([
             "complete",
             "wt",
@@ -561,7 +576,8 @@ fn test_complete_stops_after_branch_provided() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "merge", "feature/one", ""]);
         assert_cmd_snapshot!(cmd, @r"
@@ -589,7 +605,8 @@ fn test_complete_switch_with_create_flag_no_completion() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "switch", "--create", ""]);
         assert_cmd_snapshot!(cmd, @r"
@@ -605,7 +622,8 @@ fn test_complete_switch_with_create_flag_no_completion() {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
+        temp.clean_cli_env(&mut cmd);
         cmd.current_dir(temp.root_path())
             .args(["complete", "wt", "switch", "-c", ""]);
         assert_cmd_snapshot!(cmd, @r"
@@ -631,7 +649,8 @@ fn test_complete_switch_base_flag_after_branch() {
         .unwrap();
 
     // Test completion for --base even after --create and branch name
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args([
@@ -669,7 +688,8 @@ fn test_complete_remove_shows_branches() {
         .unwrap();
 
     // Test completion for remove (should show ALL branches)
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args(["complete", "wt", "remove", ""])
@@ -691,7 +711,8 @@ fn test_complete_dev_run_hook_shows_hook_types() {
     temp.commit("initial");
 
     // Test completion for dev run-hook
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args(["complete", "wt", "dev", "run-hook", ""])
@@ -717,7 +738,8 @@ fn test_complete_dev_run_hook_with_partial_input() {
     temp.commit("initial");
 
     // Test completion with partial input
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
+    temp.clean_cli_env(&mut cmd);
     let output = cmd
         .current_dir(temp.root_path())
         .args(["complete", "wt", "dev", "run-hook", "po"])

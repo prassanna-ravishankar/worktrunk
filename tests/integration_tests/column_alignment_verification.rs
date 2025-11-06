@@ -11,9 +11,7 @@
 //!
 //! The detailed verification logic here catches alignment bugs that would slip through snapshot review.
 
-use crate::common::TestRepo;
-use insta_cmd::get_cargo_bin;
-use std::process::Command;
+use crate::common::{TestRepo, wt_command};
 use unicode_width::UnicodeWidthStr;
 
 /// Strip ANSI escape codes from a string
@@ -334,12 +332,9 @@ fn test_alignment_verification_with_varying_content() {
     std::fs::write(short_path.join("single.txt"), "x").unwrap();
 
     // Run wt list and capture output
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
-    cmd.arg("list")
-        .current_dir(repo.root_path())
-        .env("COLUMNS", "200")
-        .env("CLICOLOR_FORCE", "1");
+    cmd.arg("list").current_dir(repo.root_path());
 
     let output = cmd.output().expect("Failed to run wt list");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -366,12 +361,9 @@ fn test_alignment_with_unicode_content() {
     repo.add_worktree("résumé-feature", "resume");
 
     // Run wt list
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
-    cmd.arg("list")
-        .current_dir(repo.root_path())
-        .env("COLUMNS", "200")
-        .env("CLICOLOR_FORCE", "1");
+    cmd.arg("list").current_dir(repo.root_path());
 
     let output = cmd.output().expect("Failed to run wt list");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -408,12 +400,9 @@ fn test_alignment_with_sparse_columns() {
     std::fs::write(small_path.join("one.txt"), "x").unwrap();
 
     // Run wt list
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
-    cmd.arg("list")
-        .current_dir(repo.root_path())
-        .env("COLUMNS", "200")
-        .env("CLICOLOR_FORCE", "1");
+    cmd.arg("list").current_dir(repo.root_path());
 
     let output = cmd.output().expect("Failed to run wt list");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -462,12 +451,9 @@ fn test_alignment_real_world_scenario() {
     // No changes on this one
 
     // Run wt list at a width where Dirty column is visible
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
-    cmd.arg("list")
-        .current_dir(repo.root_path())
-        .env("COLUMNS", "200")
-        .env("CLICOLOR_FORCE", "1");
+    cmd.arg("list").current_dir(repo.root_path());
 
     let output = cmd.output().expect("Failed to run wt list");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -498,12 +484,11 @@ fn test_alignment_at_different_terminal_widths() {
     for width in [80, 120, 150, 200] {
         println!("\n### Testing at width {} ###", width);
 
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("list")
             .current_dir(repo.root_path())
-            .env("COLUMNS", width.to_string())
-            .env("CLICOLOR_FORCE", "1");
+            .env("COLUMNS", width.to_string());
 
         let output = cmd.output().expect("Failed to run wt list");
         let stdout = String::from_utf8_lossy(&output.stdout);

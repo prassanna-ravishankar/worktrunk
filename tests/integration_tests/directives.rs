@@ -1,6 +1,6 @@
-use crate::common::TestRepo;
+use crate::common::{TestRepo, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::assert_cmd_snapshot;
 use std::process::Command;
 
 /// Test the directive protocol for switch command
@@ -16,7 +16,7 @@ fn test_switch_internal_directive() {
     settings.add_filter(r"__WORKTRUNK_CD__[^\n]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("switch")
@@ -45,7 +45,7 @@ fn test_switch_without_internal() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("switch")
             .arg("my-feature")
@@ -76,7 +76,7 @@ fn test_remove_internal_directive() {
     settings.add_filter(r"__WORKTRUNK_CD__[^\n]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("remove")
@@ -96,7 +96,7 @@ fn test_remove_without_internal() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("remove").current_dir(repo.root_path());
 
@@ -153,7 +153,7 @@ fn test_merge_internal_no_remove() {
     settings.add_filter(r"@ [a-f0-9]{7}", "@ [SHA]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("merge")
@@ -214,7 +214,7 @@ fn test_merge_internal_remove() {
     settings.add_filter(r"/tmp/\.tmp[^\s]+/test-repo", "[REPO]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("merge")

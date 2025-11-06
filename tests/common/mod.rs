@@ -25,10 +25,46 @@
 // Test utilities are Unix-only since integration tests are Unix-only
 #![cfg(unix)]
 
+use insta_cmd::get_cargo_bin;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::TempDir;
+
+/// Create a `wt` CLI command with standardized test environment settings.
+///
+/// The command has the following guarantees:
+/// - All host `GIT_*` and `WORKTRUNK_*` variables are cleared
+/// - Color output is forced (`CLICOLOR_FORCE=1`) so ANSI styling appears in snapshots
+/// - Terminal width defaults to 150 columns when `COLUMNS` is not already set
+pub fn wt_command() -> Command {
+    let mut cmd = Command::new(get_cargo_bin("wt"));
+    configure_cli_command(&mut cmd);
+    cmd
+}
+
+/// Configure an existing command with the standardized worktrunk CLI environment.
+///
+/// This helper mirrors the environment preparation performed by `wt_command`
+/// and is intended for cases where tests need to construct the command manually
+/// (e.g., to execute shell pipelines).
+pub fn configure_cli_command(cmd: &mut Command) {
+    for (key, _) in std::env::vars() {
+        if key.starts_with("GIT_") || key.starts_with("WORKTRUNK_") {
+            cmd.env_remove(&key);
+        }
+    }
+    cmd.env("CLICOLOR_FORCE", "1");
+    if std::env::var("COLUMNS").is_err() {
+        cmd.env("COLUMNS", "150");
+    }
+}
+
+/// Set `HOME` and `XDG_CONFIG_HOME` for commands that rely on isolated temp homes.
+pub fn set_temp_home_env(cmd: &mut Command, home: &Path) {
+    cmd.env("HOME", home);
+    cmd.env("XDG_CONFIG_HOME", home.join(".config"));
+}
 
 pub struct TestRepo {
     temp_dir: TempDir, // Must keep to ensure cleanup on drop
@@ -134,23 +170,12 @@ impl TestRepo {
     /// This also sets `WORKTRUNK_CONFIG_PATH` to an isolated test config
     /// to prevent tests from polluting the user's real config file.
     pub fn clean_cli_env(&self, cmd: &mut Command) {
-        // Remove git-related env vars that might interfere
-        for (key, _) in std::env::vars() {
-            if key.starts_with("GIT_") || key.starts_with("WORKTRUNK_") {
-                cmd.env_remove(&key);
-            }
-        }
-        // Set deterministic environment for git
+        configure_cli_command(cmd);
         self.configure_git_cmd(cmd);
-        // Force color output for snapshot testing (captures ANSI codes)
-        cmd.env("CLICOLOR_FORCE", "1");
         // Set isolated config path to prevent polluting user's config
         cmd.env("WORKTRUNK_CONFIG_PATH", &self.test_config_path);
         // Set consistent terminal width for stable snapshot output
         // (can be overridden by individual tests that want to test specific widths)
-        if std::env::var("COLUMNS").is_err() {
-            cmd.env("COLUMNS", "150");
-        }
         // NOTE: We don't set PATH here. Tests inherit PATH from the test runner,
         // which allows them to find git, shells, etc. Since we don't explicitly set it,
         // insta-cmd won't capture it in snapshots, avoiding privacy leaks.

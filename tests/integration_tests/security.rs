@@ -145,9 +145,9 @@
 //! For comprehensive security testing, see `tests/integration_tests/shell_wrapper.rs` which
 //! tests the full shell integration pipeline.
 
-use crate::common::TestRepo;
+use crate::common::{TestRepo, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::assert_cmd_snapshot;
 use std::process::Command;
 
 /// Test that Git rejects NUL bytes in commit messages
@@ -273,7 +273,7 @@ fn test_branch_name_is_directive_not_executed() {
     settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("switch")
@@ -315,7 +315,7 @@ fn test_branch_name_with_newline_directive_not_executed() {
     settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("switch")
@@ -352,7 +352,7 @@ fn test_commit_message_with_directive_not_executed() {
 
     // Run 'wt list' which might show commit messages
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("list").current_dir(repo.root_path());
 
@@ -387,7 +387,7 @@ fn test_path_with_directive_not_executed() {
 
     // Run a command that might display this path
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("list").current_dir(repo.root_path());
 
@@ -428,7 +428,7 @@ fn test_branch_name_with_cd_directive_not_executed() {
     settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("switch")
@@ -456,7 +456,7 @@ fn test_error_message_with_directive_not_executed() {
     settings.set_snapshot_path("../snapshots");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("switch")
@@ -503,7 +503,7 @@ fn test_execute_flag_with_directive_like_branch_name() {
     settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         cmd.arg("--internal")
             .arg("switch")

@@ -1,8 +1,7 @@
-use crate::common::TestRepo;
+use crate::common::{TestRepo, set_temp_home_env, wt_command};
 use insta::Settings;
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::assert_cmd_snapshot;
 use std::fs;
-use std::process::Command;
 use tempfile::TempDir;
 
 /// Test configure-shell with --force flag (skips confirmation)
@@ -20,12 +19,12 @@ fn test_configure_shell_with_yes() {
     settings.add_filter(&temp_home.path().to_string_lossy(), "[TEMP_HOME]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("config")
             .arg("shell")
             .arg("--force")
-            .env("HOME", temp_home.path())
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd, @r#"
@@ -63,14 +62,14 @@ fn test_configure_shell_specific_shell() {
     settings.add_filter(&temp_home.path().to_string_lossy(), "[TEMP_HOME]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("config")
             .arg("shell")
             .arg("--shell")
             .arg("zsh")
             .arg("--force")
-            .env("HOME", temp_home.path())
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd, @r#"
@@ -112,14 +111,14 @@ fn test_configure_shell_already_exists() {
     settings.add_filter(&temp_home.path().to_string_lossy(), "[TEMP_HOME]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("config")
             .arg("shell")
             .arg("--shell")
             .arg("zsh")
             .arg("--force")
-            .env("HOME", temp_home.path())
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd, @r"
@@ -149,14 +148,14 @@ fn test_configure_shell_fish() {
     settings.add_filter(&temp_home.path().to_string_lossy(), "[TEMP_HOME]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("config")
             .arg("shell")
             .arg("--shell")
             .arg("fish")
             .arg("--force")
-            .env("HOME", temp_home.path())
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd, @r"
@@ -202,12 +201,12 @@ fn test_configure_shell_no_files() {
     settings.add_filter(r", \[TEMP_HOME\]/\.profile", "");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("config")
             .arg("shell")
             .arg("--force")
-            .env("HOME", temp_home.path())
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd, @r"
@@ -239,12 +238,12 @@ fn test_configure_shell_multiple_configs() {
     settings.add_filter(&temp_home.path().to_string_lossy(), "[TEMP_HOME]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("config")
             .arg("shell")
             .arg("--force")
-            .env("HOME", temp_home.path())
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd, @r#"
@@ -301,12 +300,12 @@ fn test_configure_shell_mixed_states() {
     settings.add_filter(&temp_home.path().to_string_lossy(), "[TEMP_HOME]");
 
     settings.bind(|| {
-        let mut cmd = Command::new(get_cargo_bin("wt"));
+        let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
         cmd.arg("config")
             .arg("shell")
             .arg("--force")
-            .env("HOME", temp_home.path())
             .current_dir(repo.root_path());
 
         assert_cmd_snapshot!(cmd, @r#"

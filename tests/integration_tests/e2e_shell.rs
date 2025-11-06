@@ -1,4 +1,4 @@
-use crate::common::TestRepo;
+use crate::common::{TestRepo, wt_command};
 use insta_cmd::get_cargo_bin;
 use rstest::rstest;
 use std::process::Command;
@@ -63,7 +63,7 @@ fn execute_shell_script(repo: &TestRepo, shell: &str, script: &str) -> String {
 
 /// Generate shell integration code for the given shell
 fn generate_init_code(repo: &TestRepo, shell: &str) -> String {
-    let mut cmd = Command::new(get_cargo_bin("wt"));
+    let mut cmd = wt_command();
     repo.clean_cli_env(&mut cmd);
 
     let output = cmd
