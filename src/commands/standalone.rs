@@ -7,7 +7,7 @@ use worktrunk::styling::{
 use super::command_executor::CommandContext;
 use super::commit::{
     CommitOptions, commit_changes, commit_staged_changes, format_commit_message_for_display,
-    run_pre_commit_commands, show_llm_config_hint_if_needed,
+    run_pre_commit_commands, show_llm_config_hint_if_needed, warn_untracked_auto_stage,
 };
 use super::context::CommandEnv;
 use super::merge::{execute_post_merge_commands, run_pre_merge_commands};
@@ -121,6 +121,8 @@ pub fn handle_standalone_commit(force: bool, no_verify: bool) -> Result<(), GitE
 ///
 /// # Arguments
 /// * `auto_trust` - If true, skip approval prompts for pre-commit commands (already approved in batch)
+/// * `tracked_only` - Stage only tracked files (mirrors `--tracked-only` in merge)
+/// * `warn_about_untracked` - Emit a warning before auto-staging untracked files
 ///
 /// Returns true if a commit or squash operation occurred, false if nothing needed to be done
 pub fn handle_standalone_squash(
@@ -128,6 +130,8 @@ pub fn handle_standalone_squash(
     force: bool,
     skip_pre_commit: bool,
     auto_trust: bool,
+    tracked_only: bool,
+    warn_about_untracked: bool,
 ) -> Result<bool, GitError> {
     let CommandEnv {
         repo,
@@ -138,6 +142,19 @@ pub fn handle_standalone_squash(
 
     // Get target branch (default to default branch if not provided)
     let target_branch = repo.resolve_target_branch(target)?;
+
+    // Auto-stage changes before running pre-commit hooks so both beta and merge paths behave identically
+    if warn_about_untracked && !tracked_only {
+        warn_untracked_auto_stage(&repo)?;
+    }
+
+    if tracked_only {
+        repo.run_command(&["add", "-u"])
+            .git_context("Failed to stage tracked changes")?;
+    } else {
+        repo.run_command(&["add", "-A"])
+            .git_context("Failed to stage changes")?;
+    }
 
     // Run pre-commit hook unless explicitly skipped
     if !skip_pre_commit && let Some(project_config) = load_project_config(&repo)? {

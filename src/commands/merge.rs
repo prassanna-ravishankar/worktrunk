@@ -5,7 +5,7 @@ use worktrunk::styling::{CYAN, CYAN_BOLD, ERROR, ERROR_EMOJI, GREEN_BOLD, HINT, 
 
 use super::command_approval::approve_command_batch;
 use super::command_executor::CommandContext;
-use super::commit::{CommitOptions, commit_changes, warn_untracked_auto_stage};
+use super::commit::{CommitOptions, commit_changes};
 use super::context::CommandEnv;
 use super::hooks::{HookFailureStrategy, HookPipeline};
 use super::project_config::load_project_config;
@@ -115,19 +115,7 @@ pub fn handle_merge(
     // Handle uncommitted changes (skip if --no-commit) - track whether commit occurred
     let committed = if !no_commit && repo.is_dirty()? {
         if squash_enabled {
-            // Warn about untracked files before staging
-            if !tracked_only {
-                warn_untracked_auto_stage(&repo)?;
-            }
-
-            if tracked_only {
-                repo.run_command(&["add", "-u"])
-                    .git_context("Failed to stage tracked changes")?;
-            } else {
-                repo.run_command(&["add", "-A"])
-                    .git_context("Failed to stage changes")?;
-            }
-            false // Staged but didn't commit (will squash later)
+            false // Squash path handles staging and committing
         } else {
             // Commit immediately when not squashing
             let repo_root = repo.worktree_base()?;
@@ -156,7 +144,7 @@ pub fn handle_merge(
 
     // Squash commits if enabled - track whether squashing occurred
     let squashed = if squash_enabled {
-        handle_squash(&target_branch, force)?
+        handle_squash(&target_branch, force, no_verify, tracked_only)?
     } else {
         false
     };
@@ -288,9 +276,21 @@ fn handle_merge_summary_output(primary_path: Option<&std::path::Path>) -> Result
     Ok(())
 }
 
-fn handle_squash(target_branch: &str, force: bool) -> Result<bool, GitError> {
+fn handle_squash(
+    target_branch: &str,
+    force: bool,
+    skip_pre_commit: bool,
+    tracked_only: bool,
+) -> Result<bool, GitError> {
     // Delegate to the shared standalone implementation (auto_trust=true: commands approved in batch)
-    super::standalone::handle_standalone_squash(Some(target_branch), force, false, true)
+    super::standalone::handle_standalone_squash(
+        Some(target_branch),
+        force,
+        skip_pre_commit,
+        true,
+        tracked_only,
+        !tracked_only,
+    )
 }
 
 /// Run pre-merge commands sequentially (blocking, fail-fast)

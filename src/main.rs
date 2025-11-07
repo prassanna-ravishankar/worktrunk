@@ -168,7 +168,8 @@ fn main() {
                 target,
                 force,
                 no_verify,
-            } => handle_standalone_squash(target.as_deref(), force, no_verify, false).map(|_| ()),
+            } => handle_standalone_squash(target.as_deref(), force, no_verify, false, false, true)
+                .map(|_| ()),
             StandaloneCommand::Push {
                 target,
                 allow_merge_commits,
