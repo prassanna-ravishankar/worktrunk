@@ -129,6 +129,7 @@ const COMMIT_HASH_WIDTH: usize = 8;
 /// Both layout calculations and rendering use these constants.
 pub const HEADER_BRANCH: &str = "Branch";
 pub const HEADER_STATUS: &str = "Status";
+pub const HEADER_USER_STATUS: &str = ""; // Empty header for user status column
 pub const HEADER_WORKING_DIFF: &str = "HEAD±";
 pub const HEADER_AHEAD_BEHIND: &str = "main↕";
 pub const HEADER_BRANCH_DIFF: &str = "main…±";
@@ -216,6 +217,7 @@ pub struct DiffWidths {
 pub struct ColumnWidths {
     pub branch: usize,
     pub status: usize,
+    pub user_status: usize,
     pub time: usize,
     pub ci_status: usize,
     pub message: usize,
@@ -229,6 +231,7 @@ pub struct ColumnWidths {
 #[derive(Clone, Copy, Debug)]
 pub struct ColumnDataFlags {
     pub status: bool,
+    pub user_status: bool,
     pub working_diff: bool,
     pub ahead_behind: bool,
     pub branch_diff: bool,
@@ -242,6 +245,7 @@ fn column_has_data(kind: ColumnKind, flags: &ColumnDataFlags) -> bool {
     match kind {
         ColumnKind::Branch => true,
         ColumnKind::Status => flags.status,
+        ColumnKind::UserStatus => flags.user_status,
         ColumnKind::WorkingDiff => flags.working_diff,
         ColumnKind::AheadBehind => flags.ahead_behind,
         ColumnKind::BranchDiff => flags.branch_diff,
@@ -349,6 +353,7 @@ fn ideal_for_column(
     match spec.kind {
         ColumnKind::Branch => ColumnIdeal::text(widths.branch),
         ColumnKind::Status => ColumnIdeal::text(widths.status),
+        ColumnKind::UserStatus => ColumnIdeal::text(widths.user_status),
         ColumnKind::Path => ColumnIdeal::text(max_path_width),
         ColumnKind::Time => ColumnIdeal::text(widths.time),
         ColumnKind::CiStatus => ColumnIdeal::text(widths.ci_status),
@@ -368,6 +373,7 @@ pub fn calculate_column_widths(
     // Track maximum data widths (headers are enforced via fit_header() later)
     let mut max_branch = 0;
     let mut max_status = 0;
+    let mut max_user_status = 0;
     let mut max_time = 0;
     let mut max_message = 0;
 
@@ -393,10 +399,19 @@ pub fn calculate_column_widths(
         // Branch name
         max_branch = max_branch.max(item.branch_name().width());
 
-        // Status column: git status symbols + user-defined status (worktrees only)
+        // Status column: git status symbols (worktrees only)
+        // User status column: user-defined status (worktrees and branches)
         if let Some(info) = worktree_info {
-            let combined_width = info.combined_status().width();
-            max_status = max_status.max(combined_width);
+            let git_status_width = info.status_symbols.render().width();
+            max_status = max_status.max(git_status_width);
+
+            if let Some(ref user_status) = info.user_status {
+                max_user_status = max_user_status.max(user_status.width());
+            }
+        } else if let ListItem::Branch(branch_info) = item
+            && let Some(ref user_status) = branch_info.user_status
+        {
+            max_user_status = max_user_status.max(user_status.width());
         }
 
         // Time
@@ -462,6 +477,9 @@ pub fn calculate_column_widths(
     let has_status_data = max_status > 0;
     let final_status = fit_header(HEADER_STATUS, max_status);
 
+    let has_user_status_data = max_user_status > 0;
+    let final_user_status = fit_header(HEADER_USER_STATUS, max_user_status);
+
     // CI status column: Always 2 chars wide
     // Only show if we attempted to fetch CI data (regardless of whether any items have status)
     let has_ci_status = fetch_ci && items.iter().any(|item| item.pr_status().is_some());
@@ -470,6 +488,7 @@ pub fn calculate_column_widths(
     let widths = ColumnWidths {
         branch: fit_header(HEADER_BRANCH, max_branch),
         status: final_status,
+        user_status: final_user_status,
         time: fit_header(HEADER_AGE, max_time),
         ci_status: fit_header(HEADER_CI, ci_status_width),
         message: fit_header(HEADER_MESSAGE, max_message),
@@ -481,6 +500,7 @@ pub fn calculate_column_widths(
 
     let data_flags = ColumnDataFlags {
         status: has_status_data,
+        user_status: has_user_status_data,
         working_diff: working_diff.added_digits > 0 || working_diff.deleted_digits > 0,
         ahead_behind: ahead_behind.added_digits > 0 || ahead_behind.deleted_digits > 0,
         branch_diff: branch_diff.added_digits > 0 || branch_diff.deleted_digits > 0,

@@ -263,20 +263,6 @@ impl ListItem {
             ListItem::Branch(info) => info.pr_status.as_ref(),
         }
     }
-
-    /// Get combined status (git symbols + user status)
-    /// For worktrees: uses WorktreeInfo.combined_status()
-    /// For branches: returns user status (branches have no git status symbols)
-    pub fn combined_status(&self) -> String {
-        match self {
-            ListItem::Worktree(info) => info.combined_status(),
-            ListItem::Branch(info) => {
-                // Branch-only entries show just the user status (no git symbols)
-                // If no user status, show "·" to indicate "branch without worktree"
-                info.user_status.clone().unwrap_or_else(|| "·".to_string())
-            }
-        }
-    }
 }
 
 impl BranchInfo {
@@ -956,23 +942,6 @@ impl WorktreeInfo {
             display,
             working_diff_display: None,
         })
-    }
-
-    /// Combine git status symbols and user-defined status
-    /// Returns the combined string with aligned rendering
-    pub fn combined_status(&self) -> String {
-        if !self.status_symbols.is_empty() {
-            let rendered = self.status_symbols.render();
-            if let Some(ref user_status) = self.user_status {
-                format!("{}{}", rendered, user_status)
-            } else {
-                rendered
-            }
-        } else if let Some(ref user_status) = self.user_status {
-            user_status.clone()
-        } else {
-            String::new()
-        }
     }
 }
 

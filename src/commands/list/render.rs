@@ -311,15 +311,39 @@ pub fn format_list_item_line(
                 }
             }
             (ColumnKind::Status, _) => {
-                // Combine git status symbols + user-defined status from worktrunk.status
-                let status_content = item.combined_status();
-                let status_start = line.width();
+                // Git status symbols only (no user-defined status)
+                if let Some(info) = worktree_info {
+                    let git_status = info.status_symbols.render();
+                    let status_start = line.width();
 
-                // Status column never inherits row color
-                line.push_raw(status_content);
+                    // Status column never inherits row color
+                    line.push_raw(git_status);
+
+                    if !is_last {
+                        line.pad_to(status_start + column.width);
+                    }
+                } else if !is_last {
+                    // Branch-only entries have no git status symbols
+                    push_blank(&mut line, column.width);
+                }
+            }
+            (ColumnKind::UserStatus, _) => {
+                // User-defined status from worktrunk.status
+                let user_status_content = if let Some(info) = worktree_info {
+                    info.user_status.clone().unwrap_or_default()
+                } else if let ListItem::Branch(branch_info) = item {
+                    branch_info.user_status.clone().unwrap_or_default()
+                } else {
+                    String::new()
+                };
+
+                let user_status_start = line.width();
+
+                // UserStatus column never inherits row color
+                line.push_raw(user_status_content);
 
                 if !is_last {
-                    line.pad_to(status_start + column.width);
+                    line.pad_to(user_status_start + column.width);
                 }
             }
             (ColumnKind::WorkingDiff, ColumnFormat::Diff { digits, variant }) => {
