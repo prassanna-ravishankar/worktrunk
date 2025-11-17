@@ -211,9 +211,14 @@ impl WorktreeSkimItem {
 
             // Part 1: Bright commits (merge-base..HEAD)
             let range = format!("{}..{}", merge_base, head);
-            if let Ok(log_output) =
-                repo.run_command(&["log", "--graph", "--oneline", "--color=always", &range])
-            {
+            if let Ok(log_output) = repo.run_command(&[
+                "log",
+                "--graph",
+                "--decorate",
+                "--oneline",
+                "--color=always",
+                &range,
+            ]) {
                 output.push_str(&log_output);
             }
 
