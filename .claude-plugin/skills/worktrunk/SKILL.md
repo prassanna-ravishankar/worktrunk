@@ -10,10 +10,10 @@ Help users work with Worktrunk, a CLI tool for managing git worktrees.
 ## Available Documentation
 
 - **SKILL.md**: Configuration workflows and common patterns
-- **README.md**: Features, installation, examples, FAQ
+- **reference/README.md**: Features, installation, examples, FAQ
 - **reference/*.md**: Detailed configuration and hook specifications
 
-For general usage, consult README.md. For configuration, follow the workflows below.
+For general usage, consult reference/README.md. For configuration, follow the workflows below.
 
 ## Two Types of Configuration
 
@@ -24,14 +24,14 @@ Worktrunk uses two separate config files with different scopes and behaviors:
 - **Location**: `~/.config/worktrunk/config.toml` (never checked into git)
 - **Contains**: LLM integration, worktree path templates, approved commands
 - **Permission model**: Always propose changes and get consent before editing
-- **See**: `references/user-config.md` for detailed guidance
+- **See**: `reference/user-config.md` for detailed guidance
 
 ### Project Config (`.config/wt.toml`)
 - **Scope**: Team-wide automation shared by all developers
 - **Location**: `<repo>/.config/wt.toml` (checked into git)
 - **Contains**: Hooks for worktree lifecycle (post-create, pre-merge, etc.)
 - **Permission model**: Proactive (create directly, changes are reversible via git)
-- **See**: `references/project-config.md` for detailed guidance
+- **See**: `reference/project-config.md` for detailed guidance
 
 ## Determining Which Config to Use
 
@@ -92,7 +92,7 @@ Most common request. Follow this sequence:
    wt merge  # in a repo with uncommitted changes
    ```
 
-**See `references/user-config.md` for complete details.**
+**See `reference/user-config.md` for complete details.**
 
 ### Setting Up Project Hooks (Project Config)
 
@@ -138,7 +138,7 @@ Common request for workflow automation. Follow discovery process:
    wt switch --create test-hooks
    ```
 
-**See `references/project-config.md` for complete details.**
+**See `reference/project-config.md` for complete details.**
 
 ## Permission Models
 
@@ -157,17 +157,17 @@ Common request for workflow automation. Follow discovery process:
 ## Common Tasks Reference
 
 ### User Config Tasks
-- Set up LLM integration → `references/user-config.md#llm-setup`
-- Customize worktree paths → `references/user-config.md#worktree-paths`
-- Custom commit templates → `references/user-config.md#templates`
-- Troubleshoot LLM issues → `references/user-config.md#troubleshooting`
+- Set up LLM integration → `reference/user-config.md#llm-setup`
+- Customize worktree paths → `reference/user-config.md#worktree-paths`
+- Custom commit templates → `reference/user-config.md#templates`
+- Troubleshoot LLM issues → `reference/user-config.md#troubleshooting`
 
 ### Project Config Tasks
-- Set up hooks for new project → `references/project-config.md#new-project`
-- Add hook to existing config → `references/project-config.md#add-hook`
-- Use template variables → `references/project-config.md#variables`
-- Convert command formats → `references/project-config.md#formats`
-- Troubleshoot hook execution → `references/project-config.md#troubleshooting`
+- Set up hooks for new project → `reference/project-config.md#new-project`
+- Add hook to existing config → `reference/project-config.md#add-hook`
+- Use template variables → `reference/project-config.md#variables`
+- Convert command formats → `reference/project-config.md#formats`
+- Troubleshoot hook execution → `reference/project-config.md#troubleshooting`
 
 ## Key Commands
 
@@ -184,13 +184,13 @@ wt config --help
 
 ## Loading Additional Documentation
 
-Load **README.md** for general features, installation, commands, and examples.
+Load **reference/README.md** for general features, installation, commands, and examples.
 
 Load **reference files** for detailed configuration, hook specifications, and troubleshooting.
 
 Find specific sections with grep:
 ```bash
-grep -A 20 "## Installation" README.md
-grep -A 20 "## LLM Setup" references/user-config.md
-grep -A 30 "### post-create-command" references/project-config.md
+grep -A 20 "## Installation" reference/README.md
+grep -A 20 "## LLM Setup" reference/user-config.md
+grep -A 30 "### post-create-command" reference/project-config.md
 ```
