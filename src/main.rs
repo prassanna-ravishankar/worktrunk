@@ -187,14 +187,12 @@ fn main() {
             StandaloneCommand::RunHook { hook_type, force } => {
                 handle_standalone_run_hook(hook_type, force)
             }
-            StandaloneCommand::Commit { force, no_verify } => {
-                handle_standalone_commit(force, no_verify)
-            }
+            StandaloneCommand::Commit { force, verify } => handle_standalone_commit(force, !verify),
             StandaloneCommand::Squash {
                 target,
                 force,
-                no_verify,
-            } => handle_squash(target.as_deref(), force, no_verify, false, false, true).map(|_| ()),
+                verify,
+            } => handle_squash(target.as_deref(), force, !verify, false, false, true).map(|_| ()),
             StandaloneCommand::Push {
                 target,
                 allow_merge_commits,
@@ -220,13 +218,13 @@ fn main() {
             base,
             execute,
             force,
-            no_verify,
+            verify,
         } => WorktrunkConfig::load()
             .git_context("Failed to load config")
             .and_then(|config| {
                 // Execute switch operation (creates worktree, runs post-create hooks)
                 let (result, resolved_branch) =
-                    handle_switch(&branch, create, base.as_deref(), force, no_verify, &config)?;
+                    handle_switch(&branch, create, base.as_deref(), force, !verify, &config)?;
 
                 // Show success message (temporal locality: immediately after worktree creation)
                 handle_switch_output(&result, &resolved_branch, execute.is_some())?;
@@ -234,7 +232,7 @@ fn main() {
                 // Now spawn post-start hooks (background processes, after success message)
                 // Only run post-start commands when creating a NEW worktree, not when switching to existing
                 // Note: If user declines post-start commands, continue anyway - they're optional
-                if !no_verify && let SwitchResult::Created { path, .. } = &result {
+                if verify && let SwitchResult::Created { path, .. } = &result {
                     let repo = Repository::current();
                     let repo_root = repo.worktree_base()?;
                     let ctx = CommandContext::new(
@@ -263,16 +261,15 @@ fn main() {
             }),
         Commands::Remove {
             worktrees,
-            no_delete_branch,
-            no_background,
+            delete_branch,
+            background,
         } => (|| -> Result<(), GitError> {
-            let background = !no_background;
             let repo = Repository::current();
 
             if worktrees.is_empty() {
                 // No worktrees specified, remove current worktree
                 let current_branch = repo.resolve_worktree_name("@")?;
-                let result = handle_remove(&current_branch, no_delete_branch, background)?;
+                let result = handle_remove(&current_branch, !delete_branch, background)?;
                 handle_remove_output(&result, None, false, background)
             } else {
                 // When removing multiple worktrees, we need to handle the current worktree last
@@ -303,13 +300,13 @@ fn main() {
                 // Remove others first, then current last
                 // Progress messages shown by handle_remove_output for all cases
                 for resolved in &others {
-                    let result = handle_remove(resolved, no_delete_branch, background)?;
+                    let result = handle_remove(resolved, !delete_branch, background)?;
                     handle_remove_output(&result, Some(resolved), false, background)?;
                 }
 
                 // Remove current worktree last (if it was in the list)
                 if let Some(resolved) = current {
-                    let result = handle_remove(&resolved, no_delete_branch, background)?;
+                    let result = handle_remove(&resolved, !delete_branch, background)?;
                     handle_remove_output(&result, Some(&resolved), false, background)?;
                 }
 
@@ -318,18 +315,18 @@ fn main() {
         })(),
         Commands::Merge {
             target,
-            no_squash,
-            no_commit,
-            no_remove,
-            no_verify,
+            squash,
+            commit,
+            remove,
+            verify,
             force,
             tracked_only,
         } => handle_merge(
             target.as_deref(),
-            no_squash,
-            no_commit,
-            no_remove,
-            no_verify,
+            !squash,
+            !commit,
+            !remove,
+            !verify,
             force,
             tracked_only,
         ),

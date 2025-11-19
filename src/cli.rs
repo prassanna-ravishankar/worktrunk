@@ -196,8 +196,8 @@ pub enum StandaloneCommand {
         force: bool,
 
         /// Skip pre-commit hooks
-        #[arg(long)]
-        no_verify: bool,
+        #[arg(long = "no-verify", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        verify: bool,
     },
 
     /// Squash commits with LLM-generated message
@@ -211,8 +211,8 @@ pub enum StandaloneCommand {
         force: bool,
 
         /// Skip pre-commit hooks
-        #[arg(long)]
-        no_verify: bool,
+        #[arg(long = "no-verify", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        verify: bool,
     },
 
     /// Push changes to target branch
@@ -470,8 +470,8 @@ Use '@' for current HEAD, '-' for previous, '^' for main:
         force: bool,
 
         /// Skip project hooks
-        #[arg(long)]
-        no_verify: bool,
+        #[arg(long = "no-verify", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        verify: bool,
     },
 
     /// Finish current worktree, returning to primary if current
@@ -532,12 +532,12 @@ Switch to default in primary:
         worktrees: Vec<String>,
 
         /// Keep branch after removal
-        #[arg(long = "no-delete-branch")]
-        no_delete_branch: bool,
+        #[arg(long = "no-delete-branch", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        delete_branch: bool,
 
         /// Run removal in foreground
-        #[arg(long = "no-background")]
-        no_background: bool,
+        #[arg(long = "no-background", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        background: bool,
     },
 
     /// Merge worktree into target branch
@@ -597,20 +597,20 @@ Skip pre-merge commands:
         target: Option<String>,
 
         /// Skip commit squashing
-        #[arg(long = "no-squash")]
-        no_squash: bool,
+        #[arg(long = "no-squash", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        squash: bool,
 
         /// Skip commit, squash, and rebase
-        #[arg(long)]
-        no_commit: bool,
+        #[arg(long = "no-commit", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        commit: bool,
 
         /// Keep worktree after merge
-        #[arg(long = "no-remove")]
-        no_remove: bool,
+        #[arg(long = "no-remove", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        remove: bool,
 
         /// Skip project hooks
-        #[arg(long)]
-        no_verify: bool,
+        #[arg(long = "no-verify", action = clap::ArgAction::SetFalse, default_value_t = true)]
+        verify: bool,
 
         /// Skip approval prompts
         #[arg(short, long)]
