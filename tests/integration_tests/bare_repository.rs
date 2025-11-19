@@ -451,3 +451,159 @@ worktree-path = "{{ branch }}"
     assert!(normal_stdout.contains("main"));
     assert_eq!(bare_stdout.lines().count(), normal_stdout.lines().count());
 }
+
+#[test]
+fn test_bare_repo_commands_from_bare_directory() {
+    let test = BareRepoTest::new();
+
+    // Create a worktree so the repo has some content
+    let main_worktree = test.create_worktree("main", "test-repo.main");
+    test.commit_in_worktree(&main_worktree, "Initial commit");
+
+    // Run wt list from the bare repo directory itself (not from a worktree)
+    let mut cmd = wt_command();
+    test.configure_wt_cmd(&mut cmd);
+    cmd.arg("list").current_dir(test.bare_repo_path());
+
+    let output = cmd.output().expect("Failed to run wt list from bare repo");
+
+    if !output.status.success() {
+        panic!(
+            "wt list from bare repo failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Should list the worktree even when run from bare repo
+    assert!(stdout.contains("main"), "Should show main worktree");
+    assert!(!stdout.contains("bare"), "Should not show bare repo itself");
+}
+
+#[test]
+fn test_bare_repo_merge_workflow() {
+    let test = BareRepoTest::new();
+
+    // Create main worktree
+    let main_worktree = test.create_worktree("main", "test-repo.main");
+    test.commit_in_worktree(&main_worktree, "Initial commit on main");
+
+    // Create feature worktree with config
+    let config = r#"
+worktree-path = "{{ branch }}"
+"#;
+    fs::write(test.config_path(), config).expect("Failed to write config");
+
+    // Create feature branch worktree
+    let mut cmd = wt_command();
+    test.configure_wt_cmd(&mut cmd);
+    cmd.args(["switch", "--create", "feature", "--internal"])
+        .current_dir(&main_worktree);
+    cmd.output().expect("Failed to create feature worktree");
+
+    // Get feature worktree path
+    let bare_name = test.bare_repo_path().file_name().unwrap().to_str().unwrap();
+    let feature_worktree = test.temp_path().join(format!("{}.feature", bare_name));
+    assert!(feature_worktree.exists(), "Feature worktree should exist");
+
+    // Make a commit in feature worktree
+    test.commit_in_worktree(&feature_worktree, "Feature work");
+
+    // Merge feature into main (explicitly specify target)
+    let mut cmd = wt_command();
+    test.configure_wt_cmd(&mut cmd);
+    cmd.args([
+        "merge",
+        "main",        // Explicitly specify target branch
+        "--no-squash", // Skip squash to avoid LLM dependency
+        "--no-verify", // Skip pre-merge hooks
+        "--internal",
+    ])
+    .current_dir(&feature_worktree);
+
+    let output = cmd.output().expect("Failed to run wt merge");
+
+    if !output.status.success() {
+        panic!(
+            "wt merge failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // Verify feature worktree was removed
+    assert!(
+        !feature_worktree.exists(),
+        "Feature worktree should be removed after merge"
+    );
+
+    // Verify main worktree still exists and has the feature commit
+    assert!(main_worktree.exists(), "Main worktree should still exist");
+
+    // Check that feature branch commit is now in main
+    let log_output = Command::new("git")
+        .args(["-C", main_worktree.to_str().unwrap(), "log", "--oneline"])
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .output()
+        .expect("Failed to get git log");
+
+    let log = String::from_utf8_lossy(&log_output.stdout);
+    assert!(
+        log.contains("Feature work"),
+        "Main should contain feature commit after merge"
+    );
+}
+
+#[test]
+fn test_bare_repo_background_logs_location() {
+    // This test verifies that background operation logs go to the correct location
+    // in bare repos (bare_repo/wt-logs/ instead of worktree/.git/wt-logs/)
+    let test = BareRepoTest::new();
+
+    // Create main worktree
+    let main_worktree = test.create_worktree("main", "test-repo.main");
+    test.commit_in_worktree(&main_worktree, "Initial commit");
+
+    // Create feature worktree
+    let bare_name = test.bare_repo_path().file_name().unwrap().to_str().unwrap();
+    let feature_worktree = test.create_worktree("feature", &format!("{}.feature", bare_name));
+    test.commit_in_worktree(&feature_worktree, "Feature work");
+
+    // Run remove in background to test log file location
+    let mut cmd = wt_command();
+    test.configure_wt_cmd(&mut cmd);
+    cmd.args(["remove", "feature", "--background", "--internal"])
+        .current_dir(&main_worktree);
+
+    let output = cmd.output().expect("Failed to run wt remove");
+
+    if !output.status.success() {
+        panic!(
+            "wt remove failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // Give background process time to create log file (file gets created immediately, content written later)
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    // Verify log file was created in bare repo's wt-logs directory (not in worktree's .git/)
+    // The key test is that the path is correct, not that content was written (background processes are flaky in tests)
+    let log_path = test.bare_repo_path().join("wt-logs/feature-remove.log");
+    assert!(
+        log_path.exists(),
+        "Background removal log should be created in bare repo's wt-logs/ directory at {:?}.\nBare repo path: {:?}",
+        log_path,
+        test.bare_repo_path()
+    );
+
+    // Verify it's NOT in the worktree's .git directory (which doesn't exist for linked worktrees)
+    let wrong_path = main_worktree.join(".git/wt-logs/feature-remove.log");
+    assert!(
+        !wrong_path.exists(),
+        "Log should NOT be in worktree's .git directory"
+    );
+}
