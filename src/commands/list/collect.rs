@@ -315,8 +315,8 @@ fn drain_cell_updates(
     mut on_update: impl FnMut(usize, &mut ListItem, bool, Option<String>),
 ) {
     // Temporary storage for data needed by status_symbols computation
-    let mut has_conflicts_map: Vec<bool> = vec![false; worktree_items.len()];
-    let mut user_status_map: Vec<Option<String>> = vec![None; worktree_items.len()];
+    let mut has_conflicts_map: Vec<Option<bool>> = vec![None; worktree_items.len()];
+    let mut user_status_map: Vec<Option<Option<String>>> = vec![None; worktree_items.len()];
 
     // Process cell updates as they arrive
     while let Ok(update) = rx.recv() {
@@ -354,7 +354,7 @@ fn drain_cell_updates(
                 has_conflicts,
             } => {
                 // Store temporarily for status_symbols computation
-                has_conflicts_map[item_idx] = has_conflicts;
+                has_conflicts_map[item_idx] = Some(has_conflicts);
             }
             CellUpdate::WorktreeState {
                 item_idx,
@@ -369,7 +369,7 @@ fn drain_cell_updates(
                 user_status,
             } => {
                 // Store temporarily for status_symbols computation
-                user_status_map[item_idx] = user_status;
+                user_status_map[item_idx] = Some(user_status);
             }
             CellUpdate::Upstream { item_idx, upstream } => {
                 worktree_items[item_idx].upstream = Some(upstream);
@@ -384,8 +384,8 @@ fn drain_cell_updates(
         }
 
         // Invoke rendering callback (progressive mode re-renders rows, buffered mode does nothing)
-        let has_conflicts = has_conflicts_map[item_idx];
-        let user_status = user_status_map[item_idx].clone();
+        let has_conflicts = has_conflicts_map[item_idx].unwrap_or(false);
+        let user_status = user_status_map[item_idx].clone().unwrap_or(None);
         on_update(
             item_idx,
             &mut worktree_items[item_idx],
