@@ -329,7 +329,7 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
     },
 
     /// List worktrees and optionally branches
-    #[command(after_help = "## OPERATION
+    #[command(after_long_help = "## OPERATION
 
 Displays worktrees in a table format with status information, commit details, and optional branch listings.
 
@@ -453,7 +453,7 @@ Use `--format=json` for structured data. The `status_symbols` field contains two
     },
 
     /// Switch to a worktree
-    #[command(after_help = r#"## OPERATION
+    #[command(after_long_help = r#"## OPERATION
 
 **Switching to Existing Worktree:**
 - If worktree exists for branch, changes directory via shell integration
@@ -552,7 +552,7 @@ wt remove @                              # Remove current worktree
     },
 
     /// Remove worktree and branch
-    #[command(after_help = r#"## OPERATION
+    #[command(after_long_help = r#"## OPERATION
 
 **Remove Current Worktree** (no arguments):
 - Requires clean working tree (no uncommitted changes)
