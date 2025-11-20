@@ -115,6 +115,62 @@ pub(super) fn detect_worktree_state(repo: &Repository) -> Option<String> {
     }
 }
 
+/// Compute main branch divergence state from ahead/behind counts.
+fn compute_main_divergence(ahead: usize, behind: usize) -> MainDivergence {
+    match (ahead, behind) {
+        (0, 0) => MainDivergence::None,
+        (a, 0) if a > 0 => MainDivergence::Ahead,
+        (0, b) if b > 0 => MainDivergence::Behind,
+        _ => MainDivergence::Diverged,
+    }
+}
+
+/// Compute upstream divergence state from ahead/behind counts.
+fn compute_upstream_divergence(ahead: usize, behind: usize) -> UpstreamDivergence {
+    match (ahead, behind) {
+        (0, 0) => UpstreamDivergence::None,
+        (a, 0) if a > 0 => UpstreamDivergence::Ahead,
+        (0, b) if b > 0 => UpstreamDivergence::Behind,
+        _ => UpstreamDivergence::Diverged,
+    }
+}
+
+/// Determine branch state for a worktree.
+///
+/// Returns:
+/// - `BranchState::None` if primary worktree or no base branch
+/// - `BranchState::MatchesMain` if working tree matches main exactly (no commits, no diff)
+/// - `BranchState::NoCommits` if no commits and working tree is clean
+/// - `BranchState::None` otherwise
+fn determine_worktree_branch_state(
+    is_primary: bool,
+    base_branch: Option<&str>,
+    ahead: usize,
+    working_tree_diff: Option<&LineDiff>,
+    working_tree_diff_with_main: &Option<Option<LineDiff>>,
+) -> BranchState {
+    if is_primary || base_branch.is_none() {
+        return BranchState::None;
+    }
+
+    let is_clean = working_tree_diff.map(|d| d.is_empty()).unwrap_or(true);
+
+    // Check if working tree matches main exactly (requires diff with main to be computed)
+    if let Some(Some(mdiff)) = working_tree_diff_with_main.as_ref()
+        && mdiff.is_empty()
+        && ahead == 0
+    {
+        return BranchState::MatchesMain;
+    }
+
+    // Check if no commits and clean working tree
+    if ahead == 0 && is_clean {
+        BranchState::NoCommits
+    } else {
+        BranchState::None
+    }
+}
+
 /// Compute status symbols for a single item (worktrees and branches).
 ///
 /// This is idempotent and can be called multiple times as new data arrives.
@@ -145,44 +201,13 @@ fn compute_item_status_symbols(item: &mut ListItem, base_branch: Option<&str>) {
             }
 
             // Determine branch state (only for non-primary worktrees with base branch)
-            let branch_state = if !data.is_primary && base_branch.is_some() {
-                // Check for MatchesMain (requires mdiff to confirm working tree matches main's tree)
-                if let Some(mdiff) = data
-                    .working_tree_diff_with_main
-                    .as_ref()
-                    .and_then(|opt| opt.as_ref())
-                {
-                    if mdiff.added == 0 && mdiff.deleted == 0 && counts.ahead == 0 {
-                        BranchState::MatchesMain
-                    } else if counts.ahead == 0
-                        && data
-                            .working_tree_diff
-                            .as_ref()
-                            .map(|d| d.is_empty())
-                            .unwrap_or(true)
-                    {
-                        BranchState::NoCommits
-                    } else {
-                        BranchState::None
-                    }
-                } else {
-                    // mdiff is None (optimization when trees differ)
-                    // Can still determine NoCommits without computing diff
-                    if counts.ahead == 0
-                        && data
-                            .working_tree_diff
-                            .as_ref()
-                            .map(|d| d.is_empty())
-                            .unwrap_or(true)
-                    {
-                        BranchState::NoCommits
-                    } else {
-                        BranchState::None
-                    }
-                }
-            } else {
-                BranchState::None
-            };
+            let branch_state = determine_worktree_branch_state(
+                data.is_primary,
+                base_branch,
+                counts.ahead,
+                data.working_tree_diff.as_ref(),
+                &data.working_tree_diff_with_main,
+            );
 
             // Determine git operation
             let git_operation = match data.worktree_state.as_deref() {
@@ -192,22 +217,12 @@ fn compute_item_status_symbols(item: &mut ListItem, base_branch: Option<&str>) {
             };
 
             // Main divergence
-            let main_divergence = match (counts.ahead, counts.behind) {
-                (0, 0) => MainDivergence::None,
-                (a, 0) if a > 0 => MainDivergence::Ahead,
-                (0, b) if b > 0 => MainDivergence::Behind,
-                _ => MainDivergence::Diverged,
-            };
+            let main_divergence = compute_main_divergence(counts.ahead, counts.behind);
 
             // Upstream divergence
             let (upstream_ahead, upstream_behind) =
                 upstream.active().map(|(_, a, b)| (a, b)).unwrap_or((0, 0));
-            let upstream_divergence = match (upstream_ahead, upstream_behind) {
-                (0, 0) => UpstreamDivergence::None,
-                (a, 0) if a > 0 => UpstreamDivergence::Ahead,
-                (0, b) if b > 0 => UpstreamDivergence::Behind,
-                _ => UpstreamDivergence::Diverged,
-            };
+            let upstream_divergence = compute_upstream_divergence(upstream_ahead, upstream_behind);
 
             item.status_symbols = Some(StatusSymbols {
                 has_conflicts,
@@ -230,22 +245,12 @@ fn compute_item_status_symbols(item: &mut ListItem, base_branch: Option<&str>) {
             // Only compute symbols that apply to branches (no working tree, git operation, or worktree attrs)
 
             // Main divergence
-            let main_divergence = match (counts.ahead, counts.behind) {
-                (0, 0) => MainDivergence::None,
-                (a, 0) if a > 0 => MainDivergence::Ahead,
-                (0, b) if b > 0 => MainDivergence::Behind,
-                _ => MainDivergence::Diverged,
-            };
+            let main_divergence = compute_main_divergence(counts.ahead, counts.behind);
 
             // Upstream divergence
             let (upstream_ahead, upstream_behind) =
                 upstream.active().map(|(_, a, b)| (a, b)).unwrap_or((0, 0));
-            let upstream_divergence = match (upstream_ahead, upstream_behind) {
-                (0, 0) => UpstreamDivergence::None,
-                (a, 0) if a > 0 => UpstreamDivergence::Ahead,
-                (0, b) if b > 0 => UpstreamDivergence::Behind,
-                _ => UpstreamDivergence::Diverged,
-            };
+            let upstream_divergence = compute_upstream_divergence(upstream_ahead, upstream_behind);
 
             // Branch state - only compute if we have actual counts data
             // Branches without worktrees can only show NoCommits (no unique commits) or None
