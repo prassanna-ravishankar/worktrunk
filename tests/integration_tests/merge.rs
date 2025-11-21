@@ -78,6 +78,56 @@ fn setup_merge_scenario() -> (TestRepo, std::path::PathBuf) {
     (repo, feature_wt)
 }
 
+/// Merge test setup with multiple commits on feature branch.
+/// Returns (repo, feature_wt_path).
+fn setup_merge_scenario_multi_commit() -> (TestRepo, std::path::PathBuf) {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add worktree");
+
+    // Create a feature worktree and make multiple commits
+    let feature_wt = repo.add_worktree("feature", "feature");
+
+    std::fs::write(feature_wt.join("file1.txt"), "content 1").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file1.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "feat: add file 1"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    std::fs::write(feature_wt.join("file2.txt"), "content 2").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file2.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "feat: add file 2"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    (repo, feature_wt)
+}
+
 #[test]
 fn test_merge_fast_forward() {
     let (repo, feature_wt) = setup_merge_scenario();
@@ -578,49 +628,7 @@ fn test_merge_squash_single_commit() {
 
 #[test]
 fn test_merge_no_squash() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
-
-    // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .expect("Failed to add worktree");
-
-    // Create a feature worktree and make multiple commits
-    let feature_wt = repo.add_worktree("feature", "feature");
-
-    std::fs::write(feature_wt.join("file1.txt"), "content 1").expect("Failed to write file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file1.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to add file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: add file 1"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to commit");
-
-    std::fs::write(feature_wt.join("file2.txt"), "content 2").expect("Failed to write file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file2.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to add file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: add file 2"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to commit");
+    let (repo, feature_wt) = setup_merge_scenario_multi_commit();
 
     // Merge with --no-squash - should NOT squash the commits
     snapshot_merge(
@@ -809,51 +817,7 @@ fn test_merge_auto_commit_with_llm() {
 
 #[test]
 fn test_merge_auto_commit_and_squash() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
-
-    // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .expect("Failed to add worktree");
-
-    // Create a feature worktree with multiple commits
-    let feature_wt = repo.add_worktree("feature", "feature");
-
-    // First commit
-    std::fs::write(feature_wt.join("file1.txt"), "content 1").expect("Failed to write file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file1.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to add file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: add file 1"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to commit");
-
-    // Second commit
-    std::fs::write(feature_wt.join("file2.txt"), "content 2").expect("Failed to write file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file2.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to add file");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: add file 2"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to commit");
+    let (repo, feature_wt) = setup_merge_scenario_multi_commit();
 
     // Add uncommitted tracked changes
     std::fs::write(feature_wt.join("file1.txt"), "updated content 1")

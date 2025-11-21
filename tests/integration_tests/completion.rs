@@ -120,7 +120,7 @@ fn test_complete_push_shows_all_branches() {
 }
 
 #[test]
-fn test_complete_base_flag_shows_all_branches() {
+fn test_complete_base_flag_all_formats() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
@@ -137,95 +137,45 @@ fn test_complete_base_flag_shows_all_branches() {
         .output()
         .unwrap();
 
-    // Test completion for --base flag (long form)
-    let output = temp
-        .completion_cmd(&["wt", "switch", "--create", "new-branch", "--base", ""])
-        .output()
-        .unwrap();
+    // Test all base flag formats: --base, -b, --base=, -b=
+    // For space-separated (--base ""), cursor is on empty arg after flag
+    // For equals (--base=), cursor is completing the value after equals
+    let test_cases: &[&[&str]] = &[
+        &["wt", "switch", "--create", "new-branch", "--base", ""], // long form with space
+        &["wt", "switch", "--create", "new-branch", "-b", ""],     // short form with space
+        &["wt", "switch", "--create", "new-branch", "--base="],    // long form with equals
+        &["wt", "switch", "--create", "new-branch", "-b="],        // short form with equals
+    ];
 
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches = value_suggestions(&stdout);
+    for args in test_cases {
+        let output = temp.completion_cmd(args).output().unwrap();
+        assert!(output.status.success(), "Failed for args: {:?}", args);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let branches = value_suggestions(&stdout);
 
-    // Should show all branches as potential base
-    assert!(branches.iter().any(|b| b.contains("develop")));
-    assert!(branches.iter().any(|b| b.contains("feature/existing")));
+        assert!(
+            branches.iter().any(|b| b.contains("develop")),
+            "Missing develop for {:?}: {:?}",
+            args,
+            branches
+        );
+        assert!(
+            branches.iter().any(|b| b.contains("feature/existing")),
+            "Missing feature/existing for {:?}: {:?}",
+            args,
+            branches
+        );
+    }
 
-    // Test completion for -b flag (short form)
-    let output = temp
-        .completion_cmd(&["wt", "switch", "--create", "new-branch", "-b", ""])
-        .output()
-        .unwrap();
-
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches = value_suggestions(&stdout);
-
-    // Should show all branches as potential base (short form works too)
-    assert!(branches.iter().any(|b| b.contains("develop")));
-}
-
-#[test]
-fn test_complete_base_flag_with_equals() {
-    let temp = TestRepo::new();
-    temp.commit("initial");
-
-    // Create some branches
-    Command::new("git")
-        .args(["branch", "develop"])
-        .current_dir(temp.root_path())
-        .output()
-        .unwrap();
-
-    Command::new("git")
-        .args(["branch", "feature/existing"])
-        .current_dir(temp.root_path())
-        .output()
-        .unwrap();
-
-    // Test completion for --base= format (equals sign, no space)
-    let output = temp
-        .completion_cmd(&["wt", "switch", "--create", "new-branch", "--base="])
-        .output()
-        .unwrap();
-
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches = value_suggestions(&stdout);
-
-    // Should show all branches as potential base
-    assert!(branches.iter().any(|b| b.contains("develop")));
-    assert!(branches.iter().any(|b| b.contains("feature/existing")));
-    assert!(branches.iter().any(|b| b.contains("main")));
-
-    // Test completion for --base=m (equals sign with partial value)
+    // Test partial completion --base=m (shell handles filtering, we return all)
     let output = temp
         .completion_cmd(&["wt", "switch", "--create", "new-branch", "--base=m"])
         .output()
         .unwrap();
-
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let branches = value_suggestions(&stdout);
-
-    // Should show all branches (shell handles prefix filtering)
     assert!(branches.iter().any(|b| b.contains("main")));
-    assert!(branches.iter().any(|b| b.contains("develop")));
-    assert!(branches.iter().any(|b| b.contains("feature")));
-
-    // Test completion for -b= format (short form with equals)
-    let output = temp
-        .completion_cmd(&["wt", "switch", "--create", "new-branch", "-b="])
-        .output()
-        .unwrap();
-
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches: Vec<&str> = stdout.lines().collect();
-
-    // Should show all branches (short form with equals works too)
-    assert!(branches.iter().any(|b| b.contains("develop")));
-    assert!(branches.iter().any(|b| b.contains("feature/existing")));
 }
 
 #[test]
@@ -890,32 +840,7 @@ fn test_complete_list_format_flag() {
 }
 
 #[test]
-fn test_complete_switch_with_execute_flag() {
-    let temp = TestRepo::new();
-    temp.commit("initial");
-
-    Command::new("git")
-        .args(["branch", "develop"])
-        .current_dir(temp.root_path())
-        .output()
-        .unwrap();
-
-    // Test: wt switch --execute "code ." <cursor>
-    // Should complete branches because --execute takes a value
-    let output = temp
-        .completion_cmd(&["wt", "switch", "--execute", "code .", ""])
-        .output()
-        .unwrap();
-
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches = value_suggestions(&stdout);
-    assert!(branches.iter().any(|b| b.contains("develop")));
-    assert!(branches.iter().any(|b| b.contains("main")));
-}
-
-#[test]
-fn test_complete_switch_with_execute_equals_format() {
+fn test_complete_switch_execute_all_formats() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
@@ -925,43 +850,32 @@ fn test_complete_switch_with_execute_equals_format() {
         .output()
         .unwrap();
 
-    // Test: wt switch --execute="code ." <cursor>
-    // Should complete branches
-    let output = temp
-        .completion_cmd(&["wt", "switch", "--execute=code .", ""])
-        .output()
-        .unwrap();
+    // Test all execute flag formats: --execute with space, --execute=, -xvalue
+    // All should complete branches after the execute value is provided
+    let test_cases: &[&[&str]] = &[
+        &["wt", "switch", "--execute", "code .", ""], // --execute with space
+        &["wt", "switch", "--execute=code .", ""],    // --execute= with equals
+        &["wt", "switch", "-xcode", ""],              // -x fused short form
+    ];
 
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches = value_suggestions(&stdout);
-    assert!(branches.iter().any(|b| b.contains("feature")));
-    assert!(branches.iter().any(|b| b.contains("main")));
-}
-
-#[test]
-fn test_complete_switch_short_cluster_with_value() {
-    let temp = TestRepo::new();
-    temp.commit("initial");
-
-    Command::new("git")
-        .args(["branch", "bugfix"])
-        .current_dir(temp.root_path())
-        .output()
-        .unwrap();
-
-    // Test: wt switch -xcode <cursor>
-    // -x takes value "code" (fused), should complete branches for positional
-    let output = temp
-        .completion_cmd(&["wt", "switch", "-xcode", ""])
-        .output()
-        .unwrap();
-
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches: Vec<&str> = stdout.lines().collect();
-    assert!(branches.iter().any(|b| b.contains("bugfix")));
-    assert!(branches.iter().any(|b| b.contains("main")));
+    for args in test_cases {
+        let output = temp.completion_cmd(args).output().unwrap();
+        assert!(output.status.success(), "Failed for args: {:?}", args);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let branches: Vec<&str> = stdout.lines().collect();
+        assert!(
+            branches.iter().any(|b| b.contains("feature")),
+            "Missing feature for {:?}: {:?}",
+            args,
+            branches
+        );
+        assert!(
+            branches.iter().any(|b| b.contains("main")),
+            "Missing main for {:?}: {:?}",
+            args,
+            branches
+        );
+    }
 }
 
 #[test]
