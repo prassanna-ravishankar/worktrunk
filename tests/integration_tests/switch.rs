@@ -2,6 +2,13 @@ use crate::common::{TestRepo, make_snapshot_cmd_with_global_flags, setup_snapsho
 use insta_cmd::assert_cmd_snapshot;
 use std::path::Path;
 
+/// Common setup for switch tests - creates repo with initial commit
+fn setup_switch_repo() -> TestRepo {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo
+}
+
 /// Helper to create snapshot with normalized paths and SHAs
 fn snapshot_switch(test_name: &str, repo: &TestRepo, args: &[&str]) {
     snapshot_switch_with_home(test_name, repo, args, None, &[]);
@@ -37,16 +44,14 @@ fn snapshot_switch_with_home(
 
 #[test]
 fn test_switch_create_new_branch() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     snapshot_switch("switch_create_new", &repo, &["--create", "feature-x"]);
 }
 
 #[test]
 fn test_switch_create_existing_branch_error() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
 
     // Create a branch first
     repo.add_worktree("feature-y", "feature-y");
@@ -63,8 +68,7 @@ fn test_switch_create_existing_branch_error() {
 fn test_switch_create_with_remote_branch_only() {
     use std::process::Command;
 
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
 
     // Set up a remote
     repo.setup_remote("main");
@@ -103,8 +107,7 @@ fn test_switch_create_with_remote_branch_only() {
 
 #[test]
 fn test_switch_existing_branch() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
 
     // Create a worktree for a branch
     repo.add_worktree("feature-z", "feature-z");
@@ -127,8 +130,7 @@ fn test_switch_with_base_branch() {
 
 #[test]
 fn test_switch_base_without_create_warning() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     snapshot_switch(
         "switch_base_without_create",
@@ -139,8 +141,7 @@ fn test_switch_base_without_create_warning() {
 
 #[test]
 fn test_switch_internal_mode() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     snapshot_switch_with_global_flags(
         "switch_internal_mode",
@@ -152,8 +153,7 @@ fn test_switch_internal_mode() {
 
 #[test]
 fn test_switch_existing_worktree_internal() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
 
     repo.add_worktree("existing-wt", "existing-wt");
 
@@ -167,8 +167,7 @@ fn test_switch_existing_worktree_internal() {
 
 #[test]
 fn test_switch_internal_with_execute() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     let execute_cmd = "echo 'line1'\necho 'line2'";
 
@@ -182,8 +181,7 @@ fn test_switch_internal_with_execute() {
 
 #[test]
 fn test_switch_error_missing_worktree_directory() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
 
     // Create a worktree
     let wt_path = repo.add_worktree("missing-wt", "missing-wt");
@@ -197,8 +195,7 @@ fn test_switch_error_missing_worktree_directory() {
 
 #[test]
 fn test_switch_execute_success() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     snapshot_switch(
         "switch_execute_success",
@@ -209,8 +206,7 @@ fn test_switch_execute_success() {
 
 #[test]
 fn test_switch_execute_creates_file() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     let create_file_cmd = "echo 'test content' > test.txt";
 
@@ -223,8 +219,7 @@ fn test_switch_execute_creates_file() {
 
 #[test]
 fn test_switch_execute_failure() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     snapshot_switch(
         "switch_execute_failure",
@@ -235,8 +230,7 @@ fn test_switch_execute_failure() {
 
 #[test]
 fn test_switch_execute_with_existing_worktree() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
 
     // Create a worktree first
     repo.add_worktree("existing-exec", "existing-exec");
@@ -252,8 +246,7 @@ fn test_switch_execute_with_existing_worktree() {
 
 #[test]
 fn test_switch_execute_multiline() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     let multiline_cmd = "echo 'line1'\necho 'line2'\necho 'line3'";
 
@@ -266,8 +259,7 @@ fn test_switch_execute_multiline() {
 
 #[test]
 fn test_switch_no_config_commands_execute_still_runs() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     snapshot_switch(
         "switch_no_hooks_execute_still_runs",
@@ -288,8 +280,7 @@ fn test_switch_no_config_commands_skips_post_start_commands() {
     use tempfile::TempDir;
 
     let temp_home = TempDir::new().unwrap();
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // Create project config with a command that would create a file
     let config_dir = repo.root_path().join(".config");
@@ -333,8 +324,7 @@ approved-commands = ["{}"]
 
 #[test]
 fn test_switch_no_config_commands_with_existing_worktree() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
 
     // Create a worktree first
     repo.add_worktree("existing-no-hooks", "existing-no-hooks");
@@ -358,8 +348,7 @@ fn test_switch_no_config_commands_with_force() {
     use tempfile::TempDir;
 
     let temp_home = TempDir::new().unwrap();
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // Create project config with a command
     let config_dir = repo.root_path().join(".config");
@@ -384,8 +373,7 @@ fn test_switch_no_config_commands_with_force() {
 
 #[test]
 fn test_switch_create_no_remote() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
     // Deliberately NOT calling setup_remote to test local branch inference
 
     // Create a branch without specifying base - should infer default branch locally
@@ -394,8 +382,7 @@ fn test_switch_create_no_remote() {
 
 #[test]
 fn test_switch_primary_on_different_branch() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let mut repo = setup_switch_repo();
     repo.setup_remote("main");
 
     repo.switch_primary_to("develop");
@@ -422,8 +409,7 @@ fn test_switch_primary_on_different_branch() {
 fn test_switch_previous_branch() {
     use std::process::Command;
 
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // Create two branches
     let mut cmd = Command::new("git");
@@ -450,8 +436,7 @@ fn test_switch_previous_branch() {
 
 #[test]
 fn test_switch_previous_branch_no_history() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // No checkout history, so wt switch - should fail with helpful error
     snapshot_switch("switch_previous_branch_no_history", &repo, &["-"]);
@@ -461,8 +446,7 @@ fn test_switch_previous_branch_no_history() {
 fn test_switch_previous_branch_with_worktrunk_history() {
     use std::process::Command;
 
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // Create two branches
     let mut cmd = Command::new("git");
@@ -505,8 +489,7 @@ fn test_switch_previous_branch_with_worktrunk_history() {
 fn test_switch_main_branch() {
     use std::process::Command;
 
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // Create a feature branch
     let mut cmd = Command::new("git");
@@ -525,8 +508,7 @@ fn test_switch_main_branch() {
 
 #[test]
 fn test_create_with_base_main() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // Create new branch from main using ^
     snapshot_switch(
@@ -538,8 +520,7 @@ fn test_create_with_base_main() {
 
 #[test]
 fn test_switch_default_branch_missing_worktree() {
-    let repo = TestRepo::new();
-    repo.commit("Initial commit");
+    let repo = setup_switch_repo();
 
     // Move the primary worktree off the default branch so no worktree holds it
     repo.switch_primary_to("develop");

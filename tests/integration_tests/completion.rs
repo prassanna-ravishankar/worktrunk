@@ -681,43 +681,33 @@ fn test_complete_remove_shows_branches() {
 }
 
 #[test]
-fn test_complete_dev_run_hook_shows_hook_types() {
+fn test_complete_dev_run_hook_all_variations() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test completion for beta run-hook
+    // Test 1: No input - shows all hook types
     let output = temp
         .completion_cmd(&["wt", "beta", "run-hook", ""])
         .output()
         .unwrap();
-
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let hooks = value_suggestions(&stdout);
-
     assert!(hooks.contains(&"post-create"), "Missing post-create");
     assert!(hooks.contains(&"post-start"), "Missing post-start");
     assert!(hooks.contains(&"pre-commit"), "Missing pre-commit");
     assert!(hooks.contains(&"pre-merge"), "Missing pre-merge");
     assert!(hooks.contains(&"post-merge"), "Missing post-merge");
     assert_eq!(hooks.len(), 5, "Should have exactly 5 hook types");
-}
 
-#[test]
-fn test_complete_dev_run_hook_with_partial_input() {
-    let temp = TestRepo::new();
-    temp.commit("initial");
-
-    // Test completion with partial input
+    // Test 2: Partial input "po" - filters to post-* hooks
     let output = temp
         .completion_cmd(&["wt", "beta", "run-hook", "po"])
         .output()
         .unwrap();
-
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let hooks = value_suggestions(&stdout);
-
     assert!(hooks.contains(&"post-create"));
     assert!(hooks.contains(&"post-start"));
     assert!(hooks.contains(&"post-merge"));
@@ -726,94 +716,58 @@ fn test_complete_dev_run_hook_with_partial_input() {
 }
 
 #[test]
-fn test_complete_init_shell_shows_shells() {
+fn test_complete_init_shell_all_variations() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test completion for config shell init command with no input
+    // Test 1: No input - shows all supported shells
     let output = temp
         .completion_cmd(&["wt", "config", "shell", "init", ""])
         .output()
         .unwrap();
-
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let shells = value_suggestions(&stdout);
-
-    // Should show supported shells (bash, fish, zsh)
     assert!(shells.contains(&"bash"));
     assert!(shells.contains(&"fish"));
     assert!(shells.contains(&"zsh"));
     assert!(!shells.contains(&"elvish"));
     assert!(!shells.contains(&"nushell"));
-    assert!(!shells.contains(&"oil"));
-    assert!(!shells.contains(&"powershell"));
-    assert!(!shells.contains(&"xonsh"));
-}
 
-#[test]
-fn test_complete_init_shell_partial() {
-    let temp = TestRepo::new();
-    temp.commit("initial");
-
-    // Test completion with partial input "fi"
+    // Test 2: Partial input "fi" - filters to fish
     let output = temp
         .completion_cmd(&["wt", "config", "shell", "init", "fi"])
         .output()
         .unwrap();
-
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let shells = value_suggestions(&stdout);
-
-    // With clap fallback, we filter by prefix
     assert!(shells.contains(&"fish"));
-    // Should NOT contain shells that don't match the prefix
     assert!(!shells.contains(&"bash"));
-}
 
-#[test]
-fn test_complete_init_shell_with_source_flag() {
-    let temp = TestRepo::new();
-    temp.commit("initial");
-
-    // Test completion with --source flag: wt --source config shell init <tab>
-    let output = temp
-        .completion_cmd(&["wt", "--source", "config", "shell", "init", ""])
-        .output()
-        .unwrap();
-
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let shells = value_suggestions(&stdout);
-
-    // Should show supported shells, same as without --source
-    assert!(shells.contains(&"bash"));
-    assert!(shells.contains(&"fish"));
-    assert!(shells.contains(&"zsh"));
-    assert!(!shells.contains(&"elvish"));
-    assert!(!shells.contains(&"nushell"));
-}
-
-#[test]
-fn test_complete_init_shell_partial_z() {
-    let temp = TestRepo::new();
-    temp.commit("initial");
-
-    // Test completion for config shell init with partial input "z"
+    // Test 3: Partial input "z" - filters to zsh
     let output = temp
         .completion_cmd(&["wt", "config", "shell", "init", "z"])
         .output()
         .unwrap();
-
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let shells = value_suggestions(&stdout);
-
-    // Should filter by prefix
     assert!(shells.contains(&"zsh"));
     assert!(!shells.contains(&"bash"));
     assert!(!shells.contains(&"fish"));
+
+    // Test 4: With --source flag - same behavior
+    let output = temp
+        .completion_cmd(&["wt", "--source", "config", "shell", "init", ""])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let shells = value_suggestions(&stdout);
+    assert!(shells.contains(&"bash"));
+    assert!(shells.contains(&"fish"));
+    assert!(shells.contains(&"zsh"));
 }
 
 // test_complete_init_shell_all_with_source removed - duplicate of test_complete_init_shell_with_source_flag

@@ -22,11 +22,17 @@ fn snapshot_remove_with_global_flags(
     });
 }
 
-#[test]
-fn test_remove_already_on_default() {
+/// Common setup for remove tests - creates repo with initial commit and remote
+fn setup_remove_repo() -> TestRepo {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
+    repo
+}
+
+#[test]
+fn test_remove_already_on_default() {
+    let repo = setup_remove_repo();
 
     // Already on main branch
     snapshot_remove("remove_already_on_default", &repo, &[], None);
@@ -34,9 +40,7 @@ fn test_remove_already_on_default() {
 
 #[test]
 fn test_remove_switch_to_default() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let repo = setup_remove_repo();
 
     // Create and switch to a feature branch in the main repo
     let mut cmd = Command::new("git");
@@ -51,9 +55,7 @@ fn test_remove_switch_to_default() {
 
 #[test]
 fn test_remove_from_worktree() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     let worktree_path = repo.add_worktree("feature-wt", "feature-wt");
 
@@ -63,9 +65,7 @@ fn test_remove_from_worktree() {
 
 #[test]
 fn test_remove_internal_mode() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     let worktree_path = repo.add_worktree("feature-internal", "feature-internal");
 
@@ -80,9 +80,7 @@ fn test_remove_internal_mode() {
 
 #[test]
 fn test_remove_dirty_working_tree() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let repo = setup_remove_repo();
 
     // Create a dirty file
     std::fs::write(repo.root_path().join("dirty.txt"), "uncommitted changes")
@@ -93,9 +91,7 @@ fn test_remove_dirty_working_tree() {
 
 #[test]
 fn test_remove_by_name_from_main() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     // Create a worktree
     let _worktree_path = repo.add_worktree("feature-a", "feature-a");
@@ -106,9 +102,7 @@ fn test_remove_by_name_from_main() {
 
 #[test]
 fn test_remove_by_name_from_other_worktree() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     // Create two worktrees
     let worktree_a = repo.add_worktree("feature-a", "feature-a");
@@ -125,9 +119,7 @@ fn test_remove_by_name_from_other_worktree() {
 
 #[test]
 fn test_remove_current_by_name() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     let worktree_path = repo.add_worktree("feature-current", "feature-current");
 
@@ -142,9 +134,7 @@ fn test_remove_current_by_name() {
 
 #[test]
 fn test_remove_nonexistent_worktree() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let repo = setup_remove_repo();
 
     // Try to remove a worktree that doesn't exist
     snapshot_remove("remove_nonexistent_worktree", &repo, &["nonexistent"], None);
@@ -152,9 +142,7 @@ fn test_remove_nonexistent_worktree() {
 
 #[test]
 fn test_remove_by_name_dirty_target() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     let worktree_path = repo.add_worktree("feature-dirty", "feature-dirty");
 
@@ -173,9 +161,7 @@ fn test_remove_by_name_dirty_target() {
 
 #[test]
 fn test_remove_multiple_worktrees() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     // Create three worktrees
     let _worktree_a = repo.add_worktree("feature-a", "feature-a");
@@ -193,9 +179,7 @@ fn test_remove_multiple_worktrees() {
 
 #[test]
 fn test_remove_multiple_including_current() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     // Create three worktrees
     let worktree_a = repo.add_worktree("feature-a", "feature-a");
@@ -213,9 +197,7 @@ fn test_remove_multiple_including_current() {
 
 #[test]
 fn test_remove_branch_not_fully_merged() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     // Create a worktree with an unmerged commit
     let worktree_path = repo.add_worktree("feature-unmerged", "feature-unmerged");
@@ -244,9 +226,7 @@ fn test_remove_branch_not_fully_merged() {
 
 #[test]
 fn test_remove_foreground() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     // Create a worktree
     let _worktree_path = repo.add_worktree("feature-fg", "feature-fg");
@@ -262,9 +242,7 @@ fn test_remove_foreground() {
 
 #[test]
 fn test_remove_no_delete_branch() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
+    let mut repo = setup_remove_repo();
 
     // Create a worktree
     let _worktree_path = repo.add_worktree("feature-keep", "feature-keep");
