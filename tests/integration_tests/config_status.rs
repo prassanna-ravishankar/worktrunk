@@ -20,7 +20,7 @@ fn test_config_status_set_branch_default() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    assert_snapshot!(String::from_utf8_lossy(&output.stdout), @"✅ [32mSet status for [1m[32mmain[0m to [1m[32m🚧[0m[0m");
+    assert_snapshot!(String::from_utf8_lossy(&output.stdout), @"✅ [32mSet status for [1m[32mmain[0m[32m to [1m[32m🚧[0m[0m");
 
     // Verify it was set
     let output = repo
@@ -40,7 +40,7 @@ fn test_config_status_set_branch_specific() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    assert_snapshot!(String::from_utf8_lossy(&output.stdout), @"✅ [32mSet status for [1m[32mfeature[0m to [1m[32m🔧[0m[0m");
+    assert_snapshot!(String::from_utf8_lossy(&output.stdout), @"✅ [32mSet status for [1m[32mfeature[0m[32m to [1m[32m🔧[0m[0m");
 
     // Verify it was set
     let output = repo
@@ -116,7 +116,7 @@ fn test_config_status_unset_all() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    assert_snapshot!(String::from_utf8_lossy(&output.stdout), @"✅ [32mCleared [1m[32m3[0m statuses[0m");
+    assert_snapshot!(String::from_utf8_lossy(&output.stdout), @"✅ [32mCleared [1m[32m3[0m[32m statuses[0m");
 
     // Verify all were unset
     let output = repo

@@ -7,7 +7,9 @@ use std::path::Path;
 
 use super::HookType;
 use crate::path::format_path_for_display;
-use crate::styling::{ERROR, ERROR_BOLD, ERROR_EMOJI, HINT, HINT_EMOJI, format_with_gutter};
+use crate::styling::{
+    ERROR, ERROR_BOLD, ERROR_EMOJI, HINT, HINT_BOLD, HINT_EMOJI, format_with_gutter,
+};
 
 /// Semantic errors that require special handling in main.rs
 ///
@@ -42,7 +44,7 @@ impl std::fmt::Display for WorktrunkError {
             } => {
                 let name_suffix = command_name
                     .as_ref()
-                    .map(|n| format!(": {ERROR_BOLD}{n}{ERROR_BOLD:#}"))
+                    .map(|n| format!(": {ERROR_BOLD}{n}{ERROR_BOLD:#}{ERROR}"))
                     .unwrap_or_default();
 
                 write!(
@@ -136,7 +138,7 @@ pub fn no_worktree_found(branch: &str) -> anyhow::Error {
 /// Worktree path occupied error
 pub fn worktree_path_occupied(branch: &str, path: &Path, occupant: Option<&str>) -> anyhow::Error {
     let occupant_note = occupant
-        .map(|b| format!(" (currently on {ERROR_BOLD}{b}{ERROR_BOLD:#})"))
+        .map(|b| format!(" (currently on {HINT_BOLD}{b}{HINT_BOLD:#}{HINT})"))
         .unwrap_or_default();
     anyhow::anyhow!(
         "{ERROR_EMOJI} {ERROR}Cannot create worktree for {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR}: target path already exists{ERROR:#}\n\n{HINT_EMOJI} {HINT}Reuse the existing worktree at {}{} or remove it before retrying{HINT:#}",
@@ -168,7 +170,7 @@ pub fn not_fast_forward(
     files_formatted: &str,
 ) -> anyhow::Error {
     let mut msg = format!(
-        "{ERROR_EMOJI} {ERROR}Can't push to local {ERROR_BOLD}{target_branch}{ERROR_BOLD:#} branch: it has newer commits{ERROR:#}\n"
+        "{ERROR_EMOJI} {ERROR}Can't push to local {ERROR_BOLD}{target_branch}{ERROR_BOLD:#}{ERROR} branch: it has newer commits{ERROR:#}\n"
     );
 
     if !commits_formatted.is_empty() {
@@ -240,7 +242,7 @@ pub fn worktree_creation_failed(
     error: &str,
 ) -> anyhow::Error {
     let base_suffix = base_branch
-        .map(|base| format!("{ERROR} from base {ERROR_BOLD}{base}{ERROR_BOLD:#}"))
+        .map(|base| format!("{ERROR} from base {ERROR_BOLD}{base}{ERROR_BOLD:#}{ERROR}"))
         .unwrap_or_default();
 
     let header = format!(

@@ -384,7 +384,7 @@ pub fn handle_remove(
     // Show progress (unless running in background - output handler will show command)
     if !background {
         let progress_msg = format!(
-            "{CYAN}Removing worktree for {CYAN_BOLD}{worktree_name}{CYAN_BOLD:#}...{CYAN:#}"
+            "{CYAN}Removing worktree for {CYAN_BOLD}{worktree_name}{CYAN_BOLD:#}{CYAN}...{CYAN:#}"
         );
         crate::output::progress(progress_msg)?;
     }

@@ -11,7 +11,7 @@ info:
     COLUMNS: "150"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
-    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_GLOBAL: "[TEST_GIT_CONFIG]"
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
     LANG: C
@@ -22,7 +22,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-🔄 [36mRemoving worktree for [1m[36mfeature-fg[0m...[0m
+🔄 [36mRemoving worktree for [1m[36mfeature-fg[0m[36m...[0m
 ✅ [32mRemoved worktree & branch for [1m[32mfeature-fg[0m[0m
 
 ----- stderr -----

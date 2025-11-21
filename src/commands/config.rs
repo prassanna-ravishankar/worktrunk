@@ -203,7 +203,7 @@ pub fn handle_config_status_set(value: String, branch: Option<String>) -> anyhow
 
     let branch_bold = GREEN.bold();
     crate::output::success(format!(
-        "{GREEN}Set status for {branch_bold}{branch_name}{branch_bold:#} to {GREEN_BOLD}{value}{GREEN_BOLD:#}{GREEN:#}"
+        "{GREEN}Set status for {branch_bold}{branch_name}{branch_bold:#}{GREEN} to {GREEN_BOLD}{value}{GREEN_BOLD:#}{GREEN:#}"
     ))?;
 
     Ok(())
@@ -231,7 +231,7 @@ pub fn handle_config_status_unset(target: String) -> anyhow::Result<()> {
             crate::output::info("No statuses to clear")?;
         } else {
             crate::output::success(format!(
-                "{GREEN}Cleared {GREEN_BOLD}{cleared_count}{GREEN_BOLD:#} status{}{GREEN:#}",
+                "{GREEN}Cleared {GREEN_BOLD}{cleared_count}{GREEN_BOLD:#}{GREEN} status{}{GREEN:#}",
                 if cleared_count == 1 { "" } else { "es" }
             ))?;
         }
