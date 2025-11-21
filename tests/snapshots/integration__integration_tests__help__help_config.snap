@@ -13,7 +13,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-config - Manage configuration and shell integration
+wt config - Manage configuration and shell integration
 Usage: wt config [OPTIONS] <COMMAND>
 
 Commands:

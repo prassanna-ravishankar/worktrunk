@@ -13,7 +13,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-merge - Merge worktree into target branch
+wt merge - Merge worktree into target branch
 Usage: wt merge [OPTIONS] [TARGET]
 
 Options:

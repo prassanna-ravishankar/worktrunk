@@ -14,7 +14,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-config-shell - Shell integration setup
+wt config shell - Shell integration setup
 Usage: wt config shell [OPTIONS] <COMMAND>
 
 Commands:

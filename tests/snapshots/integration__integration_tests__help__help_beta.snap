@@ -13,7 +13,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-beta - Development and testing utilities
+wt beta - Development and testing utilities
 Usage: wt beta [OPTIONS] <COMMAND>
 
 Commands:

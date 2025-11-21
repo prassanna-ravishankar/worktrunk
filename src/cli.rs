@@ -66,20 +66,21 @@ Options:
 /// Build a clap Command for Cli with the shared help template applied recursively.
 pub fn build_command() -> Command {
     let cmd = Cli::command();
-    apply_help_template_recursive(cmd)
+    apply_help_template_recursive(cmd, DEFAULT_COMMAND_NAME)
 }
 
-fn apply_help_template_recursive(mut cmd: Command) -> Command {
+fn apply_help_template_recursive(mut cmd: Command, path: &str) -> Command {
     let template = if cmd.get_subcommands().next().is_some() {
         HELP_TEMPLATE_WITH_SUBCOMMANDS
     } else {
         HELP_TEMPLATE
     };
-    cmd = cmd.help_template(template);
+    cmd = cmd.help_template(template).display_name(path);
 
     for sub in cmd.get_subcommands_mut() {
         let sub_cmd = std::mem::take(sub);
-        let sub_cmd = apply_help_template_recursive(sub_cmd);
+        let sub_path = format!("{} {}", path, sub_cmd.get_name());
+        let sub_cmd = apply_help_template_recursive(sub_cmd, &sub_path);
         *sub = sub_cmd;
     }
     cmd

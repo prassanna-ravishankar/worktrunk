@@ -13,7 +13,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-remove - Remove worktree and branch
+wt remove - Remove worktree and branch
 Usage: wt remove [OPTIONS] [WORKTREES]...
 
 Options:

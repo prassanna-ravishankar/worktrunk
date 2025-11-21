@@ -13,7 +13,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-switch - Switch to a worktree
+wt switch - Switch to a worktree
 Usage: wt switch [OPTIONS] <BRANCH>
 
 Options:

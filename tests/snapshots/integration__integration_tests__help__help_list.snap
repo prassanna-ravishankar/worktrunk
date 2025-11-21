@@ -13,7 +13,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt-list - List worktrees and optionally branches
+wt list - List worktrees and optionally branches
 Usage: wt list [OPTIONS]
 
 Options:
