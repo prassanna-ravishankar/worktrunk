@@ -10,16 +10,19 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use worktrunk::path::format_path_for_display;
 
+/// Format timestamp as verbose relative time (e.g., "2 hours ago")
 pub fn format_relative_time(timestamp: i64) -> String {
-    const MINUTE: i64 = 60;
-    const HOUR: i64 = MINUTE * 60;
-    const DAY: i64 = HOUR * 24;
-    const WEEK: i64 = DAY * 7;
-    const MONTH: i64 = DAY * 30; // Approximate calendar month
-    const YEAR: i64 = DAY * 365; // Approximate calendar year
+    format_relative_time_impl(timestamp, get_now(), false)
+}
 
-    // Respect SOURCE_DATE_EPOCH for reproducible builds/tests
-    let now = std::env::var("SOURCE_DATE_EPOCH")
+/// Format timestamp as abbreviated relative time (e.g., "2h")
+pub fn format_relative_time_short(timestamp: i64) -> String {
+    format_relative_time_impl(timestamp, get_now(), true)
+}
+
+/// Get current time, respecting SOURCE_DATE_EPOCH for reproducible builds/tests
+fn get_now() -> i64 {
+    std::env::var("SOURCE_DATE_EPOCH")
         .ok()
         .and_then(|val| val.parse::<i64>().ok())
         .unwrap_or_else(|| {
@@ -27,36 +30,49 @@ pub fn format_relative_time(timestamp: i64) -> String {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs() as i64
-        });
+        })
+}
+
+fn format_relative_time_impl(timestamp: i64, now: i64, short: bool) -> String {
+    const MINUTE: i64 = 60;
+    const HOUR: i64 = MINUTE * 60;
+    const DAY: i64 = HOUR * 24;
+    const WEEK: i64 = DAY * 7;
+    const MONTH: i64 = DAY * 30;
+    const YEAR: i64 = DAY * 365;
 
     let seconds_ago = now - timestamp;
 
     if seconds_ago < 0 {
-        return "in the future".to_string();
+        return if short { "future" } else { "in the future" }.to_string();
     }
 
     if seconds_ago < MINUTE {
-        return "just now".to_string();
+        return if short { "now" } else { "just now" }.to_string();
     }
 
-    const UNITS: &[(i64, &str)] = &[
-        (YEAR, "year"),
-        (MONTH, "month"),
-        (WEEK, "week"),
-        (DAY, "day"),
-        (HOUR, "hour"),
-        (MINUTE, "minute"),
+    const UNITS: &[(i64, &str, &str)] = &[
+        (YEAR, "year", "y"),
+        (MONTH, "month", "mo"),
+        (WEEK, "week", "w"),
+        (DAY, "day", "d"),
+        (HOUR, "hour", "h"),
+        (MINUTE, "minute", "m"),
     ];
 
-    for &(unit_seconds, label) in UNITS {
+    for &(unit_seconds, label, abbrev) in UNITS {
         let value = seconds_ago / unit_seconds;
         if value > 0 {
-            let plural = if value == 1 { "" } else { "s" };
-            return format!("{} {}{} ago", value, label, plural);
+            return if short {
+                format!("{}{}", value, abbrev)
+            } else {
+                let plural = if value == 1 { "" } else { "s" };
+                format!("{} {}{} ago", value, label, plural)
+            };
         }
     }
 
-    "just now".to_string()
+    if short { "now" } else { "just now" }.to_string()
 }
 
 /// Find the common prefix among all paths

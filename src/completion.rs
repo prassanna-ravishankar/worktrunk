@@ -6,7 +6,8 @@ use clap_complete::engine::{ArgValueCompleter, CompletionCandidate, ValueComplet
 use clap_complete::env::CompleteEnv;
 
 use crate::cli;
-use worktrunk::git::Repository;
+use crate::display::format_relative_time_short;
+use worktrunk::git::{BranchCategory, Repository};
 
 /// Handle shell-initiated completion requests via `COMPLETE=$SHELL wt`
 pub fn maybe_handle_env_completion() -> bool {
@@ -56,18 +57,26 @@ fn complete_branches(suppress_with_create: bool) -> Vec<CompletionCandidate> {
         return Vec::new();
     }
 
-    let branches = load_branches();
+    let branches = match Repository::current().branches_for_completion() {
+        Ok(b) => b,
+        Err(_) => return Vec::new(),
+    };
+
     if branches.is_empty() {
         return Vec::new();
     }
 
-    branches.into_iter().map(CompletionCandidate::new).collect()
-}
-
-fn load_branches() -> Vec<String> {
-    Repository::current()
-        .all_branches()
-        .unwrap_or_else(|_| Vec::new())
+    branches
+        .into_iter()
+        .map(|branch| {
+            let time_str = format_relative_time_short(branch.timestamp);
+            let help = match branch.category {
+                BranchCategory::Worktree | BranchCategory::Local => time_str,
+                BranchCategory::Remote(remote) => format!("{}, {}", time_str, remote),
+            };
+            CompletionCandidate::new(branch.name).help(Some(help.into()))
+        })
+        .collect()
 }
 
 fn suppress_switch_branch_completion() -> bool {

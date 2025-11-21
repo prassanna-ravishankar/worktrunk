@@ -7,8 +7,8 @@ use anyhow::{Context, bail};
 
 // Import types and functions from parent module (mod.rs)
 use super::{
-    DefaultBranchName, DiffStats, LineDiff, SwitchHistory, Worktree, WorktreeList, detached_head,
-    error_message, parse_error, uncommitted_changes,
+    BranchCategory, CompletionBranch, DefaultBranchName, DiffStats, LineDiff, SwitchHistory,
+    Worktree, WorktreeList, detached_head, error_message, parse_error, uncommitted_changes,
 };
 
 /// Global base path for repository operations, set by -C flag
@@ -792,6 +792,124 @@ impl Repository {
             .filter(|s| !s.is_empty())
             .map(str::to_owned)
             .collect())
+    }
+
+    /// Get branches with metadata for shell completions.
+    ///
+    /// Returns branches in completion order: worktrees first, then local branches,
+    /// then remote-only branches. Each category is sorted by recency.
+    ///
+    /// For remote branches, returns the local name (e.g., "fix" not "origin/fix")
+    /// since `git worktree add path fix` auto-creates a tracking branch.
+    pub fn branches_for_completion(&self) -> anyhow::Result<Vec<CompletionBranch>> {
+        use std::collections::HashSet;
+
+        // Get worktree branches
+        let worktrees = self.list_worktrees()?;
+        let worktree_branches: HashSet<String> = worktrees
+            .worktrees
+            .iter()
+            .filter_map(|wt| wt.branch.clone())
+            .collect();
+
+        // Get local branches with timestamps
+        let local_output = self.run_command(&[
+            "for-each-ref",
+            "--sort=-committerdate",
+            "--format=%(refname:short)\t%(committerdate:unix)",
+            "refs/heads/",
+        ])?;
+
+        let local_branches: Vec<(String, i64)> = local_output
+            .lines()
+            .filter_map(|line| {
+                let parts: Vec<&str> = line.split('\t').collect();
+                if parts.len() == 2 {
+                    let timestamp = parts[1].parse().unwrap_or(0);
+                    Some((parts[0].to_string(), timestamp))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let local_branch_names: HashSet<String> =
+            local_branches.iter().map(|(n, _)| n.clone()).collect();
+
+        // Get remote branches with timestamps
+        let remote = self
+            .primary_remote()
+            .unwrap_or_else(|_| "origin".to_string());
+        let remote_ref_path = format!("refs/remotes/{}/", remote);
+        let remote_prefix = format!("{}/", remote);
+
+        let remote_output = self.run_command(&[
+            "for-each-ref",
+            "--sort=-committerdate",
+            "--format=%(refname:short)\t%(committerdate:unix)",
+            &remote_ref_path,
+        ])?;
+
+        let remote_head = format!("{}/HEAD", remote);
+        let remote_branches: Vec<(String, String, i64)> = remote_output
+            .lines()
+            .filter_map(|line| {
+                let parts: Vec<&str> = line.split('\t').collect();
+                if parts.len() == 2 {
+                    let full_name = parts[0];
+                    // Skip <remote>/HEAD
+                    if full_name == remote_head {
+                        return None;
+                    }
+                    // Strip remote prefix to get local name
+                    let local_name = full_name.strip_prefix(&remote_prefix)?;
+                    // Skip if local branch exists (user should use local)
+                    if local_branch_names.contains(local_name) {
+                        return None;
+                    }
+                    let timestamp = parts[1].parse().unwrap_or(0);
+                    Some((local_name.to_string(), remote.clone(), timestamp))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Build result: worktrees first, then local, then remote
+        let mut result = Vec::new();
+
+        // Worktree branches (sorted by recency from local_branches order)
+        for (name, timestamp) in &local_branches {
+            if worktree_branches.contains(name) {
+                result.push(CompletionBranch {
+                    name: name.clone(),
+                    timestamp: *timestamp,
+                    category: BranchCategory::Worktree,
+                });
+            }
+        }
+
+        // Local branches without worktrees
+        for (name, timestamp) in &local_branches {
+            if !worktree_branches.contains(name) {
+                result.push(CompletionBranch {
+                    name: name.clone(),
+                    timestamp: *timestamp,
+                    category: BranchCategory::Local,
+                });
+            }
+        }
+
+        // Remote-only branches
+        for (local_name, remote_name, timestamp) in remote_branches {
+            result.push(CompletionBranch {
+                name: local_name,
+                timestamp,
+                category: BranchCategory::Remote(remote_name),
+            });
+        }
+
+        Ok(result)
     }
 
     /// Get the merge base between two commits.

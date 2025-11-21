@@ -39,6 +39,28 @@ pub use error::{
 };
 pub use repository::{Repository, set_base_path};
 
+/// Category of branch for completion display
+#[derive(Debug, Clone, PartialEq)]
+pub enum BranchCategory {
+    /// Branch has an active worktree
+    Worktree,
+    /// Local branch without worktree
+    Local,
+    /// Remote-only branch (includes remote name)
+    Remote(String),
+}
+
+/// Branch information for shell completions
+#[derive(Debug, Clone)]
+pub struct CompletionBranch {
+    /// Branch name (local name for remotes, e.g., "fix" not "origin/fix")
+    pub name: String,
+    /// Unix timestamp of last commit
+    pub timestamp: i64,
+    /// Category for sorting and display
+    pub category: BranchCategory,
+}
+
 // Re-export parsing helpers for internal use
 pub(crate) use parse::DefaultBranchName;
 
