@@ -30,6 +30,9 @@ Options:
   -C <path>
       Change working directory
 
+  --config <path>          
+      User config file path
+
   -v, --verbose
       Show commands and debug info
 

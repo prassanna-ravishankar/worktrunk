@@ -21,7 +21,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpKR9Xgz/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpOTBJGU/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -187,10 +187,11 @@ _wt() {
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 '-V[Print version]' \
 '--version[Print version]' \
 ":: :_wt_commands" \
@@ -205,6 +206,7 @@ _wt() {
             (config)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help (see more with '\''--help'\'')]' \
@@ -222,6 +224,7 @@ _arguments "${_arguments_options[@]}" : \
             (shell)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -240,6 +243,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--command-name=[Command name]:COMMAND_NAME:_default' \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help (see more with '\''--help'\'')]' \
@@ -251,6 +255,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--command-name=[Command name]:COMMAND_NAME:_default' \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-f[Skip confirmation prompt]' \
 '--force[Skip confirmation prompt]' \
 '-v[Show commands and debug info]' \
@@ -267,6 +272,7 @@ esac
 (create)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -276,6 +282,7 @@ _arguments "${_arguments_options[@]}" : \
 (list)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -285,6 +292,7 @@ _arguments "${_arguments_options[@]}" : \
 (refresh-cache)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -294,6 +302,7 @@ _arguments "${_arguments_options[@]}" : \
 (status)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -312,6 +321,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--branch=[Target branch (defaults to current)]:BRANCH:_default' \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -322,6 +332,7 @@ _arguments "${_arguments_options[@]}" : \
 (unset)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -340,6 +351,7 @@ esac
 (beta)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -357,6 +369,7 @@ _arguments "${_arguments_options[@]}" : \
             (run-hook)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-f[Skip approval prompts]' \
 '--force[Skip approval prompts]' \
 '-v[Show commands and debug info]' \
@@ -369,6 +382,7 @@ _arguments "${_arguments_options[@]}" : \
 (commit)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-f[Skip approval prompts]' \
 '--force[Skip approval prompts]' \
 '--no-verify[Skip pre-commit hooks]' \
@@ -381,6 +395,7 @@ _arguments "${_arguments_options[@]}" : \
 (squash)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-f[Skip approval prompts]' \
 '--force[Skip approval prompts]' \
 '--no-verify[Skip pre-commit hooks]' \
@@ -394,6 +409,7 @@ _arguments "${_arguments_options[@]}" : \
 (push)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '--allow-merge-commits[Allow merge commits]' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
@@ -405,6 +421,7 @@ _arguments "${_arguments_options[@]}" : \
 (rebase)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
@@ -415,6 +432,7 @@ _arguments "${_arguments_options[@]}" : \
 (ask-approvals)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-f[Skip approval prompts]' \
 '--force[Skip approval prompts]' \
 '--all[Show all commands]' \
@@ -427,6 +445,7 @@ _arguments "${_arguments_options[@]}" : \
 (clear-approvals)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-g[Clear global approvals]' \
 '--global[Clear global approvals]' \
 '-v[Show commands and debug info]' \
@@ -438,6 +457,7 @@ _arguments "${_arguments_options[@]}" : \
 (select)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
 '-h[Print help (see more with '\''--help'\'')]' \
@@ -453,6 +473,7 @@ _arguments "${_arguments_options[@]}" : \
 '--format=[Output format (table, json)]:FORMAT:((table\:"Human-readable table format"
 json\:"JSON output"))' \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '--branches[Include branches without worktrees]' \
 '--remotes[Include remote branches from primary remote]' \
 '--full[Show CI, conflicts, diffs]' \
@@ -471,6 +492,7 @@ _arguments "${_arguments_options[@]}" : \
 '-x+[Execute command after switching]:EXECUTE:_default' \
 '--execute=[Execute command after switching]:EXECUTE:_default' \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '-c[Create a new branch]' \
 '--create[Create a new branch]' \
 '-f[Skip approval prompts]' \
@@ -486,6 +508,7 @@ _arguments "${_arguments_options[@]}" : \
 (remove)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '--no-delete-branch[Keep branch after removal]' \
 '-D[Delete unmerged branches]' \
 '--force-delete[Delete unmerged branches]' \
@@ -500,6 +523,7 @@ _arguments "${_arguments_options[@]}" : \
 (merge)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
 '--no-squash[Skip commit squashing]' \
 '--no-commit[Skip commit, squash, and rebase]' \
 '--no-remove[Keep worktree after merge]' \

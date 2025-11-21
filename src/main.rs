@@ -2,7 +2,7 @@ use anstyle::Style;
 use anyhow::Context;
 use clap::FromArgMatches;
 use std::process;
-use worktrunk::config::WorktrunkConfig;
+use worktrunk::config::{WorktrunkConfig, set_config_path};
 use worktrunk::git::{Repository, exit_code, is_command_not_approved, set_base_path};
 use worktrunk::path::format_path_for_display;
 use worktrunk::styling::{SUCCESS_EMOJI, println};
@@ -102,6 +102,11 @@ fn main() {
     // Initialize base path from -C flag if provided
     if let Some(path) = cli.directory {
         set_base_path(path);
+    }
+
+    // Initialize config path from --config flag if provided
+    if let Some(path) = cli.config {
+        set_config_path(path);
     }
 
     // Initialize output context based on --internal flag

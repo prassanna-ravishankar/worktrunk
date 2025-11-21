@@ -47,7 +47,9 @@ mod user;
 pub use commands::{Command, CommandConfig, CommandPhase};
 pub use expansion::{expand_command_template, expand_template};
 pub use project::ProjectConfig;
-pub use user::{CommitGenerationConfig, UserProjectConfig, WorktrunkConfig, get_config_path};
+pub use user::{
+    CommitGenerationConfig, UserProjectConfig, WorktrunkConfig, get_config_path, set_config_path,
+};
 
 #[cfg(test)]
 mod tests {

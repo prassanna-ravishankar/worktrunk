@@ -26,13 +26,26 @@ Options:
   -C <path>
       Change working directory
 
+  --config <path>          
+      User config file path
+
   -v, --verbose
       Show commands and debug info
 
   -h, --help
-      Print help
+      Print help (see a summary with '-h')
 
   -V, --version
       Print version
+
+[38;5;10mGLOBAL OPTIONS[39m
+
+-C <path>: Run as if started in <path> instead of current directory.
+
+--config <path>: Override user config file location. Without this flag,
+config is loaded from (in order of precedence):
+1. WORKTRUNK_CONFIG_PATH environment variable
+2. ~/.config/worktrunk/config.toml (Linux/macOS) or 
+%APPDATA%\worktrunk\config.toml (Windows)
 
 ----- stderr -----

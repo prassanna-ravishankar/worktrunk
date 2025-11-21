@@ -5,9 +5,18 @@
 use config::{Config, ConfigError, File};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 #[cfg(not(test))]
 use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
+
+/// Global override for config path, set via --config CLI flag
+static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
+
+/// Set the global config path override (called from CLI --config flag)
+pub fn set_config_path(path: PathBuf) {
+    CONFIG_PATH.set(path).ok();
+}
 
 use super::expansion::expand_template;
 
@@ -403,7 +412,12 @@ impl WorktrunkConfig {
 }
 
 pub fn get_config_path() -> Option<PathBuf> {
-    // Check for test override first (WORKTRUNK_CONFIG_PATH env var)
+    // Priority 1: CLI --config flag
+    if let Some(path) = CONFIG_PATH.get() {
+        return Some(path.clone());
+    }
+
+    // Priority 2: Environment variable (also used by tests)
     if let Ok(path) = std::env::var("WORKTRUNK_CONFIG_PATH") {
         return Some(PathBuf::from(path));
     }

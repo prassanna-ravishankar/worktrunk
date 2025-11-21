@@ -113,13 +113,25 @@ pub enum OutputFormat {
 #[command(version = version_str())]
 #[command(disable_help_subcommand = true)]
 #[command(styles = help_styles())]
+#[command(after_long_help = r#"## GLOBAL OPTIONS
+
+**-C <path>**: Run as if started in `<path>` instead of current directory.
+
+**--config <path>**: Override user config file location. Without this flag,
+config is loaded from (in order of precedence):
+1. `WORKTRUNK_CONFIG_PATH` environment variable
+2. `~/.config/worktrunk/config.toml` (Linux/macOS) or `%APPDATA%\worktrunk\config.toml` (Windows)"#)]
 pub struct Cli {
     /// Change working directory
     #[arg(short = 'C', global = true, value_name = "path", display_order = 100)]
     pub directory: Option<std::path::PathBuf>,
 
+    /// User config file path
+    #[arg(long, global = true, value_name = "path", display_order = 101)]
+    pub config: Option<std::path::PathBuf>,
+
     /// Show commands and debug info
-    #[arg(long, short = 'v', global = true, display_order = 101)]
+    #[arg(long, short = 'v', global = true, display_order = 102)]
     pub verbose: bool,
 
     /// Use internal mode (outputs directives for shell wrapper)
