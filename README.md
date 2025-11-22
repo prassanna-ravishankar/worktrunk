@@ -84,18 +84,18 @@ choices optimize for parallel AI agent workflow:
 
 - Trunk-based development
 - Lots of short-lived worktrees
-- Commits are squashed into linear histories
-- Terminal-based coding agents, shell navigation
+- Terminal-based, both coding agents & shell navigation
 - Inner dev loops are local
+- Linear commit histories
 
 ...and that means...
 
-- Total focus on zero cost of additional parallel agents
+- Total focus on zero-cost of additional parallel agents
 - A fairly small surface area: three core commands
   - Worktrees are addressed by their branch
 - Maximum automation: LLM commit messages, lifecycle hooks, Claude Code hooks
   - A robust "run auto-merge when 'local-CI' passes" approach
-- Default is to commit everything and squash marge (but configurable)
+- Defaults for commits is "everything and squash merge" (but configurable)
 - Extreme UI responsiveness; slow ops can't delay fast ones
 - Pluggable; adopting Worktrunk for a portion of a workflow doesn't require
   adopting it for everything. standard `git worktree` commands continue working
@@ -106,8 +106,9 @@ choices optimize for parallel AI agent workflow:
 ### LLM Commit Messages
 
 Worktrunk can invoke external commands during merge operations to generate
-commit messages. Simon Willison's [llm](https://llm.datasette.io/) tool reads
-the diff and a configurable prompt, then returns a formatted commit message.
+commit messages, by passing the diff & a configurable prompt, and reading back a
+formatted commit message. Simon Willison's [llm](https://llm.datasette.io/) tool
+is recommended.
 
 Add to `~/.config/worktrunk/config.toml`:
 
@@ -137,7 +138,7 @@ $ wt merge
 ✅ Squashed @ a1b2c3d
 ```
 
-To set up integration: run `wt config --help` to see the setup guide, or `wt config create` to create an example config file.
+For more details: `wt config --help`
 
 <details>
 <summary>Advanced: Custom Prompt Templates</summary>
