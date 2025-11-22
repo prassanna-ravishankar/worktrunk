@@ -9,6 +9,10 @@ fn only_option_suggestions(stdout: &str) -> bool {
         .all(|line| line.starts_with('-'))
 }
 
+fn has_any_options(stdout: &str) -> bool {
+    stdout.lines().any(|line| line.trim().starts_with('-'))
+}
+
 fn value_suggestions(stdout: &str) -> Vec<&str> {
     stdout
         .lines()
@@ -1034,5 +1038,68 @@ fn test_complete_remove_flexible_argument_ordering() {
     assert!(
         suggestions.iter().any(|s| s.contains("bugfix")),
         "Should suggest additional worktrees after positional and flag, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn test_complete_filters_options_when_positionals_exist() {
+    let temp = TestRepo::new();
+    temp.commit("initial");
+
+    Command::new("git")
+        .args(["branch", "feature"])
+        .current_dir(temp.root_path())
+        .output()
+        .unwrap();
+
+    // Test: wt switch <cursor>
+    // Should show branches but NOT options like --config, --verbose, -C
+    let output = temp.completion_cmd(&["wt", "switch", ""]).output().unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Should have branch completions
+    assert!(stdout.contains("feature"), "Should contain feature branch");
+    assert!(stdout.contains("main"), "Should contain main branch");
+
+    // Should NOT have options (they're filtered out when positionals exist)
+    assert!(
+        !has_any_options(&stdout),
+        "Options should be filtered out when positional completions exist, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn test_complete_subcommands_filter_options() {
+    let temp = TestRepo::new();
+    temp.commit("initial");
+
+    // Test: wt <cursor>
+    // Should show subcommands but NOT global options
+    let output = temp.completion_cmd(&["wt", ""]).output().unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let suggestions = value_suggestions(&stdout);
+
+    // Should have subcommands
+    assert!(suggestions.contains(&"switch"), "Should contain switch");
+    assert!(suggestions.contains(&"list"), "Should contain list");
+    assert!(suggestions.contains(&"merge"), "Should contain merge");
+
+    // Should NOT have global options
+    assert!(
+        !has_any_options(&stdout),
+        "Global options should be filtered out at subcommand position, got:\n{stdout}"
+    );
+
+    // Test: wt --<cursor>
+    // Now options SHOULD appear
+    let output = temp.completion_cmd(&["wt", "--"]).output().unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    assert!(
+        has_any_options(&stdout),
+        "Options should appear when explicitly completing with --, got:\n{stdout}"
     );
 }

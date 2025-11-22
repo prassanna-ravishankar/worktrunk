@@ -108,7 +108,38 @@ thread_local! {
 }
 
 fn completion_command() -> Command {
-    adjust_completion_command(cli::build_command())
+    let cmd = cli::build_command();
+    let cmd = adjust_completion_command(cmd);
+    hide_non_positional_options_for_completion(cmd)
+}
+
+/// Hide non-positional options so they're filtered out when positional/subcommand
+/// completions exist, but still shown when completing `--<TAB>`.
+///
+/// This exploits clap_complete's behavior: if any non-hidden candidates exist,
+/// hidden ones are dropped. When all candidates are hidden, they're kept.
+fn hide_non_positional_options_for_completion(cmd: Command) -> Command {
+    // Disable built-in help/version flags for completion only
+    let cmd = cmd
+        .disable_help_flag(true)
+        .disable_help_subcommand(true)
+        .disable_version_flag(true);
+
+    fn recurse(cmd: Command) -> Command {
+        // Hide every non-positional arg on this Command
+        let cmd = cmd.mut_args(|arg| {
+            if arg.is_positional() {
+                arg
+            } else {
+                arg.hide(true)
+            }
+        });
+
+        // Recurse into subcommands
+        cmd.mut_subcommands(recurse)
+    }
+
+    recurse(cmd)
 }
 
 // Mark positional args as `.last(true)` to allow them after all flags.
