@@ -103,12 +103,12 @@ fn test_complete_push_shows_all_branches() {
         .output()
         .unwrap();
 
-    // Test completion for beta push (should show ALL branches, including those with worktrees)
+    // Test completion for step push (should show ALL branches, including those with worktrees)
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
         let output = temp
-            .completion_cmd(&["wt", "beta", "push", ""])
+            .completion_cmd(&["wt", "step", "push", ""])
             .output()
             .unwrap();
         assert!(output.status.success());
@@ -249,7 +249,7 @@ fn test_complete_unknown_command() {
 }
 
 #[test]
-fn test_complete_beta_commit_no_positionals() {
+fn test_complete_step_commit_no_positionals() {
     let repo = TestRepo::new();
     repo.commit("initial");
     let mut settings = Settings::clone_current();
@@ -257,7 +257,7 @@ fn test_complete_beta_commit_no_positionals() {
 
     settings.bind(|| {
         let output = repo
-            .completion_cmd(&["wt", "beta", "commit", ""])
+            .completion_cmd(&["wt", "step", "commit", ""])
             .output()
             .unwrap();
         assert!(output.status.success());
@@ -267,7 +267,7 @@ fn test_complete_beta_commit_no_positionals() {
                 .lines()
                 .filter(|line| !line.trim().is_empty())
                 .all(|line| line.starts_with('-')),
-            "beta commit should only suggest flags, got:\n{stdout}"
+            "step commit should only suggest flags, got:\n{stdout}"
         );
     });
 }
@@ -555,12 +555,12 @@ fn test_complete_stops_after_branch_provided() {
         );
     });
 
-    // Test that beta push stops completing after branch is provided
+    // Test that step push stops completing after branch is provided
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
     settings.bind(|| {
         let output = temp
-            .completion_cmd(&["wt", "beta", "push", "feature/one", ""])
+            .completion_cmd(&["wt", "step", "push", "feature/one", ""])
             .output()
             .unwrap();
         assert!(output.status.success());
@@ -685,38 +685,42 @@ fn test_complete_remove_shows_branches() {
 }
 
 #[test]
-fn test_complete_dev_run_hook_all_variations() {
+fn test_complete_step_subcommands() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test 1: No input - shows all hook types
-    let output = temp
-        .completion_cmd(&["wt", "beta", "run-hook", ""])
-        .output()
-        .unwrap();
+    // Test 1: No input - shows all step subcommands
+    let output = temp.completion_cmd(&["wt", "step", ""]).output().unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let hooks = value_suggestions(&stdout);
-    assert!(hooks.contains(&"post-create"), "Missing post-create");
-    assert!(hooks.contains(&"post-start"), "Missing post-start");
-    assert!(hooks.contains(&"pre-commit"), "Missing pre-commit");
-    assert!(hooks.contains(&"pre-merge"), "Missing pre-merge");
-    assert!(hooks.contains(&"post-merge"), "Missing post-merge");
-    assert_eq!(hooks.len(), 5, "Should have exactly 5 hook types");
+    let subcommands = value_suggestions(&stdout);
+    // Operations
+    assert!(subcommands.contains(&"commit"), "Missing commit");
+    assert!(subcommands.contains(&"squash"), "Missing squash");
+    assert!(subcommands.contains(&"push"), "Missing push");
+    assert!(subcommands.contains(&"rebase"), "Missing rebase");
+    // Hook types
+    assert!(subcommands.contains(&"post-create"), "Missing post-create");
+    assert!(subcommands.contains(&"post-start"), "Missing post-start");
+    assert!(subcommands.contains(&"pre-commit"), "Missing pre-commit");
+    assert!(subcommands.contains(&"pre-merge"), "Missing pre-merge");
+    assert!(subcommands.contains(&"post-merge"), "Missing post-merge");
+    assert_eq!(
+        subcommands.len(),
+        9,
+        "Should have exactly 9 step subcommands"
+    );
 
-    // Test 2: Partial input "po" - filters to post-* hooks
-    let output = temp
-        .completion_cmd(&["wt", "beta", "run-hook", "po"])
-        .output()
-        .unwrap();
+    // Test 2: Partial input "po" - filters to post-* subcommands
+    let output = temp.completion_cmd(&["wt", "step", "po"]).output().unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let hooks = value_suggestions(&stdout);
-    assert!(hooks.contains(&"post-create"));
-    assert!(hooks.contains(&"post-start"));
-    assert!(hooks.contains(&"post-merge"));
-    assert!(!hooks.contains(&"pre-commit"));
-    assert!(!hooks.contains(&"pre-merge"));
+    let subcommands = value_suggestions(&stdout);
+    assert!(subcommands.contains(&"post-create"));
+    assert!(subcommands.contains(&"post-start"));
+    assert!(subcommands.contains(&"post-merge"));
+    assert!(!subcommands.contains(&"pre-commit"));
+    assert!(!subcommands.contains(&"pre-merge"));
 }
 
 #[test]

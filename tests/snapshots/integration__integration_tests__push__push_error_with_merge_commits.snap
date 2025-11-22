@@ -11,7 +11,7 @@ info:
     COLUMNS: "150"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
-    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_GLOBAL: "[TEST_GIT_CONFIG]"
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
     LANG: C
@@ -20,10 +20,12 @@ info:
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: false
-exit_code: 1
+exit_code: 2
 ----- stdout -----
-❌ [31mFound merge commits in push range[0m
-
-💡 [2mUse --allow-merge-commits to push non-linear history[0m
 
 ----- stderr -----
+[1m[31merror:[0m unrecognized subcommand '[1m[33mpush[0m'
+
+[1m[32mUsage:[0m [1m[36mwt beta[0m [36m[OPTIONS][0m [36m<COMMAND>[0m
+
+For more information, try '[1m[36m--help[0m'.

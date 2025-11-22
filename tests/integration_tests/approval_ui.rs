@@ -239,11 +239,11 @@ test = "echo 'Running tests...'"
     );
 }
 
-/// Helper for run-hook snapshot tests with approval prompt
+/// Helper for step hook snapshot tests with approval prompt
 fn snapshot_run_hook(test_name: &str, repo: &TestRepo, hook_type: &str, approve: bool) {
     let settings = setup_snapshot_settings(repo);
     settings.bind(|| {
-        let mut cmd = make_snapshot_cmd(repo, "beta", &["run-hook", hook_type], None);
+        let mut cmd = make_snapshot_cmd(repo, "step", &[hook_type], None);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -275,9 +275,9 @@ fn snapshot_run_hook(test_name: &str, repo: &TestRepo, hook_type: &str, approve:
     });
 }
 
-/// Test that `wt beta run-hook pre-merge` requires approval (security boundary test)
+/// Test that `wt step pre-merge` requires approval (security boundary test)
 ///
-/// This verifies the fix for the security issue where run-hook was bypassing approval.
+/// This verifies the fix for the security issue where step hooks were bypassing approval.
 /// Before the fix, pre-merge hooks ran with auto_trust=true, skipping approval prompts.
 #[test]
 fn test_run_hook_pre_merge_requires_approval() {
@@ -299,9 +299,9 @@ fn test_run_hook_pre_merge_requires_approval() {
     );
 }
 
-/// Test that `wt beta run-hook post-merge` requires approval (security boundary test)
+/// Test that `wt step post-merge` requires approval (security boundary test)
 ///
-/// This verifies the fix for the security issue where run-hook was bypassing approval.
+/// This verifies the fix for the security issue where step hooks were bypassing approval.
 /// Before the fix, post-merge hooks ran with auto_trust=true, skipping approval prompts.
 #[test]
 fn test_run_hook_post_merge_requires_approval() {

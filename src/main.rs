@@ -33,9 +33,10 @@ use commands::{
 use output::{execute_user_command, handle_remove_output, handle_switch_output};
 
 use cli::{
-    ApprovalsCommand, Cli, Commands, ConfigCommand, ConfigShellCommand, StandaloneCommand,
-    StatusAction,
+    ApprovalsCommand, BetaCommand, Cli, Commands, ConfigCommand, ConfigShellCommand, StatusAction,
+    StepCommand,
 };
+use worktrunk::HookType;
 
 /// Try to handle --help flag with pager before clap processes it
 fn maybe_handle_help_with_pager() -> bool {
@@ -268,11 +269,8 @@ fn main() {
                 ApprovalsCommand::Clear { global } => handle_standalone_clear_approvals(global),
             },
         },
-        Commands::Standalone { action } => match action {
-            StandaloneCommand::RunHook { hook_type, force } => {
-                handle_standalone_run_hook(hook_type, force)
-            }
-            StandaloneCommand::Commit {
+        Commands::Step { action } => match action {
+            StepCommand::Commit {
                 force,
                 verify,
                 stage,
@@ -284,7 +282,7 @@ fn main() {
                         .unwrap_or_default();
                     handle_standalone_commit(force, !verify, stage_final)
                 }),
-            StandaloneCommand::Squash {
+            StepCommand::Squash {
                 target,
                 force,
                 verify,
@@ -297,13 +295,30 @@ fn main() {
                         .unwrap_or_default();
                     handle_squash(target.as_deref(), force, !verify, false, stage_final).map(|_| ())
                 }),
-            StandaloneCommand::Push {
+            StepCommand::Push {
                 target,
                 allow_merge_commits,
             } => handle_push(target.as_deref(), allow_merge_commits, "Pushed to", None),
-            StandaloneCommand::Rebase { target } => handle_rebase(target.as_deref()).map(|_| ()),
-            #[cfg(unix)]
-            StandaloneCommand::Select => handle_select(),
+            StepCommand::Rebase { target } => handle_rebase(target.as_deref()).map(|_| ()),
+            StepCommand::PostCreate { force } => {
+                handle_standalone_run_hook(HookType::PostCreate, force)
+            }
+            StepCommand::PostStart { force } => {
+                handle_standalone_run_hook(HookType::PostStart, force)
+            }
+            StepCommand::PreCommit { force } => {
+                handle_standalone_run_hook(HookType::PreCommit, force)
+            }
+            StepCommand::PreMerge { force } => {
+                handle_standalone_run_hook(HookType::PreMerge, force)
+            }
+            StepCommand::PostMerge { force } => {
+                handle_standalone_run_hook(HookType::PostMerge, force)
+            }
+        },
+        #[cfg(unix)]
+        Commands::Beta { action } => match action {
+            BetaCommand::Select => handle_select(),
         },
         Commands::List {
             format,

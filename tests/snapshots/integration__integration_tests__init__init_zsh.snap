@@ -12,13 +12,13 @@ info:
     COLUMNS: "150"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
-    GIT_CONFIG_GLOBAL: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpmd08Pi/test-gitconfig
+    GIT_CONFIG_GLOBAL: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpo6rxHm/test-gitconfig
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpmd08Pi/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpo6rxHm/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -392,7 +392,7 @@ esac
     ;;
 esac
 ;;
-(beta)
+(step)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
 '--config=[User config file path]:path:_files' \
@@ -400,30 +400,17 @@ _arguments "${_arguments_options[@]}" : \
 '--verbose[Show commands and debug info]' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_wt__beta_commands" \
-"*::: :->beta" \
+":: :_wt__step_commands" \
+"*::: :->step" \
 && ret=0
 
     case $state in
-    (beta)
+    (step)
         words=($line[1] "${words[@]}")
         (( CURRENT += 1 ))
-        curcontext="${curcontext%:*:*}:wt-beta-command-$line[1]:"
+        curcontext="${curcontext%:*:*}:wt-step-command-$line[1]:"
         case $line[1] in
-            (run-hook)
-_arguments "${_arguments_options[@]}" : \
-'-C+[Change working directory]:path:_files' \
-'--config=[User config file path]:path:_files' \
-'-f[Skip approval prompts]' \
-'--force[Skip approval prompts]' \
-'-v[Show commands and debug info]' \
-'--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
-':hook_type -- Hook type to run:(post-create post-start pre-commit pre-merge post-merge)' \
-&& ret=0
-;;
-(commit)
+            (commit)
 _arguments "${_arguments_options[@]}" : \
 '--stage=[What to stage before committing \[default\: all\]]:STAGE:((all\:"Stage everything\: untracked files + unstaged tracked changes"
 tracked\:"Stage tracked changes only (like git add -u)"
@@ -479,7 +466,89 @@ _arguments "${_arguments_options[@]}" : \
 '::target -- Target branch:_default' \
 && ret=0
 ;;
-(select)
+(post-create)
+_arguments "${_arguments_options[@]}" : \
+'-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
+'-f[Skip approval prompts]' \
+'--force[Skip approval prompts]' \
+'-v[Show commands and debug info]' \
+'--verbose[Show commands and debug info]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(post-start)
+_arguments "${_arguments_options[@]}" : \
+'-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
+'-f[Skip approval prompts]' \
+'--force[Skip approval prompts]' \
+'-v[Show commands and debug info]' \
+'--verbose[Show commands and debug info]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(pre-commit)
+_arguments "${_arguments_options[@]}" : \
+'-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
+'-f[Skip approval prompts]' \
+'--force[Skip approval prompts]' \
+'-v[Show commands and debug info]' \
+'--verbose[Show commands and debug info]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(pre-merge)
+_arguments "${_arguments_options[@]}" : \
+'-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
+'-f[Skip approval prompts]' \
+'--force[Skip approval prompts]' \
+'-v[Show commands and debug info]' \
+'--verbose[Show commands and debug info]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(post-merge)
+_arguments "${_arguments_options[@]}" : \
+'-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
+'-f[Skip approval prompts]' \
+'--force[Skip approval prompts]' \
+'-v[Show commands and debug info]' \
+'--verbose[Show commands and debug info]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(beta)
+_arguments "${_arguments_options[@]}" : \
+'-C+[Change working directory]:path:_files' \
+'--config=[User config file path]:path:_files' \
+'-v[Show commands and debug info]' \
+'--verbose[Show commands and debug info]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_wt__beta_commands" \
+"*::: :->beta" \
+&& ret=0
+
+    case $state in
+    (beta)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:wt-beta-command-$line[1]:"
+        case $line[1] in
+            (select)
 _arguments "${_arguments_options[@]}" : \
 '-C+[Change working directory]:path:_files' \
 '--config=[User config file path]:path:_files' \
@@ -578,7 +647,8 @@ esac
 _wt_commands() {
     local commands; commands=(
 'config:Manage configuration and shell integration' \
-'beta:Development and testing utilities' \
+'step:Primitive operations (building blocks for workflows)' \
+'beta:Experimental commands' \
 'list:List worktrees and optionally branches' \
 'switch:Switch to a worktree' \
 'remove:Remove worktree and branch' \
@@ -589,44 +659,14 @@ _wt_commands() {
 (( $+functions[_wt__beta_commands] )) ||
 _wt__beta_commands() {
     local commands; commands=(
-'run-hook:Run project hook' \
-'commit:Commit changes with LLM message' \
-'squash:Squash commits with LLM message' \
-'push:Push changes to local target branch' \
-'rebase:Rebase onto target' \
 'select:Interactive worktree selector' \
     )
     _describe -t commands 'wt beta commands' commands "$@"
-}
-(( $+functions[_wt__beta__commit_commands] )) ||
-_wt__beta__commit_commands() {
-    local commands; commands=()
-    _describe -t commands 'wt beta commit commands' commands "$@"
-}
-(( $+functions[_wt__beta__push_commands] )) ||
-_wt__beta__push_commands() {
-    local commands; commands=()
-    _describe -t commands 'wt beta push commands' commands "$@"
-}
-(( $+functions[_wt__beta__rebase_commands] )) ||
-_wt__beta__rebase_commands() {
-    local commands; commands=()
-    _describe -t commands 'wt beta rebase commands' commands "$@"
-}
-(( $+functions[_wt__beta__run-hook_commands] )) ||
-_wt__beta__run-hook_commands() {
-    local commands; commands=()
-    _describe -t commands 'wt beta run-hook commands' commands "$@"
 }
 (( $+functions[_wt__beta__select_commands] )) ||
 _wt__beta__select_commands() {
     local commands; commands=()
     _describe -t commands 'wt beta select commands' commands "$@"
-}
-(( $+functions[_wt__beta__squash_commands] )) ||
-_wt__beta__squash_commands() {
-    local commands; commands=()
-    _describe -t commands 'wt beta squash commands' commands "$@"
 }
 (( $+functions[_wt__config_commands] )) ||
 _wt__config_commands() {
@@ -723,6 +763,66 @@ _wt__merge_commands() {
 _wt__remove_commands() {
     local commands; commands=()
     _describe -t commands 'wt remove commands' commands "$@"
+}
+(( $+functions[_wt__step_commands] )) ||
+_wt__step_commands() {
+    local commands; commands=(
+'commit:Commit changes with LLM message' \
+'squash:Squash commits with LLM message' \
+'push:Push changes to local target branch' \
+'rebase:Rebase onto target' \
+'post-create:Run post-create hook' \
+'post-start:Run post-start hook' \
+'pre-commit:Run pre-commit hook' \
+'pre-merge:Run pre-merge hook' \
+'post-merge:Run post-merge hook' \
+    )
+    _describe -t commands 'wt step commands' commands "$@"
+}
+(( $+functions[_wt__step__commit_commands] )) ||
+_wt__step__commit_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step commit commands' commands "$@"
+}
+(( $+functions[_wt__step__post-create_commands] )) ||
+_wt__step__post-create_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step post-create commands' commands "$@"
+}
+(( $+functions[_wt__step__post-merge_commands] )) ||
+_wt__step__post-merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step post-merge commands' commands "$@"
+}
+(( $+functions[_wt__step__post-start_commands] )) ||
+_wt__step__post-start_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step post-start commands' commands "$@"
+}
+(( $+functions[_wt__step__pre-commit_commands] )) ||
+_wt__step__pre-commit_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step pre-commit commands' commands "$@"
+}
+(( $+functions[_wt__step__pre-merge_commands] )) ||
+_wt__step__pre-merge_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step pre-merge commands' commands "$@"
+}
+(( $+functions[_wt__step__push_commands] )) ||
+_wt__step__push_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step push commands' commands "$@"
+}
+(( $+functions[_wt__step__rebase_commands] )) ||
+_wt__step__rebase_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step rebase commands' commands "$@"
+}
+(( $+functions[_wt__step__squash_commands] )) ||
+_wt__step__squash_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt step squash commands' commands "$@"
 }
 (( $+functions[_wt__switch_commands] )) ||
 _wt__switch_commands() {

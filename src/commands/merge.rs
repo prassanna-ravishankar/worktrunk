@@ -248,7 +248,7 @@ fn handle_merge_summary_output(main_path: Option<&std::path::Path>) -> anyhow::R
 ///
 /// # Security Note
 /// `auto_trust`: When true, skip approval prompts (commands already approved in `wt merge`'s batch).
-///              When false, require approval (standalone `wt beta run-hook` execution).
+///              When false, require approval (standalone `wt step hook` execution).
 pub fn run_pre_merge_commands(
     project_config: &ProjectConfig,
     ctx: &CommandContext,
@@ -276,7 +276,7 @@ pub fn run_pre_merge_commands(
 ///
 /// # Security Note
 /// `auto_trust`: When true, skip approval prompts (commands already approved in `wt merge`'s batch).
-///              When false, require approval (standalone `wt beta run-hook` execution).
+///              When false, require approval (standalone `wt step hook` execution).
 pub fn execute_post_merge_commands(
     ctx: &CommandContext,
     target_branch: &str,

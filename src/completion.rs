@@ -157,8 +157,8 @@ fn adjust_completion_command(cmd: Command) -> Command {
     .mut_subcommand("merge", |merge| {
         merge.mut_arg("target", |arg| arg.last(true))
     })
-    .mut_subcommand("beta", |beta| {
-        beta.mut_subcommand("push", |push| push.mut_arg("target", |arg| arg.last(true)))
+    .mut_subcommand("step", |step| {
+        step.mut_subcommand("push", |push| push.mut_arg("target", |arg| arg.last(true)))
             .mut_subcommand("squash", |squash| {
                 squash.mut_arg("target", |arg| arg.last(true))
             })

@@ -6,7 +6,7 @@ exit_code: 1
 ----- stdout -----
 ❌ [31mCannot prompt for approval in non-interactive environment[0m
 
-💡 [2mIn CI/CD, use --force to skip prompts. To pre-approve commands, use 'wt beta ask-approvals'[0m
+💡 [2mIn CI/CD, use --force to skip prompts. To pre-approve commands, use 'wt config approvals ask'[0m
 
 ----- stderr -----
 🟡 [33m[1m[33mtest-repo[0m[33m needs approval to execute [1m[33m3[0m[33m commands:[0m

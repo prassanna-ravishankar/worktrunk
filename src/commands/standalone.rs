@@ -10,7 +10,7 @@ use super::merge::{execute_post_merge_commands, run_pre_merge_commands};
 use super::project_config::collect_commands_for_hooks;
 use super::repository_ext::RepositoryCliExt;
 
-/// Handle `wt beta run-hook` command
+/// Handle `wt step hook` command
 pub fn handle_standalone_run_hook(hook_type: HookType, force: bool) -> anyhow::Result<()> {
     // Derive context from current environment
     let env = CommandEnv::current()?;
@@ -59,7 +59,7 @@ fn check_hook_configured<T>(hook: &Option<T>, hook_type: HookType) -> anyhow::Re
     Ok(())
 }
 
-/// Handle `wt beta commit` command
+/// Handle `wt step commit` command
 pub fn handle_standalone_commit(
     force: bool,
     no_verify: bool,
@@ -78,7 +78,7 @@ pub fn handle_standalone_commit(
     options.commit()
 }
 
-/// Handle shared squash workflow (used by `wt beta squash` and `wt merge`)
+/// Handle shared squash workflow (used by `wt step squash` and `wt merge`)
 ///
 /// # Arguments
 /// * `auto_trust` - If true, skip approval prompts for pre-commit commands (already approved in batch)
@@ -258,7 +258,7 @@ pub fn handle_squash(
     Ok(true)
 }
 
-/// Handle shared rebase workflow (used by `wt beta rebase` and `wt merge`)
+/// Handle shared rebase workflow (used by `wt step rebase` and `wt merge`)
 /// Returns true if rebasing occurred, false if already up-to-date
 pub fn handle_rebase(target: Option<&str>) -> anyhow::Result<bool> {
     let repo = Repository::current();
@@ -328,7 +328,7 @@ pub fn handle_rebase(target: Option<&str>) -> anyhow::Result<bool> {
     Ok(true)
 }
 
-/// Handle `wt beta ask-approvals` command - approve all commands in the project
+/// Handle `wt config approvals ask` command - approve all commands in the project
 pub fn handle_standalone_ask_approvals(force: bool, show_all: bool) -> anyhow::Result<()> {
     use super::command_approval::approve_command_batch;
     use worktrunk::config::WorktrunkConfig;
@@ -400,7 +400,7 @@ pub fn handle_standalone_ask_approvals(force: bool, show_all: bool) -> anyhow::R
     Ok(())
 }
 
-/// Handle `wt beta clear-approvals` command - clear approved commands
+/// Handle `wt config approvals clear` command - clear approved commands
 pub fn handle_standalone_clear_approvals(global: bool) -> anyhow::Result<()> {
     use worktrunk::config::WorktrunkConfig;
 

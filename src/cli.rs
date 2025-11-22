@@ -1,7 +1,6 @@
 use clap::builder::styling::{AnsiColor, Color, Styles};
 use clap::{Command, CommandFactory, Parser, Subcommand};
 use std::sync::OnceLock;
-use worktrunk::HookType;
 
 use crate::commands::Shell;
 
@@ -282,18 +281,9 @@ pub enum StatusAction {
     },
 }
 
+/// Primitive operations (building blocks for workflows)
 #[derive(Subcommand)]
-pub enum StandaloneCommand {
-    /// Run project hook
-    RunHook {
-        /// Hook type to run
-        hook_type: HookType,
-
-        /// Skip approval prompts
-        #[arg(short, long)]
-        force: bool,
-    },
-
+pub enum StepCommand {
     /// Commit changes with LLM message
     Commit {
         /// Skip approval prompts
@@ -355,6 +345,45 @@ pub enum StandaloneCommand {
         target: Option<String>,
     },
 
+    /// Run post-create hook
+    PostCreate {
+        /// Skip approval prompts
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Run post-start hook
+    PostStart {
+        /// Skip approval prompts
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Run pre-commit hook
+    PreCommit {
+        /// Skip approval prompts
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Run pre-merge hook
+    PreMerge {
+        /// Skip approval prompts
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Run post-merge hook
+    PostMerge {
+        /// Skip approval prompts
+        #[arg(short, long)]
+        force: bool,
+    },
+}
+
+/// Experimental commands
+#[derive(Subcommand)]
+pub enum BetaCommand {
     /// Interactive worktree selector
     ///
     /// Preview modes (toggle with 1/2/3):
@@ -414,11 +443,18 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
         action: ConfigCommand,
     },
 
-    /// Development and testing utilities
-    #[command(name = "beta", hide = true)]
-    Standalone {
+    /// Primitive operations (building blocks for workflows)
+    #[command(name = "step")]
+    Step {
         #[command(subcommand)]
-        action: StandaloneCommand,
+        action: StepCommand,
+    },
+
+    /// Experimental commands
+    #[command(name = "beta", hide = true)]
+    Beta {
+        #[command(subcommand)]
+        action: BetaCommand,
     },
 
     /// List worktrees and optionally branches
