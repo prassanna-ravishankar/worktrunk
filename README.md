@@ -48,7 +48,7 @@ $ wt merge
 🔄 Removing fix-auth worktree & branch in background
 ```
 
-See [`wt merge`](#wt-merge-target) for all options.
+See [`wt merge`](#wt-merge) for all options.
 
 **See all active worktrees:**
 
@@ -394,6 +394,7 @@ wt remove @                              # Remove current worktree
 
 </details>
 
+<a id="wt-merge"></a>
 <details>
 <summary><strong><code>wt merge [target]</code></strong> - Merge, push, and cleanup</summary>
 
@@ -555,6 +556,7 @@ wt remove  # (when already in main worktree)
 
 </details>
 
+<a id="wt-list"></a>
 <details>
 <summary><strong><code>wt list</code></strong> - Show all worktrees and branches</summary>
 
