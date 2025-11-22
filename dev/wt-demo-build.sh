@@ -161,7 +161,7 @@ RUST
   mkdir -p "$DEMO_REPO/.config"
   cat >"$DEMO_REPO/.config/wt.toml" <<'TOML'
 [pre-merge-command]
-test = "cargo nextest run --no-fail-fast"
+test = "cargo nextest run"
 TOML
   git -C "$DEMO_REPO" add .config/wt.toml
   commit_dated "$DEMO_REPO" "Add project hooks" "5d"
@@ -239,7 +239,7 @@ command = "llm"
 args = ["-m", "claude-haiku-4.5"]
 
 [projects."$project_id"]
-approved-commands = ["cargo nextest run --no-fail-fast"]
+approved-commands = ["cargo nextest run"]
 TOML
 
   # Create two extra branches (no worktrees) for listing.
@@ -252,7 +252,9 @@ TOML
   # Add commit to main after beta, so beta is behind
   echo "# Development" >>"$DEMO_REPO/README.md"
   echo "See CONTRIBUTING.md for guidelines." >>"$DEMO_REPO/README.md"
-  git -C "$DEMO_REPO" add README.md
+  # Add notes.md so demo can show a tracked file diff
+  echo "# Notes" >"$DEMO_REPO/notes.md"
+  git -C "$DEMO_REPO" add README.md notes.md
   commit_dated "$DEMO_REPO" "docs: add development section" "1d"
   git -C "$DEMO_REPO" push -q
 
@@ -512,6 +514,9 @@ record_text() {
     export WT_PROGRESSIVE=false
     export NO_COLOR=1
     export CLICOLOR=0
+    export NEXTEST_STATUS_LEVEL=none
+    export NEXTEST_FINAL_STATUS_LEVEL=flaky
+    export NEXTEST_NO_FAIL_FAST=1
     eval "$(starship init bash)" >/dev/null 2>&1
     eval "$(wt config shell init bash)" >/dev/null 2>&1
     cd "$DEMO_REPO"
@@ -522,6 +527,10 @@ record_text() {
           "export "*|"eval "*|"cd "*|"clear"|"exit") continue ;;
         esac
         eval "$cmd"
+        # Wait for background removal after merge
+        case "$cmd" in
+          "wt merge"*) sleep 2 ;;
+        esac
       done <<< "$COMMANDS"
     } >"$RAW_PATH" 2>&1
   '
@@ -532,8 +541,7 @@ raw = pathlib.Path(os.environ["RAW_PATH"]).read_text(errors="ignore")
 clean = re.sub(r"\x1B\[[0-9;?]*[A-Za-z]", "", raw)
 clean = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", clean)
 clean = clean.replace("^D", "")
-clean = clean.lstrip()
-pathlib.Path(os.environ["OUT_DIR"]).joinpath("run.txt").write_text(clean.strip() + "\n")
+pathlib.Path(os.environ["OUT_DIR"]).joinpath("run.txt").write_text(clean)
 PY
 }
 

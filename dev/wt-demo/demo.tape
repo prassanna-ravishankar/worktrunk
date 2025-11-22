@@ -21,6 +21,9 @@ Env CARGO_HOME "{{REAL_HOME}}/.cargo"
 Env HOME "{{DEMO_HOME}}"
 Env XDG_CONFIG_HOME "{{DEMO_HOME}}/.config"
 Env STARSHIP_CONFIG "{{STARSHIP_CONFIG}}"
+Env NEXTEST_STATUS_LEVEL "none"
+Env NEXTEST_FINAL_STATUS_LEVEL "flaky"
+Env NEXTEST_NO_FAIL_FAST "1"
 
 Hide
 Type "export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8"
@@ -55,7 +58,7 @@ Sleep 1.6s
 
 Type "wt merge"
 Enter
-Sleep 6.5s
+Sleep 8s
 
 Type "wt list --branches --full"
 Enter
