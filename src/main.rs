@@ -268,9 +268,26 @@ fn main() {
                                     "{SUCCESS_EMOJI} {green}Configured {changes_count} shell{plural}{green:#}"
                                 );
                                 println!();
-                                println!(
-                                    "{HINT_EMOJI} {HINT}Restart your shell or run: source <config-file>{HINT:#}"
-                                );
+
+                                // Find the config file for the current shell
+                                let current_shell = std::env::var("SHELL")
+                                    .ok()
+                                    .and_then(|s| s.rsplit('/').next().map(String::from));
+
+                                let current_shell_path = current_shell.as_ref().and_then(|shell_name| {
+                                    scan_result
+                                        .configured
+                                        .iter()
+                                        .filter(|r| !matches!(r.action, ConfigAction::AlreadyExists))
+                                        .find(|r| r.shell.to_string().eq_ignore_ascii_case(shell_name))
+                                        .map(|r| format_path_for_display(&r.path))
+                                });
+
+                                if let Some(path) = current_shell_path {
+                                    println!(
+                                        "{HINT_EMOJI} {HINT}Restart your shell or run: source {path}{HINT:#}"
+                                    );
+                                }
                             } else {
                                 println!(
                                     "{SUCCESS_EMOJI} {green}All shells already configured{green:#}"

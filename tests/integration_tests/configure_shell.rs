@@ -18,6 +18,7 @@ fn test_configure_shell_with_yes() {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/zsh");
         cmd.arg("config")
             .arg("shell")
             .arg("install")
@@ -35,7 +36,7 @@ fn test_configure_shell_with_yes() {
 
         ✅ [32mConfigured 1 shell[0m
 
-        💡 [2mRestart your shell or run: source <config-file>[0m
+        💡 [2mRestart your shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
         "#);
@@ -61,6 +62,7 @@ fn test_configure_shell_specific_shell() {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/zsh");
         cmd.arg("config")
             .arg("shell")
             .arg("install")
@@ -77,7 +79,7 @@ fn test_configure_shell_specific_shell() {
 
         ✅ [32mConfigured 1 shell[0m
 
-        💡 [2mRestart your shell or run: source <config-file>[0m
+        💡 [2mRestart your shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
         "#);
@@ -107,6 +109,7 @@ fn test_configure_shell_already_exists() {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/zsh");
         cmd.arg("config")
             .arg("shell")
             .arg("install")
@@ -142,6 +145,7 @@ fn test_configure_shell_fish() {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/fish");
         cmd.arg("config")
             .arg("shell")
             .arg("install")
@@ -158,7 +162,7 @@ fn test_configure_shell_fish() {
 
         ✅ [32mConfigured 1 shell[0m
 
-        💡 [2mRestart your shell or run: source <config-file>[0m
+        💡 [2mRestart your shell or run: source ~/.config/fish/conf.d/wt.fish[0m
 
         ----- stderr -----
         ");
@@ -187,6 +191,7 @@ fn test_configure_shell_no_files() {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/zsh");
         cmd.arg("config")
             .arg("shell")
             .arg("install")
@@ -224,6 +229,7 @@ fn test_configure_shell_multiple_configs() {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/zsh");
         cmd.arg("config")
             .arg("shell")
             .arg("install")
@@ -242,7 +248,7 @@ fn test_configure_shell_multiple_configs() {
 
         ✅ [32mConfigured 2 shells[0m
 
-        💡 [2mRestart your shell or run: source <config-file>[0m
+        💡 [2mRestart your shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
         "#);
@@ -285,6 +291,7 @@ fn test_configure_shell_mixed_states() {
         let mut cmd = wt_command();
         repo.clean_cli_env(&mut cmd);
         set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/zsh");
         cmd.arg("config")
             .arg("shell")
             .arg("install")
@@ -303,7 +310,7 @@ fn test_configure_shell_mixed_states() {
 
         ✅ [32mConfigured 1 shell[0m
 
-        💡 [2mRestart your shell or run: source <config-file>[0m
+        💡 [2mRestart your shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
         "#);
