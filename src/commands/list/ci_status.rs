@@ -371,7 +371,7 @@ impl PrStatus {
         }
 
         // Parse JSON output
-        let pipelines: Vec<GitLabPipelineList> = match serde_json::from_slice(&output.stdout) {
+        let pipelines: Vec<GitLabPipeline> = match serde_json::from_slice(&output.stdout) {
             Ok(pipelines) => pipelines,
             Err(e) => {
                 log::warn!(
@@ -501,49 +501,25 @@ impl GitLabMrInfo {
 #[derive(Debug, Deserialize)]
 struct GitLabPipeline {
     status: Option<String>,
+    /// Only present in `glab ci list` output, not in MR view embedded pipeline
+    #[serde(default)]
+    sha: Option<String>,
 }
 
-/// GitLab pipeline from `glab ci list --output json`
-#[derive(Debug, Deserialize)]
-struct GitLabPipelineList {
-    status: Option<String>,
-    sha: Option<String>,
+fn parse_gitlab_status(status: Option<&str>) -> CiStatus {
+    match status {
+        Some(
+            "running" | "pending" | "preparing" | "waiting_for_resource" | "created" | "scheduled",
+        ) => CiStatus::Running,
+        Some("failed" | "canceled" | "manual") => CiStatus::Failed,
+        Some("success") => CiStatus::Passed,
+        Some("skipped") | None => CiStatus::NoCI,
+        _ => CiStatus::NoCI,
+    }
 }
 
 impl GitLabPipeline {
     fn ci_status(&self) -> CiStatus {
-        match self.status.as_deref() {
-            Some(
-                "running"
-                | "pending"
-                | "preparing"
-                | "waiting_for_resource"
-                | "created"
-                | "scheduled",
-            ) => CiStatus::Running,
-            Some("failed" | "canceled" | "manual") => CiStatus::Failed,
-            Some("success") => CiStatus::Passed,
-            Some("skipped") | None => CiStatus::NoCI,
-            _ => CiStatus::NoCI,
-        }
-    }
-}
-
-impl GitLabPipelineList {
-    fn ci_status(&self) -> CiStatus {
-        match self.status.as_deref() {
-            Some(
-                "running"
-                | "pending"
-                | "preparing"
-                | "waiting_for_resource"
-                | "created"
-                | "scheduled",
-            ) => CiStatus::Running,
-            Some("failed" | "canceled" | "manual") => CiStatus::Failed,
-            Some("success") => CiStatus::Passed,
-            Some("skipped") | None => CiStatus::NoCI,
-            _ => CiStatus::NoCI,
-        }
+        parse_gitlab_status(self.status.as_deref())
     }
 }
