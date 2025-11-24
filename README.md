@@ -1092,7 +1092,7 @@ This disables bash syntax highlighting in command output but keeps all core func
 </details>
 
 <details>
-<summary>Developing</summary>
+<summary><strong>Any notes for developing this crate?</strong></summary>
 
 ### Running Tests
 
