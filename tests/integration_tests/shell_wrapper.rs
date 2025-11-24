@@ -1713,6 +1713,54 @@ approved-commands = ["echo 'bash background'"]
         );
     }
 
+    /// Test that zsh completions work with immediate registration (compinit before wrapper)
+    #[test]
+    fn test_zsh_completions_immediate_registration() {
+        let repo = TestRepo::new();
+        repo.commit("Initial commit");
+
+        let wt_bin = get_cargo_bin("wt");
+        let wrapper_script = generate_wrapper(&repo, "zsh");
+
+        // Script that runs compinit BEFORE wrapper (immediate registration path)
+        let script = format!(
+            r#"
+            # Run compinit first (some users do this)
+            autoload -Uz compinit && compinit -i 2>/dev/null
+            export WORKTRUNK_BIN='{}'
+            export WORKTRUNK_CONFIG_PATH='{}'
+            {}
+            # Check if lazy completion stub is registered (should be immediate, no precmd needed)
+            if (( $+functions[_wt_lazy_complete] )); then
+                echo "__COMPLETION_REGISTERED__"
+            else
+                echo "__NO_COMPLETION__"
+            fi
+            "#,
+            wt_bin.display(),
+            repo.test_config_path().display(),
+            wrapper_script
+        );
+
+        let final_script = format!("( {} ) 2>&1", script);
+        let config_path = repo.test_config_path().to_string_lossy().to_string();
+        let env_vars: Vec<(&str, &str)> = vec![
+            ("WORKTRUNK_CONFIG_PATH", &config_path),
+            ("TERM", "xterm"),
+            ("ZDOTDIR", "/dev/null"),
+        ];
+
+        let (combined, exit_code) =
+            exec_in_pty_interactive("zsh", &final_script, repo.root_path(), &env_vars, &[]);
+
+        assert_eq!(exit_code, 0, "Script should succeed");
+        assert!(
+            combined.contains("__COMPLETION_REGISTERED__"),
+            "Zsh completions should register immediately when compinit runs first.\nOutput:\n{}",
+            combined
+        );
+    }
+
     // ========================================================================
     // Special Characters in Branch Names Tests
     // ========================================================================
