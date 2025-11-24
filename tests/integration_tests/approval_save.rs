@@ -21,7 +21,7 @@ fn test_approval_saves_to_disk() {
             "test command".to_string(),
             Some(&config_path),
         )
-        .expect("Failed to save approval");
+        .unwrap();
 
     // Verify the config was written to the isolated path
     assert!(

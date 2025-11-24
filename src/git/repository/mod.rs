@@ -110,7 +110,7 @@ impl Repository {
         let _ = self.layout.set(layout);
 
         // Now get() will succeed
-        Ok(self.layout.get().expect("just set"))
+        Ok(self.layout.get().unwrap())
     }
 
     /// Check if this is a bare repository (no working tree).

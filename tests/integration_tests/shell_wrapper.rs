@@ -44,14 +44,13 @@ static TMPDIR_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(
         r#"(/private/var/folders/[^/]+/[^/]+/T/\.tmp[^\s/'"]+|/tmp/\.(?:tmp|psub)[^\s/'"]+)"#,
     )
-    .expect("Invalid tmpdir regex pattern")
+    .unwrap()
 });
 
 /// Regex that collapses repeated TMPDIR placeholders (caused by nested mktemp paths)
 /// so `[TMPDIR][TMPDIR]/foo` becomes `[TMPDIR]/foo` and `[TMPDIR]/[TMPDIR]` becomes `[TMPDIR]`
-static TMPDIR_PLACEHOLDER_COLLAPSE_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"\[TMPDIR](?:/?\[TMPDIR])+").expect("Invalid TMPDIR placeholder regex")
-});
+static TMPDIR_PLACEHOLDER_COLLAPSE_REGEX: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\[TMPDIR](?:/?\[TMPDIR])+").unwrap());
 
 /// Regex for normalizing workspace paths (dynamically built from CARGO_MANIFEST_DIR)
 /// Matches: <project_root>/tests/fixtures/
@@ -59,14 +58,14 @@ static TMPDIR_PLACEHOLDER_COLLAPSE_REGEX: LazyLock<regex::Regex> = LazyLock::new
 static WORKSPACE_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let pattern = format!(r"{}/tests/fixtures/", regex::escape(manifest_dir));
-    regex::Regex::new(&pattern).expect("Invalid workspace regex pattern")
+    regex::Regex::new(&pattern).unwrap()
 });
 
 /// Regex for normalizing git commit hashes (7-character hex)
 /// Matches 7-character lowercase hex sequences (git short hashes)
 /// Note: No word boundaries because ANSI codes (ending with 'm') directly precede hashes
 static COMMIT_HASH_REGEX: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"[0-9a-f]{7}").expect("Invalid commit hash regex pattern"));
+    LazyLock::new(|| regex::Regex::new(r"[0-9a-f]{7}").unwrap());
 
 /// Output from executing a command through a shell wrapper
 #[derive(Debug)]
@@ -79,9 +78,8 @@ struct ShellOutput {
 
 /// Regex for detecting bash job control messages
 /// Matches patterns like "[1] 12345" (job start) and "[1]+ Done" (job completion)
-static JOB_CONTROL_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"\[\d+\][+-]?\s+(Done|\d+)").expect("Invalid job control regex pattern")
-});
+static JOB_CONTROL_REGEX: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\[\d+\][+-]?\s+(Done|\d+)").unwrap());
 
 impl ShellOutput {
     /// Check if output contains no directive leaks
@@ -307,7 +305,7 @@ fn exec_in_pty_interactive(
             pixel_width: 0,
             pixel_height: 0,
         })
-        .expect("Failed to open PTY");
+        .unwrap();
 
     // Spawn the shell inside the PTY
     let mut cmd = CommandBuilder::new(shell);
@@ -318,10 +316,7 @@ fn exec_in_pty_interactive(
     // Set minimal required environment for shells to function
     cmd.env(
         "HOME",
-        home::home_dir()
-            .expect("HOME directory required")
-            .to_string_lossy()
-            .to_string(),
+        home::home_dir().unwrap().to_string_lossy().to_string(),
     );
     cmd.env(
         "PATH",
@@ -357,37 +352,27 @@ fn exec_in_pty_interactive(
         cmd.env(key, value);
     }
 
-    let mut child = pair
-        .slave
-        .spawn_command(cmd)
-        .expect("Failed to spawn command in PTY");
+    let mut child = pair.slave.spawn_command(cmd).unwrap();
     drop(pair.slave); // Close slave in parent
 
     // Clone the reader for capturing output
-    let mut reader = pair
-        .master
-        .try_clone_reader()
-        .expect("Failed to clone PTY reader");
+    let mut reader = pair.master.try_clone_reader().unwrap();
 
     // Write input synchronously if we have any (matches approval_pty.rs approach)
     if !inputs.is_empty() {
-        let mut writer = pair.master.take_writer().expect("Failed to get PTY writer");
+        let mut writer = pair.master.take_writer().unwrap();
         for input in inputs {
-            writer
-                .write_all(input.as_bytes())
-                .expect("Failed to write input to PTY");
-            writer.flush().expect("Failed to flush PTY writer");
+            writer.write_all(input.as_bytes()).unwrap();
+            writer.flush().unwrap();
         }
         drop(writer); // Explicitly drop writer so PTY sees EOF
     }
 
     // Read everything the "terminal" would display (including echoed input)
     let mut buf = String::new();
-    reader
-        .read_to_string(&mut buf)
-        .expect("Failed to read from PTY"); // Blocks until child exits & PTY closes
+    reader.read_to_string(&mut buf).unwrap(); // Blocks until child exits & PTY closes
 
-    let status = child.wait().expect("Failed to wait for child process");
+    let status = child.wait().unwrap();
 
     (normalize_newlines(&buf), status.exit_code() as i32)
 }
@@ -744,7 +729,7 @@ mod tests {
 
         // Create project config with both post-create and post-start hooks
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"# Blocking command that runs before worktree is ready
@@ -759,7 +744,7 @@ server = "echo 'Starting dev server on port 3000'"
 watch = "echo 'Watching for file changes'"
 "#,
         )
-        .expect("Failed to write project config");
+        .unwrap();
 
         repo.commit("Add hooks");
 
@@ -777,7 +762,7 @@ approved-commands = [
 ]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         let output = exec_through_wrapper(shell, &repo, "switch", &["--create", "feature-hooks"]);
 
@@ -802,7 +787,7 @@ approved-commands = [
 
         // Create project config with pre-merge validation
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"[pre-merge-command]
@@ -811,7 +796,7 @@ lint = "echo '✓ Linting passed - no warnings'"
 test = "echo '✓ All 47 tests passed in 2.3s'"
 "#,
         )
-        .expect("Failed to write config");
+        .unwrap();
 
         repo.commit("Add pre-merge validation");
 
@@ -822,25 +807,25 @@ test = "echo '✓ All 47 tests passed in 2.3s'"
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to add main worktree");
+            .unwrap();
 
         // Create feature worktree with a commit
         let feature_wt = repo.add_worktree("feature", "feature");
-        fs::write(feature_wt.join("feature.txt"), "feature content").expect("Failed to write file");
+        fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["add", "feature.txt"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to add file");
+            .unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add feature"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to commit");
+            .unwrap();
 
         // Pre-approve commands
         fs::write(
@@ -855,7 +840,7 @@ approved-commands = [
 ]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         // Run merge from the feature worktree
         let output =
@@ -884,7 +869,7 @@ approved-commands = [
 
         // Create project config with failing pre-merge validation
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"[pre-merge-command]
@@ -892,7 +877,7 @@ format = "echo '✓ Code formatting check passed'"
 test = "echo '✗ Test suite failed: 3 tests failing' && exit 1"
 "#,
         )
-        .expect("Failed to write config");
+        .unwrap();
 
         repo.commit("Add failing pre-merge validation");
 
@@ -903,25 +888,25 @@ test = "echo '✗ Test suite failed: 3 tests failing' && exit 1"
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to add main worktree");
+            .unwrap();
 
         // Create feature worktree with a commit
         let feature_wt = repo.add_worktree("feature-fail", "feature-fail");
-        fs::write(feature_wt.join("feature.txt"), "feature content").expect("Failed to write file");
+        fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["add", "feature.txt"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to add file");
+            .unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add feature"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to commit");
+            .unwrap();
 
         // Pre-approve the commands
         fs::write(
@@ -935,7 +920,7 @@ approved-commands = [
 ]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         // Run merge from the feature worktree
         let output =
@@ -968,7 +953,7 @@ approved-commands = [
 
         // Create project config with pre-merge commands that output to both stdout and stderr
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             format!(
@@ -980,7 +965,7 @@ check2 = "{} check2 3"
                 script_path.display()
             ),
         )
-        .expect("Failed to write config");
+        .unwrap();
 
         repo.commit("Add pre-merge validation with mixed output");
 
@@ -991,25 +976,25 @@ check2 = "{} check2 3"
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to add main worktree");
+            .unwrap();
 
         // Create feature worktree with a commit
         let feature_wt = repo.add_worktree("feature", "feature");
-        fs::write(feature_wt.join("feature.txt"), "feature content").expect("Failed to write file");
+        fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["add", "feature.txt"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to add file");
+            .unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add feature"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to commit");
+            .unwrap();
 
         // Pre-approve commands
         fs::write(
@@ -1027,7 +1012,7 @@ approved-commands = [
                 script_path.display()
             ),
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         // Run merge from the feature worktree
         let output =
@@ -1058,12 +1043,12 @@ approved-commands = [
         // Configure a post-start command in the project config (this is where the bug manifests)
         // The println! in handle_post_start_commands causes directive leaks
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"post-start-command = "echo 'test command executed'""#,
         )
-        .expect("Failed to write project config");
+        .unwrap();
 
         repo.commit("Add post-start command");
 
@@ -1076,7 +1061,7 @@ approved-commands = [
 approved-commands = ["echo 'test command executed'"]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         let output =
             exec_through_wrapper("bash", &repo, "switch", &["--create", "feature-with-hooks"]);
@@ -1178,12 +1163,12 @@ approved-commands = ["echo 'test command executed'"]
 
         // Configure a post-start background command that will trigger progress output
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"post-start-command = "echo 'background task'""#,
         )
-        .expect("Failed to write project config");
+        .unwrap();
 
         repo.commit("Add post-start command");
 
@@ -1196,7 +1181,7 @@ approved-commands = ["echo 'test command executed'"]
 approved-commands = ["echo 'background task'"]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         let output = exec_through_wrapper("bash", &repo, "switch", &["--create", "feature-bg"]);
 
@@ -1247,12 +1232,12 @@ approved-commands = ["echo 'background task'"]
 
         // Configure a post-start background command that will trigger progress output
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"post-start-command = "echo 'fish background task'""#,
         )
-        .expect("Failed to write project config");
+        .unwrap();
 
         repo.commit("Add post-start command");
 
@@ -1265,7 +1250,7 @@ approved-commands = ["echo 'background task'"]
 approved-commands = ["echo 'fish background task'"]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         let output = exec_through_wrapper("fish", &repo, "switch", &["--create", "fish-bg"]);
 
@@ -1375,10 +1360,7 @@ approved-commands = ["echo 'fish background task'"]
 
         // Get the worktrunk source directory (where this test is running from)
         // This is the directory that contains Cargo.toml with the workspace
-        let worktrunk_source = env::current_dir()
-            .expect("Failed to get current directory")
-            .canonicalize()
-            .expect("Failed to canonicalize path");
+        let worktrunk_source = env::current_dir().unwrap().canonicalize().unwrap();
 
         // Build a shell script that runs from the worktrunk source directory
         let wt_bin = get_cargo_bin("wt");
@@ -1494,12 +1476,12 @@ approved-commands = ["echo 'fish background task'"]
 
         // Configure a post-start command that will trigger background job
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"post-start-command = "echo 'background job'""#,
         )
-        .expect("Failed to write project config");
+        .unwrap();
 
         repo.commit("Add post-start command");
 
@@ -1512,7 +1494,7 @@ approved-commands = ["echo 'fish background task'"]
 approved-commands = ["echo 'background job'"]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         let output = exec_through_wrapper("zsh", &repo, "switch", &["--create", "zsh-job-test"]);
 
@@ -1543,12 +1525,12 @@ approved-commands = ["echo 'background job'"]
 
         // Configure a post-start command that will trigger background job
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"post-start-command = "echo 'bash background'""#,
         )
-        .expect("Failed to write project config");
+        .unwrap();
 
         repo.commit("Add post-start command");
 
@@ -1561,7 +1543,7 @@ approved-commands = ["echo 'background job'"]
 approved-commands = ["echo 'bash background'"]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         let output = exec_through_wrapper("bash", &repo, "switch", &["--create", "bash-job-test"]);
 
@@ -1940,12 +1922,12 @@ approved-commands = ["echo 'bash background'"]
 
         // Configure a post-start command to exercise the background job code path
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
         fs::write(
             config_dir.join("wt.toml"),
             r#"post-start-command = "echo 'cleanup test'""#,
         )
-        .expect("Failed to write project config");
+        .unwrap();
 
         repo.commit("Add post-start command");
 
@@ -1958,7 +1940,7 @@ approved-commands = ["echo 'bash background'"]
 approved-commands = ["echo 'cleanup test'"]
 "#,
         )
-        .expect("Failed to write user config");
+        .unwrap();
 
         // Run a command that exercises the full FIFO/background job code path
         let output = exec_through_wrapper(shell, &repo, "switch", &["--create", "cleanup-test"]);
@@ -2004,11 +1986,11 @@ approved-commands = ["echo 'cleanup test'"]
 
         // Create project config with pre-merge hooks
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
 
         // Create mock commands for realistic output
         let bin_dir = repo.root_path().join(".bin");
-        fs::create_dir_all(&bin_dir).expect("Failed to create bin dir");
+        fs::create_dir_all(&bin_dir).unwrap();
 
         // Mock pytest command
         let pytest_script = r#"#!/bin/sh
@@ -2026,7 +2008,7 @@ tests/test_auth.py::test_token_validation PASSED                         [100%]
 EOF
 exit 0
 "#;
-        fs::write(bin_dir.join("pytest"), pytest_script).expect("Failed to write pytest script");
+        fs::write(bin_dir.join("pytest"), pytest_script).unwrap();
 
         // Mock ruff command
         let ruff_script = r#"#!/bin/sh
@@ -2040,7 +2022,7 @@ else
     exit 1
 fi
 "#;
-        fs::write(bin_dir.join("ruff"), ruff_script).expect("Failed to write ruff script");
+        fs::write(bin_dir.join("ruff"), ruff_script).unwrap();
 
         // Mock llm command for commit message
         let llm_script = r#"#!/bin/sh
@@ -2052,7 +2034,7 @@ Implement login and token refresh endpoints with JWT validation.
 Includes comprehensive test coverage and input validation.
 EOF
 "#;
-        fs::write(bin_dir.join("llm"), llm_script).expect("Failed to write llm script");
+        fs::write(bin_dir.join("llm"), llm_script).unwrap();
 
         // Mock uv command for running pytest and ruff
         let uv_script = r#"#!/bin/sh
@@ -2066,7 +2048,7 @@ else
     exit 1
 fi
 "#;
-        fs::write(bin_dir.join("uv"), uv_script).expect("Failed to write uv script");
+        fs::write(bin_dir.join("uv"), uv_script).unwrap();
 
         // Make scripts executable (Unix only)
         #[cfg(unix)]
@@ -2085,8 +2067,7 @@ fi
 "lint" = "uv run ruff check"
 "#;
 
-        fs::write(config_dir.join("wt.toml"), config_content)
-            .expect("Failed to write project config");
+        fs::write(config_dir.join("wt.toml"), config_content).unwrap();
 
         // Commit the config
         let mut cmd = Command::new("git");
@@ -2094,14 +2075,14 @@ fi
         cmd.args(["add", ".config/wt.toml", ".bin"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to add config");
+            .unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add pre-merge hooks"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to commit config");
+            .unwrap();
 
         // Create a worktree for main
         let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
@@ -2110,13 +2091,13 @@ fi
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to add worktree");
+            .unwrap();
 
         // Create a feature worktree and make multiple commits
         let feature_wt = repo.add_worktree("feature-auth", "feature-auth");
 
         // First commit - create initial auth.py with login endpoint
-        fs::create_dir_all(feature_wt.join("api")).expect("Failed to create api dir");
+        fs::create_dir_all(feature_wt.join("api")).unwrap();
         let auth_py_v1 = r#"# Authentication API endpoints
 from typing import Dict, Optional
 import jwt
@@ -2136,22 +2117,22 @@ def login(username: str, password: str) -> Optional[Dict]:
     token = jwt.encode(payload, 'secret', algorithm='HS256')
     return {'token': token, 'expires_in': 3600}
 "#;
-        std::fs::write(feature_wt.join("api/auth.py"), auth_py_v1).expect("Failed to write file");
+        std::fs::write(feature_wt.join("api/auth.py"), auth_py_v1).unwrap();
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["add", "api/auth.py"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to add file");
+            .unwrap();
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add login endpoint"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to commit");
+            .unwrap();
 
         // Second commit - add tests
-        fs::create_dir_all(feature_wt.join("tests")).expect("Failed to create tests dir");
+        fs::create_dir_all(feature_wt.join("tests")).unwrap();
         let test_auth_py = r#"# Authentication endpoint tests
 import pytest
 from api.auth import login
@@ -2167,20 +2148,19 @@ def test_login_invalid_password():
 def test_token_validation():
     assert login('valid_user', 'valid_pass')['expires_in'] == 3600
 "#;
-        std::fs::write(feature_wt.join("tests/test_auth.py"), test_auth_py)
-            .expect("Failed to write file");
+        std::fs::write(feature_wt.join("tests/test_auth.py"), test_auth_py).unwrap();
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["add", "tests/test_auth.py"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to add file");
+            .unwrap();
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add authentication tests"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to commit");
+            .unwrap();
 
         // Third commit - add refresh endpoint
         let auth_py_v2 = r#"# Authentication API endpoints
@@ -2215,19 +2195,19 @@ def refresh_token(token: str) -> Optional[Dict]:
     except jwt.InvalidTokenError:
         return None
 "#;
-        std::fs::write(feature_wt.join("api/auth.py"), auth_py_v2).expect("Failed to write file");
+        std::fs::write(feature_wt.join("api/auth.py"), auth_py_v2).unwrap();
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["add", "api/auth.py"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to add file");
+            .unwrap();
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add validation"])
             .current_dir(&feature_wt)
             .output()
-            .expect("Failed to commit");
+            .unwrap();
 
         // Configure LLM in worktrunk config
         let llm_path = bin_dir.join("llm");
@@ -2239,8 +2219,7 @@ command = "{}"
 "#,
             llm_path.display()
         );
-        fs::write(repo.test_config_path(), worktrunk_config)
-            .expect("Failed to write worktrunk config");
+        fs::write(repo.test_config_path(), worktrunk_config).unwrap();
 
         // Set PATH with mock binaries and run merge
         let path_with_bin = format!(
@@ -2279,11 +2258,11 @@ command = "{}"
 
         // Create project config with post-create and post-start hooks
         let config_dir = repo.root_path().join(".config");
-        fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        fs::create_dir_all(&config_dir).unwrap();
 
         // Create mock commands for realistic output
         let bin_dir = repo.root_path().join(".bin");
-        fs::create_dir_all(&bin_dir).expect("Failed to create bin dir");
+        fs::create_dir_all(&bin_dir).unwrap();
 
         // Mock uv command that simulates dependency installation
         let uv_script = r#"#!/bin/sh
@@ -2301,7 +2280,7 @@ else
     exit 1
 fi
 "#;
-        fs::write(bin_dir.join("uv"), uv_script).expect("Failed to write uv script");
+        fs::write(bin_dir.join("uv"), uv_script).unwrap();
 
         // Make scripts executable (Unix only)
         #[cfg(unix)]
@@ -2320,8 +2299,7 @@ fi
 "dev" = "uv run dev"
 "#;
 
-        fs::write(config_dir.join("wt.toml"), config_content)
-            .expect("Failed to write project config");
+        fs::write(config_dir.join("wt.toml"), config_content).unwrap();
 
         // Commit the config
         let mut cmd = Command::new("git");
@@ -2329,14 +2307,14 @@ fi
         cmd.args(["add", ".config/wt.toml", ".bin"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to add config");
+            .unwrap();
 
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["commit", "-m", "Add project hooks"])
             .current_dir(repo.root_path())
             .output()
-            .expect("Failed to commit config");
+            .unwrap();
 
         // Set PATH with mock binaries and run switch --create
         let path_with_bin = format!(
@@ -2391,7 +2369,7 @@ test = "echo 'Running tests...'"
                 pixel_width: 0,
                 pixel_height: 0,
             })
-            .expect("Failed to open PTY");
+            .unwrap();
 
         let cargo_bin = get_cargo_bin("wt");
         let mut cmd = CommandBuilder::new(cargo_bin);
@@ -2404,10 +2382,7 @@ test = "echo 'Running tests...'"
         cmd.env_clear();
         cmd.env(
             "HOME",
-            home::home_dir()
-                .expect("HOME directory required")
-                .to_string_lossy()
-                .to_string(),
+            home::home_dir().unwrap().to_string_lossy().to_string(),
         );
         cmd.env(
             "PATH",
@@ -2417,31 +2392,21 @@ test = "echo 'Running tests...'"
             cmd.env(key, value);
         }
 
-        let mut child = pair
-            .slave
-            .spawn_command(cmd)
-            .expect("Failed to spawn command in PTY");
+        let mut child = pair.slave.spawn_command(cmd).unwrap();
         drop(pair.slave);
 
-        let mut reader = pair
-            .master
-            .try_clone_reader()
-            .expect("Failed to clone PTY reader");
-        let mut writer = pair.master.take_writer().expect("Failed to get PTY writer");
+        let mut reader = pair.master.try_clone_reader().unwrap();
+        let mut writer = pair.master.take_writer().unwrap();
 
         // Send "n" to decline and complete the command
-        writer
-            .write_all(b"n\n")
-            .expect("Failed to write input to PTY");
-        writer.flush().expect("Failed to flush PTY writer");
+        writer.write_all(b"n\n").unwrap();
+        writer.flush().unwrap();
         drop(writer);
 
         // Read all output
         let mut buf = String::new();
-        reader
-            .read_to_string(&mut buf)
-            .expect("Failed to read PTY output");
-        child.wait().expect("Failed to wait for child");
+        reader.read_to_string(&mut buf).unwrap();
+        child.wait().unwrap();
 
         // Normalize: strip ANSI codes and control characters
         let ansi_regex = regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap();

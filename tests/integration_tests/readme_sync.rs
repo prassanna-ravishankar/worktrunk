@@ -17,43 +17,38 @@ static SNAPSHOT_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"(?s)<!-- README:snapshot:([^\s]+) -->\n```\w*\n(?:\$ [^\n]+\n)?(.*?)```\n<!-- README:end -->",
     )
-    .expect("Invalid marker regex")
+    .unwrap()
 });
 
 /// Regex to find README help markers (no wrapper - content is rendered markdown)
 static HELP_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?s)<!-- README:help:(.+?) -->\n(.*?)\n<!-- README:end -->")
-        .expect("Invalid help marker regex")
+    Regex::new(r"(?s)<!-- README:help:(.+?) -->\n(.*?)\n<!-- README:end -->").unwrap()
 });
 
 /// Regex to strip ANSI escape codes (actual escape sequences)
 static ANSI_ESCAPE_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\x1b\[[0-9;]*m").expect("Invalid ANSI regex"));
+    LazyLock::new(|| Regex::new(r"\x1b\[[0-9;]*m").unwrap());
 
 /// Regex to strip literal bracket notation (as stored in snapshots)
-static ANSI_LITERAL_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[[0-9;]*m").expect("Invalid literal ANSI regex"));
+static ANSI_LITERAL_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[[0-9;]*m").unwrap());
 
 /// Regex for SHA placeholder
-static SHA_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[SHA\]").expect("Invalid SHA regex"));
+static SHA_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[SHA\]").unwrap());
 
 /// Regex for HASH placeholder (used by shell_wrapper tests)
-static HASH_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[HASH\]").expect("Invalid HASH regex"));
+static HASH_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[HASH\]").unwrap());
 
 /// Regex for TMPDIR paths
 static TMPDIR_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[TMPDIR\]/test-repo\.([^\s/]+)").expect("Invalid TMPDIR regex"));
+    LazyLock::new(|| Regex::new(r"\[TMPDIR\]/test-repo\.([^\s/]+)").unwrap());
 
 /// Regex for REPO placeholder
-static REPO_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[REPO\]").expect("Invalid REPO regex"));
+static REPO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[REPO\]").unwrap());
 
 /// Regex to find DEFAULT_TEMPLATE marker
 static DEFAULT_TEMPLATE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?s)(# <!-- DEFAULT_TEMPLATE_START -->\n).*?(# <!-- DEFAULT_TEMPLATE_END -->)")
-        .expect("Invalid DEFAULT_TEMPLATE marker regex")
+        .unwrap()
 });
 
 /// Regex to find DEFAULT_SQUASH_TEMPLATE marker
@@ -61,13 +56,13 @@ static SQUASH_TEMPLATE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"(?s)(# <!-- DEFAULT_SQUASH_TEMPLATE_START -->\n).*?(# <!-- DEFAULT_SQUASH_TEMPLATE_END -->)",
     )
-    .expect("Invalid DEFAULT_SQUASH_TEMPLATE marker regex")
+    .unwrap()
 });
 
 /// Regex to extract Rust raw string constants (single pound)
 static RUST_RAW_STRING_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r##"(?s)const (DEFAULT_TEMPLATE|DEFAULT_SQUASH_TEMPLATE): &str = r#"(.*?)"#;"##)
-        .expect("Invalid Rust raw string regex")
+        .unwrap()
 });
 
 /// Strip ANSI escape codes from text
@@ -329,9 +324,8 @@ fn test_config_example_templates_are_in_sync() {
     let llm_rs_path = project_root.join("src/llm.rs");
     let config_path = project_root.join("dev/config.example.toml");
 
-    let llm_content = fs::read_to_string(&llm_rs_path).expect("Failed to read src/llm.rs");
-    let config_content =
-        fs::read_to_string(&config_path).expect("Failed to read config.example.toml");
+    let llm_content = fs::read_to_string(&llm_rs_path).unwrap();
+    let config_content = fs::read_to_string(&config_path).unwrap();
 
     // Extract templates from llm.rs
     let templates = extract_templates(&llm_content);
@@ -381,7 +375,7 @@ fn test_config_example_templates_are_in_sync() {
     );
 
     if updated_count > 0 {
-        fs::write(&config_path, &updated_content).expect("Failed to write config.example.toml");
+        fs::write(&config_path, &updated_content).unwrap();
         println!(
             "✅ Updated {} template sections in config.example.toml",
             updated_count
@@ -394,7 +388,7 @@ fn test_readme_examples_are_in_sync() {
     let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let readme_path = project_root.join("README.md");
 
-    let readme_content = fs::read_to_string(&readme_path).expect("Failed to read README.md");
+    let readme_content = fs::read_to_string(&readme_path).unwrap();
 
     let mut errors = Vec::new();
     let mut checked = 0;
@@ -449,7 +443,7 @@ fn test_readme_examples_are_in_sync() {
 
     // Write updates
     if total_updated > 0 {
-        fs::write(&readme_path, &updated_content).expect("Failed to write README.md");
+        fs::write(&readme_path, &updated_content).unwrap();
         println!("✅ Updated {} sections in README.md", total_updated);
     }
 

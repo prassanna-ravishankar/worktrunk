@@ -94,7 +94,7 @@ fn test_clear_approvals_with_approvals() {
             "echo 'test'".to_string(),
             Some(repo.test_config_path()),
         )
-        .expect("Failed to save approval");
+        .unwrap();
 
     // Now clear approvals
     snapshot_clear_approvals("clear_approvals_with_approvals", &repo, &[]);
@@ -124,7 +124,7 @@ fn test_clear_approvals_global_with_approvals() {
             "echo 'test'".to_string(),
             Some(repo.test_config_path()),
         )
-        .expect("Failed to save approval");
+        .unwrap();
 
     // Now clear all global approvals
     snapshot_clear_approvals(
@@ -150,12 +150,12 @@ fn test_clear_approvals_after_clear() {
             "echo 'test'".to_string(),
             Some(repo.test_config_path()),
         )
-        .expect("Failed to save approval");
+        .unwrap();
 
     // Clear approvals
     let mut cmd = make_snapshot_cmd(&repo, "config", &[], None);
     cmd.arg("approvals").arg("clear");
-    cmd.output().expect("Failed to clear approvals");
+    cmd.output().unwrap();
 
     // Try to clear again (should show "no approvals")
     snapshot_clear_approvals("clear_approvals_after_clear", &repo, &[]);
@@ -184,21 +184,21 @@ lint = "echo 'third'"
             "echo 'first'".to_string(),
             Some(repo.test_config_path()),
         )
-        .expect("Failed to save approval");
+        .unwrap();
     config
         .approve_command_to(
             project_id.clone(),
             "echo 'second'".to_string(),
             Some(repo.test_config_path()),
         )
-        .expect("Failed to save approval");
+        .unwrap();
     config
         .approve_command_to(
             project_id,
             "echo 'third'".to_string(),
             Some(repo.test_config_path()),
         )
-        .expect("Failed to save approval");
+        .unwrap();
 
     // Now clear approvals (should show count of 3)
     snapshot_clear_approvals("clear_approvals_multiple_approvals", &repo, &[]);
