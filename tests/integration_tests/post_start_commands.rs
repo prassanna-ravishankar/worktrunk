@@ -1,6 +1,6 @@
 use crate::common::{
     TestRepo, make_snapshot_cmd, resolve_git_common_dir, setup_snapshot_settings, wait_for_file,
-    wait_for_file_content, wait_for_file_count,
+    wait_for_file_content, wait_for_file_count, wait_for_file_lines,
 };
 use insta::assert_snapshot;
 use insta_cmd::assert_cmd_snapshot;
@@ -668,10 +668,10 @@ approved-commands = ["""
         &["--create", "feature"],
     );
 
-    // Wait for background command to create the file AND flush content
+    // Wait for background command to write all 3 lines (not just the first)
     let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
     let output_file = worktree_path.join("multiline.txt");
-    wait_for_file_content(output_file.as_path(), Duration::from_secs(5));
+    wait_for_file_lines(output_file.as_path(), 3, Duration::from_secs(5));
 
     let contents = fs::read_to_string(&output_file).unwrap();
     assert_snapshot!(contents, @r"

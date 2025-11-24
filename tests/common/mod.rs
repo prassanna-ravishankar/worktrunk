@@ -925,6 +925,33 @@ pub fn wait_for_file_content(path: &Path, timeout: std::time::Duration) {
     );
 }
 
+/// Wait for a file to have at least `expected_lines` lines, polling with exponential backoff.
+/// Use when a background process writes multiple lines sequentially.
+pub fn wait_for_file_lines(path: &Path, expected_lines: usize, timeout: std::time::Duration) {
+    let start = std::time::Instant::now();
+    let mut attempt = 0;
+    while start.elapsed() < timeout {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            let line_count = content.lines().count();
+            if line_count >= expected_lines {
+                return;
+            }
+        }
+        exponential_sleep(attempt);
+        attempt += 1;
+    }
+    let actual = std::fs::read_to_string(path)
+        .map(|c| c.lines().count())
+        .unwrap_or(0);
+    panic!(
+        "File did not reach {} lines within {:?} (got {}): {}",
+        expected_lines,
+        timeout,
+        actual,
+        path.display()
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
