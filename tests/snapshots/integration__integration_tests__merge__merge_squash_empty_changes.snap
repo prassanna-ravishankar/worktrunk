@@ -31,7 +31,7 @@ exit_code: 0
 [107m [0m  - Change 2
 [107m [0m  - Revert to initial
 ⚪ [2mNo changes after squashing 3 commits[0m
-✅ [32mMerged to [1m[32mmain[0m[0m (no new commits, no rebase needed)
+✅ [32mMerged to [1m[32mmain[0m[32m @ [2m[SHA] (no new commits, no rebase needed)[0m
 🔄 [36mRemoving [1m[36mfeature[0m[36m worktree & branch in background[0m
 
 ----- stderr -----

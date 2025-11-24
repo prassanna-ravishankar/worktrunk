@@ -626,7 +626,14 @@ pub fn handle_push(
             summary_parts.join(", ")
         ))?;
     } else {
-        // No commits to push - for merge workflow context, acknowledge operations that didn't happen
+        // No commits to push - show current HEAD commit info
+        let head_sha = repo
+            .run_command(&["rev-parse", "--short", "HEAD"])?
+            .trim()
+            .to_string();
+        let green_dim = GREEN.dimmed();
+
+        // For merge workflow context, acknowledge operations that didn't happen
         let note = if let Some(ops) = operations {
             let mut notes = Vec::new();
             if !ops.committed && !ops.squashed {
@@ -636,17 +643,17 @@ pub fn handle_push(
                 notes.push("no rebase needed");
             }
             if notes.is_empty() {
-                String::new()
+                "already up to date".to_string()
             } else {
-                format!(" ({})", notes.join(", "))
+                notes.join(", ")
             }
         } else {
             // Standalone push - no merge workflow context
-            String::new()
+            "already up to date".to_string()
         };
 
         crate::output::success(format!(
-            "{GREEN}{verb} {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN:#}{note}"
+            "{GREEN}{verb} {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN} @ {green_dim}{head_sha}{green_dim:#} ({note}){GREEN:#}"
         ))?;
     }
 
