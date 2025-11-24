@@ -31,10 +31,12 @@ List worktrees, create a worktree, make a trivial change, merge the change:
 **Create a worktree:**
 
 <!-- README:snapshot:tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_simple_switch.snap -->
+
 ```bash
 $ wt switch --create fix-auth
 ✅ Created new worktree for fix-auth from main at ../repo.fix-auth
 ```
+
 <!-- README:end -->
 
 ...then do work. When ready:
@@ -42,6 +44,7 @@ $ wt switch --create fix-auth
 **Merge it:**
 
 <!-- README:snapshot:tests/snapshots/integration__integration_tests__merge__readme_example_simple.snap -->
+
 ```bash
 $ wt merge
 🔄 Merging 1 commit to main @ a1b2c3d (no commit/squash/rebase needed)
@@ -51,6 +54,7 @@ $ wt merge
 ✅ Merged to main (1 commit, 1 file, +13)
 🔄 Removing fix-auth worktree & branch in background
 ```
+
 <!-- README:end -->
 
 See [`wt merge`](#wt-merge) for all options.
@@ -58,6 +62,7 @@ See [`wt merge`](#wt-merge) for all options.
 **List worktrees:**
 
 <!-- README:snapshot:tests/snapshots/integration__integration_tests__list__readme_example_simple_list.snap -->
+
 ```bash
 $ wt list
   Branch     Status         HEAD±    main↕  Path         Remote⇅  Commit    Age   Message
@@ -67,6 +72,7 @@ $ wt list
 
 ⚪ Showing 3 worktrees, 1 with changes, 2 ahead
 ```
+
 <!-- README:end -->
 
 See [`wt list`](#wt-list) for all options.
@@ -119,6 +125,7 @@ args = ["-m", "claude-haiku-4-5-20251001"]
 Then `wt merge` will generate commit messages automatically:
 
 <!-- README:snapshot:tests/snapshots/integration__integration_tests__merge__readme_example_complex.snap -->
+
 ```bash
 $ wt merge
 🔄 Squashing 3 commits into a single commit (3 files, +33)...
@@ -148,6 +155,7 @@ $ wt merge
 🔄 Running post-merge install:
    cargo install --path .
 ```
+
 <!-- README:end -->
 
 Use `wt step commit` to commit changes with LLM commit messages without the full merge workflow.
@@ -182,6 +190,7 @@ Automate tasks at different points in the worktree lifecycle. Configure hooks in
 ```
 
 <!-- README:snapshot:tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_hooks_post_create.snap -->
+
 ```bash
 $ wt switch --create feature-x
 🔄 Running post-create install:
@@ -193,12 +202,14 @@ $ wt switch --create feature-x
 🔄 Running post-start dev:
    uv run dev
 ```
+
 <!-- README:end -->
 
 <details>
 <summary>Merging with pre-merge hooks</summary>
 
 <!-- README:snapshot:tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_hooks_pre_merge.snap -->
+
 ```bash
 $ wt merge
 🔄 Squashing 3 commits into a single commit (2 files, +45)...
@@ -233,6 +244,7 @@ All checks passed!
 ✅ Merged to main (1 commit, 2 files, +45)
 🔄 Removing feature-auth worktree & branch in background
 ```
+
 <!-- README:end -->
 
 </details>
@@ -309,6 +321,7 @@ instead of duplicating logic:
 <summary><strong><code>wt switch [branch]</code></strong> - Switch to existing worktree or create a new one</summary>
 
 <!-- README:help:wt switch --help-md -->
+
 ```text
 wt switch — Switch to a worktree
 Usage: switch [OPTIONS] <BRANCH>
@@ -429,6 +442,7 @@ wt switch --create new-feature --base=^  # Branch from main (default)
 wt switch --create bugfix --base=@       # Branch from current HEAD
 wt remove @                              # Remove current worktree
 ```
+
 <!-- README:end -->
 
 </details>
@@ -437,6 +451,7 @@ wt remove @                              # Remove current worktree
 <summary><strong><code>wt merge [target]</code></strong> - Merge, push, and cleanup</summary>
 
 <!-- README:help:wt merge --help-md -->
+
 ```text
 wt merge — Merge worktree into target branch
 Usage: merge [OPTIONS] [TARGET]
@@ -538,6 +553,7 @@ Skip all hooks:
 ```bash
 wt merge --no-verify
 ```
+
 <!-- README:end -->
 
 </details>
@@ -546,6 +562,7 @@ wt merge --no-verify
 <summary><strong><code>wt remove [worktree]</code></strong> - Remove worktree and branch</summary>
 
 <!-- README:help:wt remove --help-md -->
+
 ```text
 wt remove — Remove worktree and branch
 Usage: remove [OPTIONS] [WORKTREES]...
@@ -630,6 +647,7 @@ Switch to default in main:
 ```bash
 wt remove  # (when already in main worktree)
 ```
+
 <!-- README:end -->
 
 </details>
@@ -638,6 +656,7 @@ wt remove  # (when already in main worktree)
 <summary><strong><code>wt list</code></strong> - Show all worktrees and branches</summary>
 
 <!-- README:help:wt list --help-md -->
+
 ```text
 wt list — List worktrees and optionally branches
 Usage: list [OPTIONS]
@@ -751,6 +770,7 @@ jq '.[] | select(.status.main_divergence == "Ahead")'
 # Find locked worktrees
 jq '.[] | select(.locked != null)'
 ```
+
 <!-- README:end -->
 
 </details>
@@ -759,6 +779,7 @@ jq '.[] | select(.locked != null)'
 <summary><strong><code>wt config</code></strong> - Manage configuration</summary>
 
 <!-- README:help:wt config --help-md -->
+
 ```text
 wt config — Manage configuration and shell integration
 Usage: config <COMMAND>
@@ -849,6 +870,7 @@ Docs: <https://llm.datasette.io/> | <https://github.com/sigoden/aichat>
 <summary><strong><code>wt step</code></strong> - Building blocks for workflows</summary>
 
 <!-- README:help:wt step --help-md -->
+
 ```text
 wt step — Primitive operations (building blocks for workflows)
 Usage: step <COMMAND>
@@ -869,6 +891,7 @@ Options:
   -h, --help
           Print help
 ```
+
 <!-- README:end -->
 
 </details>
@@ -900,6 +923,7 @@ git config worktrunk.status.feature-x "💬"
 **Status appears in the Status column:**
 
 <!-- README:snapshot:tests/snapshots/integration__integration_tests__list__with_user_status.snap -->
+
 ```bash
 $ wt list
   Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
@@ -911,6 +935,7 @@ $ wt list
 
 ⚪ Showing 5 worktrees, 1 with changes
 ```
+
 <!-- README:end -->
 
 The custom emoji appears directly after the git status symbols.
@@ -927,6 +952,7 @@ When using Claude:
 - Clears the status completely when the session ends
 
 <!-- README:snapshot:tests/snapshots/integration__integration_tests__list__with_user_status.snap -->
+
 ```bash
 $ wt list
   Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
@@ -938,6 +964,7 @@ $ wt list
 
 ⚪ Showing 5 worktrees, 1 with changes
 ```
+
 <!-- README:end -->
 
 **How it works:**
@@ -976,6 +1003,7 @@ Commands from project hooks and LLM configuration require approval on first run.
 **Example approval prompt:**
 
 <!-- README:snapshot:tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_approval_prompt.snap -->
+
 ```
 🟡 test-repo needs approval to execute 3 commands:
 
@@ -990,6 +1018,7 @@ Commands from project hooks and LLM configuration require approval on first run.
 
 💡 Allow and remember? [y/N]
 ```
+
 <!-- README:end -->
 
 Use `--force` to bypass prompts (useful for CI/automation).

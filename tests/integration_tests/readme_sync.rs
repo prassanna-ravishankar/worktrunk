@@ -262,16 +262,18 @@ fn update_readme_section(
 
         if current != expected {
             // Build replacement
+            // Include blank lines after opening marker and before closing marker
+            // to match markdown formatter expectations
             let replacement = if wrapper.0.is_empty() {
                 // No wrapper (help sections - rendered markdown)
                 format!(
-                    "<!-- README:help:{} -->\n{}\n<!-- README:end -->",
+                    "<!-- README:help:{} -->\n\n{}\n\n<!-- README:end -->",
                     id, expected
                 )
             } else {
                 // With wrapper (snapshot sections)
                 format!(
-                    "<!-- README:snapshot:{} -->\n{}\n{}\n{}\n<!-- README:end -->",
+                    "<!-- README:snapshot:{} -->\n\n{}\n{}\n{}\n\n<!-- README:end -->",
                     id, wrapper.0, expected, wrapper.1
                 )
             };
