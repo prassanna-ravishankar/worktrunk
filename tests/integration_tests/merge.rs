@@ -365,6 +365,14 @@ fn test_merge_to_default_branch() {
 }
 
 #[test]
+fn test_merge_with_caret_symbol() {
+    let (repo, feature_wt) = setup_merge_scenario();
+
+    // Merge using ^ symbol (should resolve to default branch)
+    snapshot_merge("merge_with_caret", &repo, &["^"], Some(&feature_wt));
+}
+
+#[test]
 fn test_merge_error_detached_head() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
