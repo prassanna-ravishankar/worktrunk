@@ -365,8 +365,9 @@ impl LayoutConfig {
         &self,
         item: &ListItem,
         current_worktree_path: Option<&std::path::PathBuf>,
+        previous_branch: Option<&str>,
     ) -> String {
-        let ctx = ListRowContext::new(item, current_worktree_path);
+        let ctx = ListRowContext::new(item, current_worktree_path, previous_branch);
         let line = self.render_line(|column| {
             column.render_cell(
                 &ctx,
@@ -380,7 +381,12 @@ impl LayoutConfig {
     }
 
     /// Render a skeleton row showing known data (branch, path) with placeholders for other columns
-    pub fn format_skeleton_row(&self, item: &super::model::ListItem, is_current: bool) -> String {
+    pub fn format_skeleton_row(
+        &self,
+        item: &super::model::ListItem,
+        is_current: bool,
+        is_previous: bool,
+    ) -> String {
         use crate::display::shorten_path;
 
         let branch = item.branch_name();
@@ -399,12 +405,15 @@ impl LayoutConfig {
             match col.kind {
                 ColumnKind::Gutter => {
                     // Show actual gutter symbol even in skeleton
+                    // Priority: @ (current) > ^ (main) > - (previous) > + (regular)
                     let has_worktree = item.worktree_path().is_some();
                     let symbol = if has_worktree {
                         if is_current {
                             "@ "
                         } else if is_main {
                             "^ "
+                        } else if is_previous {
+                            "- "
                         } else {
                             "+ "
                         }
@@ -453,10 +462,15 @@ struct ListRowContext<'a> {
     head: &'a str,
     text_style: Option<Style>,
     is_current: bool,
+    is_previous: bool,
 }
 
 impl<'a> ListRowContext<'a> {
-    fn new(item: &'a ListItem, current_worktree_path: Option<&std::path::PathBuf>) -> Self {
+    fn new(
+        item: &'a ListItem,
+        current_worktree_path: Option<&std::path::PathBuf>,
+        previous_branch: Option<&str>,
+    ) -> Self {
         let worktree_data = item.worktree_data();
         let counts = item.counts();
         let commit = item.commit_details();
@@ -466,6 +480,10 @@ impl<'a> ListRowContext<'a> {
 
         let is_current = worktree_data
             .and_then(|data| current_worktree_path.map(|p| p == &data.path))
+            .unwrap_or(false);
+
+        let is_previous = previous_branch
+            .map(|prev| item.branch.as_deref() == Some(prev))
             .unwrap_or(false);
 
         let mut ctx = Self {
@@ -478,6 +496,7 @@ impl<'a> ListRowContext<'a> {
             head,
             text_style: None,
             is_current,
+            is_previous,
         };
 
         ctx.text_style = ctx.compute_text_style(current_worktree_path);
@@ -533,11 +552,13 @@ impl ColumnLayout {
             ColumnKind::Gutter => {
                 let mut cell = StyledLine::new();
                 let symbol = if let Some(data) = ctx.worktree_data {
-                    // Worktree: priority is current > main > regular
+                    // Priority: @ (current) > ^ (main) > - (previous) > + (regular)
                     if ctx.is_current {
                         "@ " // Current worktree
                     } else if data.is_main {
                         "^ " // Main worktree
+                    } else if ctx.is_previous {
+                        "- " // Previous worktree (wt switch -)
                     } else {
                         "+ " // Regular worktree
                     }

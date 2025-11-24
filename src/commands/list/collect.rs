@@ -463,6 +463,7 @@ pub fn collect(
         .cloned()
         .unwrap_or_else(|| worktrees.main().clone());
     let current_worktree_path = repo.worktree_root().ok();
+    let previous_branch = repo.get_switch_history().and_then(|h| h.previous);
 
     // Sort worktrees: main first, current second, then by timestamp descending
     let sorted_worktrees = sort_worktrees(
@@ -574,9 +575,17 @@ pub fn collect(
                         .worktree_path()
                         .and_then(|p| current_worktree_path.as_ref().map(|cp| p == cp))
                         .unwrap_or(false);
-                    layout.format_skeleton_row(item, is_current)
+                    let is_previous = previous_branch
+                        .as_deref()
+                        .map(|prev| item.branch.as_deref() == Some(prev))
+                        .unwrap_or(false);
+                    layout.format_skeleton_row(item, is_current, is_previous)
                 } else {
-                    layout.format_list_item_line(item, current_worktree_path.as_ref())
+                    layout.format_list_item_line(
+                        item,
+                        current_worktree_path.as_ref(),
+                        previous_branch.as_deref(),
+                    )
                 }
             })
             .collect();
@@ -711,7 +720,11 @@ pub fn collect(
             }
 
             // Re-render the row with caching (now includes status if computed)
-            let rendered = layout.format_list_item_line(item, current_worktree_path.as_ref());
+            let rendered = layout.format_list_item_line(
+                item,
+                current_worktree_path.as_ref(),
+                previous_branch.as_deref(),
+            );
 
             // Compare using full line so changes beyond the clamp (e.g., CI) still refresh.
             if rendered != last_rendered_lines[item_idx] {
@@ -735,7 +748,11 @@ pub fn collect(
         if table.is_tty() {
             // Interactive: do final render pass and update footer to summary
             for (item_idx, item) in all_items.iter().enumerate() {
-                let rendered = layout.format_list_item_line(item, current_worktree_path.as_ref());
+                let rendered = layout.format_list_item_line(
+                    item,
+                    current_worktree_path.as_ref(),
+                    previous_branch.as_deref(),
+                );
                 if let Err(e) = table.update_row(item_idx, rendered) {
                     log::debug!("Final row update failed: {}", e);
                 }
@@ -746,8 +763,11 @@ pub fn collect(
             let mut final_lines = Vec::new();
             final_lines.push(layout.format_header_line());
             for item in &all_items {
-                final_lines
-                    .push(layout.format_list_item_line(item, current_worktree_path.as_ref()));
+                final_lines.push(layout.format_list_item_line(
+                    item,
+                    current_worktree_path.as_ref(),
+                    previous_branch.as_deref(),
+                ));
             }
             final_lines.push(String::new()); // Spacer
             final_lines.push(final_msg);
@@ -763,9 +783,11 @@ pub fn collect(
 
         crate::output::raw_terminal(layout.format_header_line())?;
         for item in &all_items {
-            crate::output::raw_terminal(
-                layout.format_list_item_line(item, current_worktree_path.as_ref()),
-            )?;
+            crate::output::raw_terminal(layout.format_list_item_line(
+                item,
+                current_worktree_path.as_ref(),
+                previous_branch.as_deref(),
+            ))?;
         }
         crate::output::raw_terminal("")?;
         crate::output::raw_terminal(final_msg)?;
