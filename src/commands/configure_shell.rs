@@ -5,6 +5,8 @@ use worktrunk::path::format_path_for_display;
 use worktrunk::shell::Shell;
 use worktrunk::styling::{INFO_EMOJI, PROGRESS_EMOJI, SUCCESS_EMOJI, format_bash_with_gutter};
 
+use crate::completion;
+
 pub struct ConfigureResult {
     pub shell: Shell,
     pub path: PathBuf,
@@ -16,17 +18,30 @@ pub struct UninstallResult {
     pub shell: Shell,
     pub path: PathBuf,
     pub action: UninstallAction,
-    pub removed_line: String,
 }
 
 pub struct UninstallScanResult {
     pub results: Vec<UninstallResult>,
+    pub completion_results: Vec<CompletionUninstallResult>,
     pub not_found: Vec<(Shell, PathBuf)>,
+}
+
+pub struct CompletionUninstallResult {
+    pub shell: Shell,
+    pub path: PathBuf,
+    pub action: UninstallAction,
 }
 
 pub struct ScanResult {
     pub configured: Vec<ConfigureResult>,
+    pub completion_results: Vec<CompletionResult>,
     pub skipped: Vec<(Shell, PathBuf)>, // Shell + first path that was checked
+}
+
+pub struct CompletionResult {
+    pub shell: Shell,
+    pub path: PathBuf,
+    pub action: ConfigAction,
 }
 
 #[derive(Debug, PartialEq)]
@@ -38,8 +53,8 @@ pub enum UninstallAction {
 impl UninstallAction {
     pub fn description(&self) -> &str {
         match self {
-            UninstallAction::Removed => "Removed from",
-            UninstallAction::WouldRemove => "Will remove from",
+            UninstallAction::Removed => "Removed",
+            UninstallAction::WouldRemove => "Will remove",
         }
     }
 
@@ -66,7 +81,7 @@ impl ConfigAction {
             ConfigAction::Added => "Added",
             ConfigAction::AlreadyExists => "Already configured",
             ConfigAction::Created => "Created",
-            ConfigAction::WouldAdd => "Will add to",
+            ConfigAction::WouldAdd => "Will add",
             ConfigAction::WouldCreate => "Will create",
         }
     }
@@ -84,41 +99,58 @@ impl ConfigAction {
 pub fn handle_configure_shell(
     shell_filter: Option<Shell>,
     skip_confirmation: bool,
-    command_name: String,
 ) -> Result<ScanResult, String> {
     // First, do a dry-run to see what would be changed
-    let preview = scan_shell_configs(shell_filter, true, &command_name)?;
+    let preview = scan_shell_configs(shell_filter, true)?;
+
+    // Preview completions that would be written
+    let shells: Vec<_> = preview.configured.iter().map(|r| r.shell).collect();
+    let completion_preview = process_shell_completions(&shells, true)?;
 
     // If nothing to do, return early
     if preview.configured.is_empty() {
-        return Ok(preview);
+        return Ok(ScanResult {
+            configured: preview.configured,
+            completion_results: completion_preview,
+            skipped: preview.skipped,
+        });
     }
 
     // Check if any changes are needed (not all are AlreadyExists)
-    let needs_changes = preview
+    let needs_shell_changes = preview
         .configured
+        .iter()
+        .any(|r| !matches!(r.action, ConfigAction::AlreadyExists));
+    let needs_completion_changes = completion_preview
         .iter()
         .any(|r| !matches!(r.action, ConfigAction::AlreadyExists));
 
     // If nothing needs to be changed, just return the preview results
-    if !needs_changes {
-        return Ok(preview);
+    if !needs_shell_changes && !needs_completion_changes {
+        return Ok(ScanResult {
+            configured: preview.configured,
+            completion_results: completion_preview,
+            skipped: preview.skipped,
+        });
     }
 
     // Show what will be done and ask for confirmation (unless --force flag is used)
-    if !skip_confirmation && !prompt_for_confirmation(&preview.configured)? {
+    if !skip_confirmation && !prompt_for_confirmation(&preview.configured, &completion_preview)? {
         return Err("Cancelled by user".to_string());
     }
 
     // User confirmed (or --force flag was used), now actually apply the changes
-    scan_shell_configs(shell_filter, false, &command_name)
+    let result = scan_shell_configs(shell_filter, false)?;
+    let completion_results = process_shell_completions(&shells, false)?;
+
+    Ok(ScanResult {
+        configured: result.configured,
+        completion_results,
+        skipped: result.skipped,
+    })
 }
 
-fn scan_shell_configs(
-    shell_filter: Option<Shell>,
-    dry_run: bool,
-    command_name: &str,
-) -> Result<ScanResult, String> {
+fn scan_shell_configs(shell_filter: Option<Shell>, dry_run: bool) -> Result<ScanResult, String> {
     let shells = if let Some(shell) = shell_filter {
         vec![shell]
     } else {
@@ -135,9 +167,7 @@ fn scan_shell_configs(
     let mut skipped = Vec::new();
 
     for shell in shells {
-        let paths = shell
-            .config_paths(command_name)
-            .map_err(|e| e.to_string())?;
+        let paths = shell.config_paths().map_err(|e| e.to_string())?;
 
         // Find the first existing config file
         let target_path = paths.iter().find(|p| p.exists());
@@ -161,13 +191,7 @@ fn scan_shell_configs(
         if should_configure {
             let path = target_path.or_else(|| paths.first());
             if let Some(path) = path {
-                match configure_shell_file(
-                    shell,
-                    path,
-                    dry_run,
-                    shell_filter.is_some(),
-                    command_name,
-                ) {
+                match configure_shell_file(shell, path, dry_run, shell_filter.is_some()) {
                     Ok(Some(result)) => results.push(result),
                     Ok(None) => {} // No action needed
                     Err(e) => {
@@ -201,6 +225,7 @@ fn scan_shell_configs(
 
     Ok(ScanResult {
         configured: results,
+        completion_results: Vec::new(), // Completions handled separately in handle_configure_shell
         skipped,
     })
 }
@@ -210,13 +235,12 @@ fn configure_shell_file(
     path: &Path,
     dry_run: bool,
     explicit_shell: bool,
-    command_name: &str,
 ) -> Result<Option<ConfigureResult>, String> {
     // Get a summary of the shell integration for display
-    let integration_summary = shell.integration_summary(command_name);
+    let integration_summary = shell.integration_summary();
 
     // The actual line we write to the config file
-    let config_content = shell.config_line(command_name);
+    let config_content = shell.config_line();
 
     // For Fish, we write to a separate conf.d/ file
     if matches!(shell, Shell::Fish) {
@@ -403,7 +427,10 @@ fn configure_fish_file(
     }))
 }
 
-fn prompt_for_confirmation(results: &[ConfigureResult]) -> Result<bool, String> {
+fn prompt_for_confirmation(
+    results: &[ConfigureResult],
+    completion_results: &[CompletionResult],
+) -> Result<bool, String> {
     use anstyle::Style;
     use worktrunk::styling::{eprint, eprintln};
 
@@ -412,20 +439,20 @@ fn prompt_for_confirmation(results: &[ConfigureResult]) -> Result<bool, String> 
     // In interactive mode, flushes both stdout and stderr
     crate::output::flush_for_stderr_prompt().map_err(|e| e.to_string())?;
 
-    // Interactive prompts go to stderr so they appear even when stdout is redirected
+    let bold = Style::new().bold();
+
+    // Show shell extension changes
     for result in results {
         // Skip items that are already configured
         if matches!(result.action, ConfigAction::AlreadyExists) {
             continue;
         }
 
-        // Format with bold shell and path
-        let bold = Style::new().bold();
         let shell = result.shell;
         let path = format_path_for_display(&result.path);
 
         eprintln!(
-            "{} {} {bold}{shell}{bold:#} {bold}{path}{bold:#}",
+            "{} {} shell extension for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
             result.action.emoji(),
             result.action.description(),
         );
@@ -433,6 +460,22 @@ fn prompt_for_confirmation(results: &[ConfigureResult]) -> Result<bool, String> 
         // Show the config line that will be added with gutter
         eprint!("{}", format_bash_with_gutter(&result.config_line, ""));
         eprintln!(); // Blank line after each shell block
+    }
+
+    // Show completion changes
+    for result in completion_results {
+        if matches!(result.action, ConfigAction::AlreadyExists) {
+            continue;
+        }
+
+        let shell = result.shell;
+        let path = format_path_for_display(&result.path);
+
+        eprintln!(
+            "{} {} completions for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
+            result.action.emoji(),
+            result.action.description(),
+        );
     }
 
     prompt_yes_no()
@@ -459,6 +502,93 @@ fn prompt_yes_no() -> Result<bool, String> {
     Ok(response == "y" || response == "yes")
 }
 
+/// Process shell completions - either preview or write based on dry_run flag
+///
+/// Note: Zsh completions are handled via lazy `compdef` in the init script,
+/// so we skip writing static completion files for zsh.
+fn process_shell_completions(
+    shells: &[Shell],
+    dry_run: bool,
+) -> Result<Vec<CompletionResult>, String> {
+    let mut results = Vec::new();
+
+    for &shell in shells {
+        // Skip zsh - completions are handled via lazy compdef in the init script
+        if matches!(shell, Shell::Zsh) {
+            continue;
+        }
+        let completion_path = shell
+            .completion_path()
+            .map_err(|e| format!("Failed to get completion path: {}", e))?;
+
+        // Check if completion already exists with same content
+        let completion_content = generate_completion_content(shell)?;
+
+        if completion_path.exists() {
+            let existing = fs::read_to_string(&completion_path).unwrap_or_default();
+            if existing == completion_content {
+                results.push(CompletionResult {
+                    shell,
+                    path: completion_path,
+                    action: ConfigAction::AlreadyExists,
+                });
+                continue;
+            }
+        }
+
+        // Determine action based on dry_run and whether file exists
+        let action = if dry_run {
+            if completion_path.exists() {
+                ConfigAction::WouldAdd
+            } else {
+                ConfigAction::WouldCreate
+            }
+        } else if completion_path.exists() {
+            ConfigAction::Added
+        } else {
+            ConfigAction::Created
+        };
+
+        if !dry_run {
+            // Create parent directory if needed
+            if let Some(parent) = completion_path.parent() {
+                fs::create_dir_all(parent).map_err(|e| {
+                    format!(
+                        "Failed to create directory {}: {}",
+                        format_path_for_display(parent),
+                        e
+                    )
+                })?;
+            }
+
+            // Write completion file
+            fs::write(&completion_path, &completion_content).map_err(|e| {
+                format!(
+                    "Failed to write {}: {}",
+                    format_path_for_display(&completion_path),
+                    e
+                )
+            })?;
+        }
+
+        results.push(CompletionResult {
+            shell,
+            path: completion_path,
+            action,
+        });
+    }
+
+    Ok(results)
+}
+
+/// Generate completion script content for a shell
+fn generate_completion_content(shell: Shell) -> Result<String, String> {
+    let mut buf = Vec::new();
+    completion::generate_completions_to_writer(shell, &mut buf)
+        .map_err(|e| format!("Failed to generate completions: {}", e))?;
+    String::from_utf8(buf).map_err(|e| format!("Invalid UTF-8 in completion script: {}", e))
+}
+
 // Pattern detection for shell integration
 fn has_integration_pattern(content: &str) -> bool {
     let lower = content.to_lowercase();
@@ -480,12 +610,14 @@ pub fn handle_unconfigure_shell(
     let preview = scan_for_uninstall(shell_filter, true)?;
 
     // If nothing to do, return early
-    if preview.results.is_empty() {
+    if preview.results.is_empty() && preview.completion_results.is_empty() {
         return Ok(preview);
     }
 
     // Show what will be done and ask for confirmation (unless --force flag is used)
-    if !skip_confirmation && !prompt_for_uninstall_confirmation(&preview.results)? {
+    if !skip_confirmation
+        && !prompt_for_uninstall_confirmation(&preview.results, &preview.completion_results)?
+    {
         return Err("Cancelled by user".to_string());
     }
 
@@ -506,9 +638,9 @@ fn scan_for_uninstall(
     let mut results = Vec::new();
     let mut not_found = Vec::new();
 
-    for shell in shells {
+    for &shell in &shells {
         let paths = shell
-            .config_paths("wt")
+            .config_paths()
             .map_err(|e| format!("Failed to get config paths for {}: {}", shell, e))?;
 
         // For Fish, check for wt.fish specifically (delete entire file)
@@ -520,7 +652,6 @@ fn scan_for_uninstall(
                             shell,
                             path: fish_path.clone(),
                             action: UninstallAction::WouldRemove,
-                            removed_line: "wt.fish".to_string(),
                         });
                     } else {
                         fs::remove_file(fish_path).map_err(|e| {
@@ -534,7 +665,6 @@ fn scan_for_uninstall(
                             shell,
                             path: fish_path.clone(),
                             action: UninstallAction::Removed,
-                            removed_line: "wt.fish".to_string(),
                         });
                     }
                 } else {
@@ -568,7 +698,47 @@ fn scan_for_uninstall(
         }
     }
 
-    Ok(UninstallScanResult { results, not_found })
+    // Also remove completion files
+    let mut completion_results = Vec::new();
+
+    for &shell in &shells {
+        // Skip zsh - completions are handled via lazy compdef in the init script
+        if matches!(shell, Shell::Zsh) {
+            continue;
+        }
+
+        let completion_path = shell
+            .completion_path()
+            .map_err(|e| format!("Failed to get completion path: {}", e))?;
+        if completion_path.exists() {
+            if dry_run {
+                completion_results.push(CompletionUninstallResult {
+                    shell,
+                    path: completion_path,
+                    action: UninstallAction::WouldRemove,
+                });
+            } else {
+                fs::remove_file(&completion_path).map_err(|e| {
+                    format!(
+                        "Failed to remove {}: {}",
+                        format_path_for_display(&completion_path),
+                        e
+                    )
+                })?;
+                completion_results.push(CompletionUninstallResult {
+                    shell,
+                    path: completion_path,
+                    action: UninstallAction::Removed,
+                });
+            }
+        }
+    }
+
+    Ok(UninstallScanResult {
+        results,
+        completion_results,
+        not_found,
+    })
 }
 
 fn uninstall_from_file(
@@ -591,15 +761,11 @@ fn uninstall_from_file(
         return Ok(None);
     }
 
-    // Use the first matching line for display
-    let removed_line = integration_lines[0].1.trim().to_string();
-
     if dry_run {
         return Ok(Some(UninstallResult {
             shell,
             path: path.to_path_buf(),
             action: UninstallAction::WouldRemove,
-            removed_line,
         }));
     }
 
@@ -628,11 +794,13 @@ fn uninstall_from_file(
         shell,
         path: path.to_path_buf(),
         action: UninstallAction::Removed,
-        removed_line,
     }))
 }
 
-fn prompt_for_uninstall_confirmation(results: &[UninstallResult]) -> Result<bool, String> {
+fn prompt_for_uninstall_confirmation(
+    results: &[UninstallResult],
+    completion_results: &[CompletionUninstallResult],
+) -> Result<bool, String> {
     use anstyle::Style;
     use worktrunk::styling::eprintln;
 
@@ -644,7 +812,19 @@ fn prompt_for_uninstall_confirmation(results: &[UninstallResult]) -> Result<bool
         let path = format_path_for_display(&result.path);
 
         eprintln!(
-            "{} {} {bold}{shell}{bold:#} {bold}{path}{bold:#}",
+            "{} {} shell extension for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
+            result.action.emoji(),
+            result.action.description(),
+        );
+    }
+
+    for result in completion_results {
+        let bold = Style::new().bold();
+        let shell = result.shell;
+        let path = format_path_for_display(&result.path);
+
+        eprintln!(
+            "{} {} completions for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
             result.action.emoji(),
             result.action.description(),
         );

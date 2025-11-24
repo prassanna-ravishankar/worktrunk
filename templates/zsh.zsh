@@ -53,43 +53,24 @@ if command -v {{ cmd_prefix }} >/dev/null 2>&1 || [[ -n "${WORKTRUNK_BIN:-}" ]];
         return $result
     }
 
-    # Lazy completion loader - loads real completions on first tab-press
-    # This avoids ~11ms binary invocation at shell startup
-    _wt_lazy_complete() {
-        # Only try to install completions once
-        if [[ -z "${_WT_COMPLETION_LOADED:-}" ]]; then
-            typeset -g _WT_COMPLETION_LOADED=1
-            local completion_script
-            if completion_script=$(COMPLETE=zsh "${_WORKTRUNK_CMD:-{{ cmd_prefix }}}" 2>/dev/null); then
-                eval "$completion_script"
-            else
-                # Failed to load - unregister to prevent future silent failures
-                compdef -d {{ cmd_prefix }} 2>/dev/null
-                return 1
+    # Lazy completions via compdef - no fpath setup needed
+    # Regenerates on first TAB in each shell session
+    if (( $+functions[compdef] )); then
+        _{{ cmd_prefix }}_lazy_complete() {
+            # Load dynamic completion script once
+            unfunction _{{ cmd_prefix }}_lazy_complete 2>/dev/null || true
+
+            # Generate & eval the real completer from the binary
+            local _script
+            _script="$(COMPLETE=zsh "$_WORKTRUNK_CMD" 2>/dev/null)" || return
+            eval "$_script"
+
+            # Delegate to clap's generated function
+            if (( $+functions[_clap_dynamic_completer_{{ cmd_prefix }}] )); then
+                _clap_dynamic_completer_{{ cmd_prefix }} "$@"
             fi
-        fi
+        }
 
-        # Delegate to real completion function if it was installed
-        if (( $+functions[_clap_dynamic_completer_{{ cmd_prefix }}] )); then
-            _clap_dynamic_completer_{{ cmd_prefix }}
-        fi
-    }
-
-    # Register completion - either now or deferred until compinit runs
-    _wt_register_completion() {
-        if (( $+functions[compdef] )); then
-            compdef _wt_lazy_complete {{ cmd_prefix }}
-            # Remove hook once registered
-            precmd_functions=(${precmd_functions:#_wt_register_completion})
-            unfunction _wt_register_completion 2>/dev/null
-            return 0
-        fi
-        return 1
-    }
-
-    # Try immediate registration, otherwise defer via precmd hook
-    if ! _wt_register_completion; then
-        # Add to hook only if not already present (handles re-sourcing .zshrc)
-        (( ${precmd_functions[(I)_wt_register_completion]} )) || precmd_functions+=(_wt_register_completion)
+        compdef _{{ cmd_prefix }}_lazy_complete {{ cmd_prefix }}
     fi
 fi

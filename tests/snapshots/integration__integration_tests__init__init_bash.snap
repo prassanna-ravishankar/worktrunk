@@ -165,32 +165,8 @@ wt_exec() {
         return $result
     }
 
-    # Lazy completion loader - loads real completions on first tab-press
-    # This avoids ~11ms binary invocation at shell startup
-    _wt_lazy_complete() {
-        # Only try to install completions once
-        if [[ -z "${_WT_COMPLETION_LOADED:-}" ]]; then
-            _WT_COMPLETION_LOADED=1
-            if completion_script=$(COMPLETE=bash "${_WORKTRUNK_CMD:-wt}" 2>/dev/null); then
-                eval "$completion_script"
-            else
-                # Failed to load - remove completion registration
-                complete -r wt 2>/dev/null || true
-                return 1
-            fi
-        fi
-
-        # Delegate to real completion function if it was installed
-        if declare -F _clap_complete_wt >/dev/null 2>&1; then
-            _clap_complete_wt
-        fi
-    }
-    # nosort requires Bash 4.4+ (macOS ships with 3.2)
-    if [[ ${BASH_VERSINFO[0]} -gt 4 || (${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -ge 4) ]]; then
-        complete -o nospace -o bashdefault -o nosort -F _wt_lazy_complete wt
-    else
-        complete -o nospace -o bashdefault -F _wt_lazy_complete wt
-    fi
+    # Completions are loaded from ~/.local/share/bash-completion/completions/wt
+    # Install with: wt config shell install
 fi
 
 ----- stderr -----

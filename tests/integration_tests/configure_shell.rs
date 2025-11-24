@@ -25,21 +25,20 @@ fn test_configure_shell_with_yes() {
             .arg("--force")
             .current_dir(repo.root_path());
 
-        assert_cmd_snapshot!(cmd, @r#"
+        assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Added [1mzsh[0m ~/.zshrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init zsh)"[0m; [1m[2m[35mfi[0m[0m
+        ✅ Added shell extension for [1mzsh[0m @ [1m~/.zshrc[0m
+        ⚪ Completions for [1mzsh[0m via lazy compdef (no file needed)
+        💡 [2mSkipped [1mbash[0m; ~/.bashrc not found[0m
+        💡 [2mSkipped [1mfish[0m; ~/.config/fish/conf.d not found[0m
 
-        💡 [2mbash ~/.bashrc (not found)[0m
-        💡 [2mfish ~/.config/fish/conf.d (not found)[0m
         ✅ Configured 1 shell
-
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
-        "#);
+        ");
     });
 
     // Verify the file was modified
@@ -70,19 +69,18 @@ fn test_configure_shell_specific_shell() {
             .arg("--force")
             .current_dir(repo.root_path());
 
-        assert_cmd_snapshot!(cmd, @r#"
+        assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Added [1mzsh[0m ~/.zshrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init zsh)"[0m; [1m[2m[35mfi[0m[0m
+        ✅ Added shell extension for [1mzsh[0m @ [1m~/.zshrc[0m
+        ⚪ Completions for [1mzsh[0m via lazy compdef (no file needed)
 
         ✅ Configured 1 shell
-
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
-        "#);
+        ");
     });
 
     // Verify the file was modified
@@ -121,7 +119,7 @@ fn test_configure_shell_already_exists() {
         success: true
         exit_code: 0
         ----- stdout -----
-        ⚪ Already configured [1mzsh[0m ~/.zshrc
+        ⚪ Already configured shell extension for [1mzsh[0m @ [1m~/.zshrc[0m
         ✅ All shells already configured
 
         ----- stderr -----
@@ -157,11 +155,10 @@ fn test_configure_shell_fish() {
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Created [1mfish[0m ~/.config/fish/conf.d/wt.fish
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mtype[0m [2m[36m-q[0m wt; [1m[2m[34mcommand[0m wt config shell init fish [2m[36m|[0m [1m[2m[34msource[0m; end[0m
+        ✅ Created shell extension for [1mfish[0m @ [1m~/.config/fish/conf.d/wt.fish[0m
+        ✅ Created completions for [1mfish[0m @ [1m~/.config/fish/completions/wt.fish[0m
 
-        ✅ Configured 1 shell
-
+        ✅ Configured 2 shells
         💡 [2mRestart shell or run: source ~/.config/fish/conf.d/wt.fish[0m
 
         ----- stderr -----
@@ -202,9 +199,9 @@ fn test_configure_shell_no_files() {
         success: false
         exit_code: 1
         ----- stdout -----
-        💡 [2mbash ~/.bashrc (not found)[0m
-        💡 [2mzsh ~/.zshrc (not found)[0m
-        💡 [2mfish ~/.config/fish/conf.d (not found)[0m
+        💡 [2mSkipped [1mbash[0m; ~/.bashrc not found[0m
+        💡 [2mSkipped [1mzsh[0m; ~/.zshrc not found[0m
+        💡 [2mSkipped [1mfish[0m; ~/.config/fish/conf.d not found[0m
         ❌ [31mNo shell config files found[0m
 
         ----- stderr -----
@@ -236,23 +233,21 @@ fn test_configure_shell_multiple_configs() {
             .arg("--force")
             .current_dir(repo.root_path());
 
-        assert_cmd_snapshot!(cmd, @r#"
+        assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Added [1mbash[0m ~/.bashrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init bash)"[0m; [1m[2m[35mfi[0m[0m
+        ✅ Added shell extension for [1mbash[0m @ [1m~/.bashrc[0m
+        ✅ Created completions for [1mbash[0m @ [1m~/.local/share/bash-completion/completions/wt[0m
+        ✅ Added shell extension for [1mzsh[0m @ [1m~/.zshrc[0m
+        ⚪ Completions for [1mzsh[0m via lazy compdef (no file needed)
+        💡 [2mSkipped [1mfish[0m; ~/.config/fish/conf.d not found[0m
 
-        ✅ Added [1mzsh[0m ~/.zshrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init zsh)"[0m; [1m[2m[35mfi[0m[0m
-
-        💡 [2mfish ~/.config/fish/conf.d (not found)[0m
-        ✅ Configured 2 shells
-
+        ✅ Configured 3 shells
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
-        "#);
+        ");
     });
 
     // Verify both files were modified
@@ -299,23 +294,21 @@ fn test_configure_shell_mixed_states() {
             .arg("--force")
             .current_dir(repo.root_path());
 
-        assert_cmd_snapshot!(cmd, @r#"
+        assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0
         ----- stdout -----
-        ⚪ Already configured [1mbash[0m ~/.bashrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init bash)"[0m; [1m[2m[35mfi[0m[0m
+        ⚪ Already configured shell extension for [1mbash[0m @ [1m~/.bashrc[0m
+        ✅ Created completions for [1mbash[0m @ [1m~/.local/share/bash-completion/completions/wt[0m
+        ✅ Added shell extension for [1mzsh[0m @ [1m~/.zshrc[0m
+        ⚪ Completions for [1mzsh[0m via lazy compdef (no file needed)
+        💡 [2mSkipped [1mfish[0m; ~/.config/fish/conf.d not found[0m
 
-        ✅ Added [1mzsh[0m ~/.zshrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init zsh)"[0m; [1m[2m[35mfi[0m[0m
-
-        💡 [2mfish ~/.config/fish/conf.d (not found)[0m
-        ✅ Configured 1 shell
-
+        ✅ Configured 2 shells
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
-        "#);
+        ");
     });
 
     // Verify bash was not modified (already configured)
@@ -360,21 +353,20 @@ fn test_uninstall_shell() {
             .arg("--force")
             .current_dir(repo.root_path());
 
-        assert_cmd_snapshot!(cmd, @r#"
+        assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Removed from [1mzsh[0m ~/.zshrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init zsh)"[0m; [1m[2m[35mfi[0m[0m
+        ✅ Removed shell extension for [1mzsh[0m @ [1m~/.zshrc[0m
+        ⚪ Completions for [1mzsh[0m were via lazy compdef (no file to remove)
         💡 [2mNo bash integration in ~/.bashrc[0m
         💡 [2mNo fish integration in ~/.config/fish/conf.d/wt.fish[0m
 
-        ✅ Removed shell integration from 1 shell
-
+        ✅ Removed integration from 1 shell
         💡 [2mRestart shell to complete uninstall[0m
 
         ----- stderr -----
-        "#);
+        ");
     });
 
     // Verify the file no longer contains the integration
@@ -421,22 +413,20 @@ fn test_uninstall_shell_multiple() {
             .arg("--force")
             .current_dir(repo.root_path());
 
-        assert_cmd_snapshot!(cmd, @r#"
+        assert_cmd_snapshot!(cmd, @r"
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Removed from [1mbash[0m ~/.bashrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init bash)"[0m; [1m[2m[35mfi[0m[0m
-        ✅ Removed from [1mzsh[0m ~/.zshrc
-        [107m [0m  [1m[2m[35mif[0m [1m[2m[34mcommand[0m [2m[36m-v[0m wt [2m[36m>[0m/dev/null [2m[33m2[0m>&1; [1m[2m[35mthen[0m [1m[2m[34meval[0m [2m[32m"$([1m[2m[34mcommand[0m wt config shell init zsh)"[0m; [1m[2m[35mfi[0m[0m
+        ✅ Removed shell extension for [1mbash[0m @ [1m~/.bashrc[0m
+        ✅ Removed shell extension for [1mzsh[0m @ [1m~/.zshrc[0m
+        ⚪ Completions for [1mzsh[0m were via lazy compdef (no file to remove)
         💡 [2mNo fish integration in ~/.config/fish/conf.d/wt.fish[0m
 
-        ✅ Removed shell integration from 2 shells
-
+        ✅ Removed integration from 2 shells
         💡 [2mRestart shell to complete uninstall[0m
 
         ----- stderr -----
-        "#);
+        ");
     });
 
     // Verify both files no longer contain the integration
@@ -520,11 +510,9 @@ fn test_uninstall_shell_fish() {
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Removed from [1mfish[0m ~/.config/fish/conf.d/wt.fish
-        [107m [0m  [1m[2m[34mwt.fish[0m[0m
+        ✅ Removed shell extension for [1mfish[0m @ [1m~/.config/fish/conf.d/wt.fish[0m
 
-        ✅ Removed shell integration from 1 shell
-
+        ✅ Removed integration from 1 shell
         💡 [2mRestart shell to complete uninstall[0m
 
         ----- stderr -----

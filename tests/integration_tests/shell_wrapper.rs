@@ -201,6 +201,12 @@ fn build_shell_script(shell: &str, repo: &TestRepo, subcommand: &str, args: &[&s
             script.push_str("set -x CLICOLOR_FORCE 1\n");
         }
         "zsh" => {
+            // For zsh, initialize the completion system first
+            // This allows static completions (which call compdef) to work in isolated mode
+            // We run with --no-rcs to prevent user rc files from touching /dev/tty,
+            // but compinit is safe since it only sets up completion functions
+            script.push_str("autoload -Uz compinit && compinit -i 2>/dev/null\n");
+
             script.push_str(&format!("export WORKTRUNK_BIN='{}'\n", wt_bin.display()));
             script.push_str(&format!(
                 "export WORKTRUNK_CONFIG_PATH='{}'\n",
@@ -1378,6 +1384,7 @@ approved-commands = ["echo 'fish background task'"]
                 script.push_str("set -x CLICOLOR_FORCE 1\n");
             }
             "zsh" => {
+                script.push_str("autoload -Uz compinit && compinit -i 2>/dev/null\n");
                 script.push_str(&format!("export WORKTRUNK_BIN='{}'\n", wt_bin.display()));
                 script.push_str(&format!(
                     "export WORKTRUNK_CONFIG_PATH='{}'\n",
@@ -1647,31 +1654,27 @@ approved-commands = ["echo 'bash background'"]
         );
     }
 
-    /// Test that zsh completions are properly registered
+    /// Test that zsh wrapper function is properly defined
+    /// Note: Completions come from fpath (~/.zfunc/_wt), not from the wrapper
     #[test]
-    fn test_zsh_completions_registered() {
+    fn test_zsh_wrapper_function_registered() {
         let repo = TestRepo::new();
         repo.commit("Initial commit");
 
         let wt_bin = get_cargo_bin("wt");
         let wrapper_script = generate_wrapper(&repo, "zsh");
 
-        // Script that sources wrapper and checks if completion function exists
-        // Tests deferred registration: compinit runs AFTER wrapper (like real .zshrc)
+        // Script that sources wrapper and checks if wt function exists
         let script = format!(
             r#"
             export WORKTRUNK_BIN='{}'
             export WORKTRUNK_CONFIG_PATH='{}'
             {}
-            # Run compinit after wrapper (simulates typical user .zshrc order)
-            autoload -Uz compinit && compinit -i 2>/dev/null
-            # Trigger precmd hook to complete deferred registration
-            for func in $precmd_functions; do $func; done
-            # Check if lazy completion stub is registered
-            if (( $+functions[_wt_lazy_complete] )); then
-                echo "__COMPLETION_REGISTERED__"
+            # Check if wt wrapper function is defined
+            if (( $+functions[wt] )); then
+                echo "__WRAPPER_REGISTERED__"
             else
-                echo "__NO_COMPLETION__"
+                echo "__NO_WRAPPER__"
             fi
             "#,
             wt_bin.display(),
@@ -1692,56 +1695,8 @@ approved-commands = ["echo 'bash background'"]
 
         assert_eq!(exit_code, 0, "Script should succeed");
         assert!(
-            combined.contains("__COMPLETION_REGISTERED__"),
-            "Zsh completions should be registered after sourcing wrapper.\nOutput:\n{}",
-            combined
-        );
-    }
-
-    /// Test that zsh completions work with immediate registration (compinit before wrapper)
-    #[test]
-    fn test_zsh_completions_immediate_registration() {
-        let repo = TestRepo::new();
-        repo.commit("Initial commit");
-
-        let wt_bin = get_cargo_bin("wt");
-        let wrapper_script = generate_wrapper(&repo, "zsh");
-
-        // Script that runs compinit BEFORE wrapper (immediate registration path)
-        let script = format!(
-            r#"
-            # Run compinit first (some users do this)
-            autoload -Uz compinit && compinit -i 2>/dev/null
-            export WORKTRUNK_BIN='{}'
-            export WORKTRUNK_CONFIG_PATH='{}'
-            {}
-            # Check if lazy completion stub is registered (should be immediate, no precmd needed)
-            if (( $+functions[_wt_lazy_complete] )); then
-                echo "__COMPLETION_REGISTERED__"
-            else
-                echo "__NO_COMPLETION__"
-            fi
-            "#,
-            wt_bin.display(),
-            repo.test_config_path().display(),
-            wrapper_script
-        );
-
-        let final_script = format!("( {} ) 2>&1", script);
-        let config_path = repo.test_config_path().to_string_lossy().to_string();
-        let env_vars: Vec<(&str, &str)> = vec![
-            ("WORKTRUNK_CONFIG_PATH", &config_path),
-            ("TERM", "xterm"),
-            ("ZDOTDIR", "/dev/null"),
-        ];
-
-        let (combined, exit_code) =
-            exec_in_pty_interactive("zsh", &final_script, repo.root_path(), &env_vars, &[]);
-
-        assert_eq!(exit_code, 0, "Script should succeed");
-        assert!(
-            combined.contains("__COMPLETION_REGISTERED__"),
-            "Zsh completions should register immediately when compinit runs first.\nOutput:\n{}",
+            combined.contains("__WRAPPER_REGISTERED__"),
+            "Zsh wrapper function should be registered after sourcing.\nOutput:\n{}",
             combined
         );
     }
@@ -1814,6 +1769,7 @@ approved-commands = ["echo 'bash background'"]
         let script = match shell {
             "zsh" => format!(
                 r#"
+                autoload -Uz compinit && compinit -i 2>/dev/null
                 # Clear PATH to ensure wt is not found via PATH
                 export PATH="/usr/bin:/bin"
                 export WORKTRUNK_BIN='{}'

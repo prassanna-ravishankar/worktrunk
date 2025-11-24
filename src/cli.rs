@@ -167,10 +167,6 @@ Use `wt config shell install` to automatically add to your shell config."#)]
         /// Shell to generate code for
         #[arg(value_enum)]
         shell: Shell,
-
-        /// Command name
-        #[arg(long, default_value = DEFAULT_COMMAND_NAME)]
-        command_name: String,
     },
 
     /// Write shell integration to config files
@@ -198,10 +194,6 @@ wt config shell install --force
         /// Skip confirmation prompt
         #[arg(short, long)]
         force: bool,
-
-        /// Command name
-        #[arg(long, default_value = DEFAULT_COMMAND_NAME)]
-        command_name: String,
     },
 
     /// Remove shell integration from config files
@@ -235,6 +227,24 @@ Detects various forms of the integration pattern regardless of:
         /// Skip confirmation prompt
         #[arg(short, long)]
         force: bool,
+    },
+
+    /// Generate shell completion script
+    #[command(after_long_help = r#"## Usage
+
+Generate completions for your shell:
+
+```bash
+wt config shell completions zsh > ~/.zfunc/_wt
+```
+
+This outputs a script that calls back to `wt` for dynamic completions
+(branch names, worktrees, etc.). The script is designed for fpath
+autoloading - zsh loads it only on first completion attempt."#)]
+    Completions {
+        /// Shell to generate completions for
+        #[arg(value_enum)]
+        shell: Shell,
     },
 }
 
