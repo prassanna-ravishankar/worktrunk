@@ -210,7 +210,6 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
         }
     };
 
-    let mut any_configured = false;
     let mut any_not_configured = false;
 
     // Show configured and not-configured shells (matching `config shell install` format exactly)
@@ -228,7 +227,6 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
 
         match result.action {
             ConfigAction::AlreadyExists => {
-                any_configured = true;
                 writeln!(
                     out,
                     "{INFO_EMOJI} Already configured {what} for {bold}{shell}{bold:#} @ {path}"
@@ -284,7 +282,7 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
     }
 
     // Summary hint
-    if any_not_configured && !any_configured {
+    if any_not_configured {
         writeln!(out)?;
         writeln!(
             out,

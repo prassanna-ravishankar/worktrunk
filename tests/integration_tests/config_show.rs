@@ -185,6 +185,47 @@ if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)
     });
 }
 
+/// Test `wt config show` shows hint when some shells configured, some not
+#[test]
+fn test_config_show_partial_shell_config_shows_hint() {
+    let repo = TestRepo::new();
+    let temp_home = TempDir::new().unwrap();
+
+    // Create global config
+    let global_config_dir = temp_home.path().join(".config").join("worktrunk");
+    fs::create_dir_all(&global_config_dir).unwrap();
+    fs::write(global_config_dir.join("config.toml"), "").unwrap();
+
+    // Create .bashrc WITHOUT wt integration
+    fs::write(
+        temp_home.path().join(".bashrc"),
+        r#"# Some bash config
+export PATH="$HOME/bin:$PATH"
+"#,
+    )
+    .unwrap();
+
+    // Create .zshrc WITH wt integration
+    fs::write(
+        temp_home.path().join(".zshrc"),
+        r#"# wt integration
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+"#,
+    )
+    .unwrap();
+
+    let settings = setup_snapshot_settings_with_home(&repo, &temp_home);
+    settings.bind(|| {
+        let mut cmd = wt_command();
+        repo.clean_cli_env(&mut cmd);
+        cmd.arg("config").arg("show").current_dir(repo.root_path());
+        set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("WT_ASSUME_COMPINIT", "1"); // Bypass zsh subprocess check
+
+        assert_cmd_snapshot!(cmd);
+    });
+}
+
 /// Test `wt config show` shows no warning when zsh compinit is enabled
 #[test]
 fn test_config_show_zsh_compinit_correct_order() {
