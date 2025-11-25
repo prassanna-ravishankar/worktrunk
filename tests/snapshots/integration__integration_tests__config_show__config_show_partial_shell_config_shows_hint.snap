@@ -33,7 +33,7 @@ exit_code: 0
 ⚪ Project Config: [1m[REPO]/.config/wt.toml[0m
 💡 [2mNot found[0m
 
-💡 [2mNot configured shell extension & completions for [1mbash[0m @ ~/.bashrc[0m
+💡 [2mNot configured shell extension & completions for [1m[2mbash[0m[2m @ ~/.bashrc[0m
 ⚪ Already configured shell extension & completions for [1mzsh[0m @ ~/.zshrc
 [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
 

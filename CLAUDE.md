@@ -278,26 +278,18 @@ println!("{HINT_EMOJI} {HINT}Use 'wt list' to see all worktrees{HINT:#}");
 
 Compose styles using anstyle methods (`.bold()`, `.fg_color()`, etc.). Branch names in messages (not tables) should be bolded. Tables (`wt list`) use conditional styling for branch names to indicate worktree state (current/main/other).
 
-Nested style resets leak color. Compose all attributes into a single style object:
+Nested style resets leak color. Compose attributes into a single style, then re-apply the surrounding style after the reset:
 
 ```rust
-// ❌ BAD - nested reset leaks color
+// ❌ BAD - nested bold loses surrounding color, text after reset is unstyled
 "{WARNING}Text with {bold}nested{bold:#} styles{WARNING:#}"
-// ✅ GOOD - compose styles together
-let warning_bold = WARNING.bold();
-"{WARNING}Text with {warning_bold}composed{warning_bold:#} styles{WARNING:#}"
+// ✅ GOOD - use composed style and re-apply surrounding style after reset
+"{WARNING}Text with {WARNING_BOLD}composed{WARNING_BOLD:#}{WARNING} styles{WARNING:#}"
+// ✅ ALSO GOOD - styled element at end (no text after reset needs styling)
+"{WARNING}Message: {WARNING_BOLD}{value}{WARNING_BOLD:#}{WARNING:#}"
 ```
 
-Styled elements must maintain their surrounding color. Compose the color with the style to avoid leaking:
-
-```rust
-// ❌ WRONG - styled element loses surrounding color
-let bold = AnstyleStyle::new().bold();
-println!("✅ {GREEN}Message {bold}{path}{bold:#}{GREEN:#}");  // Path will be black/white!
-// ✅ RIGHT - compose color with style
-let green_bold = GREEN.bold();
-println!("✅ {GREEN}Created worktree at {green_bold}{path}{green_bold:#}{GREEN:#}");
-```
+**Key insight**: `{STYLE:#}` always resets to default, not to the surrounding style. Re-apply the surrounding style after any composed style reset if there's more text to style.
 
 ### Color Detection
 

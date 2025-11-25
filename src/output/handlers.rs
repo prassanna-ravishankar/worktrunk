@@ -108,9 +108,8 @@ pub fn handle_switch_output(
                 super::success(format_switch_success(branch, path, false, None))?;
             } else {
                 // Shell integration not configured - show warning and setup hint
-                let bold = worktrunk::styling::AnstyleStyle::new().bold();
                 super::warning(format!(
-                    "{WARNING}Worktree for {bold}{branch}{bold:#}{WARNING} at {bold}{}{bold:#}{WARNING}; cannot cd (no shell integration){WARNING:#}",
+                    "{WARNING}Worktree for {WARNING_BOLD}{branch}{WARNING_BOLD:#}{WARNING} at {WARNING_BOLD}{}{WARNING_BOLD:#}{WARNING}; cannot cd (no shell integration){WARNING:#}",
                     format_path_for_display(path)
                 ))?;
                 super::shell_integration_hint(shell_integration_hint())?;

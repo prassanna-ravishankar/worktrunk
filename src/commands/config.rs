@@ -6,8 +6,8 @@ use worktrunk::git::Repository;
 use worktrunk::path::format_path_for_display;
 use worktrunk::shell::Shell;
 use worktrunk::styling::{
-    AnstyleStyle, CYAN, GREEN, GREEN_BOLD, HINT, HINT_EMOJI, INFO_EMOJI, WARNING, WARNING_EMOJI,
-    format_toml, format_with_gutter,
+    AnstyleStyle, CYAN, GREEN, GREEN_BOLD, HINT, HINT_BOLD, HINT_EMOJI, INFO_EMOJI, WARNING,
+    WARNING_EMOJI, format_toml, format_with_gutter,
 };
 
 use super::configure_shell::{ConfigAction, scan_shell_configs};
@@ -259,7 +259,7 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
                         any_not_configured = true;
                         writeln!(
                             out,
-                            "{HINT_EMOJI} {HINT}Not configured completions for {bold}{shell}{bold:#} @ {completion_display}{HINT:#}"
+                            "{HINT_EMOJI} {HINT}Not configured completions for {HINT_BOLD}{shell}{HINT_BOLD:#}{HINT} @ {completion_display}{HINT:#}"
                         )?;
                     }
                 }
@@ -268,7 +268,7 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
                 any_not_configured = true;
                 writeln!(
                     out,
-                    "{HINT_EMOJI} {HINT}Not configured {what} for {bold}{shell}{bold:#} @ {path}{HINT:#}"
+                    "{HINT_EMOJI} {HINT}Not configured {what} for {HINT_BOLD}{shell}{HINT_BOLD:#}{HINT} @ {path}{HINT:#}"
                 )?;
             }
             _ => {} // Added/Created won't appear in dry_run mode
