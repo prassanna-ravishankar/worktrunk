@@ -254,8 +254,8 @@ See `wt switch --help` and `wt merge --help` for skipping hooks, template variab
 
 ### Shell Integration
 
-Worktrunk requires shell integration in order to switch directories, during `wt
-switch` & `wt merge`/`wt remove`. To add automatic setup to shell config files
+Worktrunk requires shell integration to change directories during `wt switch`,
+`wt merge`, and `wt remove`. To add automatic setup to shell config files
 (Bash, Zsh, and Fish):
 
 ```console
@@ -1004,7 +1004,7 @@ Worktrunk executes commands in three contexts:
 2. **LLM commands** (`~/.config/worktrunk/config.toml`) - Commit message generation
 3. **--execute flag** - Commands provided explicitly
 
-Commands from project hooks and LLM configuration require approval on first run. Approved commands are saved to `~/.config/worktrunk/config.toml` under the project's configuration. If a command changes, worktrunk requires new approval.
+Commands from project hooks and LLM configuration require approval on first run. Approved commands are saved to `~/.config/worktrunk/config.toml` under the project's configuration. If a command changes, Worktrunk requires new approval.
 
 **Example approval prompt:**
 
