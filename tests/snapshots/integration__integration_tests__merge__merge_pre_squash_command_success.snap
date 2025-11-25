@@ -17,13 +17,14 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: true
 exit_code: 0
 ----- stdout -----
 🔄 [36mRunning pre-commit:[0m
-[107m [0m  [90m[1m[2m[34mecho[90m [2m[32m'Pre-commit check passed'[90m[0m
+[107m [0m  [2m[1m[2m[34mecho[2m [2m[32m'Pre-commit check passed'[2m[0m
 🔄 [36mMerging 1 commit to [1m[36mmain[0m[36m @ [2m[SHA][0m (no commit/squash/rebase needed)
 [107m [0m  * [SHA] Add feature file
 [107m [0m   feature.txt | 1 [32m+[m

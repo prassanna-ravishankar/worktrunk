@@ -183,8 +183,8 @@ pub fn format_bash_with_gutter(content: &str, left_margin: &str) -> String {
     use tree_sitter_highlight::{HighlightConfiguration, HighlightEvent, Highlighter};
 
     let gutter = super::GUTTER;
-    // Use gray (BrightBlack) for visible dimming of unhighlighted content
-    let base_style = super::GRAY;
+    // Dimmed effect for unhighlighted content (reduces intensity while preserving default color)
+    let base_style = anstyle::Style::new().dimmed();
     let reset = anstyle::Reset;
     let mut output = String::new();
 
