@@ -345,6 +345,14 @@ pub fn handle_remove_output(
 /// Per CLAUDE.md: child process output goes to stderr, worktrunk output goes to stdout.
 ///
 /// Returns error if command exits with non-zero status.
+///
+/// ## Signal Handling (Unix)
+///
+/// SIGINT (Ctrl-C) is handled by checking the child's exit status:
+/// - If the child was killed by a signal, we return exit code 128 + signal number
+/// - This follows Unix conventions (e.g., exit code 130 for SIGINT)
+///
+/// The child process receives SIGINT directly from the terminal (via Stdio::inherit).
 pub(crate) fn execute_streaming(
     command: &str,
     working_dir: &std::path::Path,
@@ -378,6 +386,18 @@ pub(crate) fn execute_streaming(
     let status = child
         .wait()
         .map_err(|e| anyhow::anyhow!("Failed to wait for command: {}", e))?;
+
+    // Check if child was killed by a signal (Unix only)
+    // This handles Ctrl-C: when SIGINT is sent, the child receives it and terminates,
+    // and we propagate the signal exit code (128 + signal number, e.g., 130 for SIGINT)
+    #[cfg(unix)]
+    if let Some(sig) = std::os::unix::process::ExitStatusExt::signal(&status) {
+        return Err(WorktrunkError::ChildProcessExited {
+            code: 128 + sig,
+            message: format!("terminated by signal {}", sig),
+        }
+        .into());
+    }
 
     if !status.success() {
         // Get the exit code if available (None means terminated by signal on some platforms)
