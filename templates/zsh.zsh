@@ -1,4 +1,7 @@
 # worktrunk shell integration for zsh
+#
+# Completions require zsh's completion system (compinit). If completions don't work:
+#   autoload -Uz compinit && compinit  # add before this line in your .zshrc
 
 # Only initialize if {{ cmd_prefix }} is available (in PATH or via WORKTRUNK_BIN)
 if command -v {{ cmd_prefix }} >/dev/null 2>&1 || [[ -n "${WORKTRUNK_BIN:-}" ]]; then
@@ -54,7 +57,6 @@ if command -v {{ cmd_prefix }} >/dev/null 2>&1 || [[ -n "${WORKTRUNK_BIN:-}" ]];
     }
 
     # Lazy completions - generate on first TAB, then delegate to clap's completer
-    # NOTE: This must come AFTER compinit in your .zshrc
     _{{ cmd_prefix }}_lazy_complete() {
         # Generate completions function once (check if clap's function exists)
         if ! (( $+functions[_clap_dynamic_completer_{{ cmd_prefix }}] )); then
@@ -63,11 +65,11 @@ if command -v {{ cmd_prefix }} >/dev/null 2>&1 || [[ -n "${WORKTRUNK_BIN:-}" ]];
         _clap_dynamic_completer_{{ cmd_prefix }} "$@"
     }
 
-    # Register completion (requires compinit to have run first)
+    # Register completion (silently skip if compinit hasn't run yet).
+    # We don't warn here because this script runs on every shell startup - users
+    # shouldn't see warnings every time they open a terminal. Instead, `wt config
+    # shell install` detects missing compinit and shows a one-time advisory.
     if (( $+functions[compdef] )); then
         compdef _{{ cmd_prefix }}_lazy_complete {{ cmd_prefix }}
-    else
-        echo "{{ cmd_prefix }}: completions disabled (compinit not loaded yet)" >&2
-        echo "{{ cmd_prefix }}: move 'eval \"\$({{ cmd_prefix }} config shell init zsh)\"' after compinit in your .zshrc" >&2
     fi
 fi

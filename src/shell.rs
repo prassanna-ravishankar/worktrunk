@@ -418,6 +418,76 @@ struct FishTemplate<'a> {
 //     cmd_prefix: &'a str,
 // }
 
+/// Detect if user's zsh has compinit enabled by probing for the compdef function.
+///
+/// Zsh's completion system (compinit) must be explicitly enabled - it's not on by default.
+/// When compinit runs, it defines the `compdef` function. We probe for this function
+/// by spawning an interactive zsh that sources the user's config, then checking if
+/// compdef exists.
+///
+/// This approach matches what other CLI tools (hugo, podman, dvc) recommend: detect
+/// the state and advise users, rather than trying to auto-enable compinit.
+///
+/// Returns:
+/// - `Some(true)` if compinit is enabled (compdef function exists)
+/// - `Some(false)` if compinit is NOT enabled
+/// - `None` if detection failed (zsh not installed, timeout, error)
+pub fn detect_zsh_compinit() -> Option<bool> {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    // Probe command: check if compdef function exists (proof compinit ran).
+    // We use unique markers (__WT_COMPINIT_*) to avoid false matches from any
+    // output the user's zshrc might produce during startup.
+    let probe_cmd =
+        r#"(( $+functions[compdef] )) && echo __WT_COMPINIT_YES__ || echo __WT_COMPINIT_NO__"#;
+
+    let mut child = Command::new("zsh")
+        .arg("-ic")
+        .arg(probe_cmd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null()) // Suppress user's zsh startup messages
+        .spawn()
+        .ok()?;
+
+    let start = Instant::now();
+    let timeout = Duration::from_secs(2);
+
+    loop {
+        match child.try_wait() {
+            Ok(Some(_status)) => {
+                // Process finished (exit status is always 0 due to || fallback in probe)
+                // wait_with_output() collects remaining stdout even after try_wait() succeeds
+                let output = child.wait_with_output().ok()?;
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                return Some(stdout.contains("__WT_COMPINIT_YES__"));
+            }
+            Ok(None) => {
+                // Still running - check timeout
+                if start.elapsed() > timeout {
+                    let _ = child.kill();
+                    let _ = child.wait(); // Reap zombie process
+                    return None;
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            Err(_) => return None,
+        }
+    }
+}
+
+/// Check if the current shell is zsh (based on $SHELL environment variable).
+///
+/// Used to determine if the user's primary shell is zsh when running `install`
+/// without a specific shell argument. If they're a zsh user, we show compinit
+/// hints; if they're using bash/fish, we skip the hint since zsh isn't their
+/// daily driver.
+pub fn is_current_shell_zsh() -> bool {
+    std::env::var("SHELL")
+        .map(|s| s.ends_with("/zsh") || s.ends_with("/zsh-"))
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

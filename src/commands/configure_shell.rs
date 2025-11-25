@@ -2,7 +2,7 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use worktrunk::path::format_path_for_display;
-use worktrunk::shell::Shell;
+use worktrunk::shell::{self, Shell};
 use worktrunk::styling::{INFO_EMOJI, PROGRESS_EMOJI, SUCCESS_EMOJI, format_bash_with_gutter};
 
 use crate::completion;
@@ -145,6 +145,44 @@ pub fn handle_configure_shell(
     // User confirmed (or --force flag was used), now actually apply the changes
     let result = scan_shell_configs(shell_filter, false)?;
     let completion_results = process_shell_completions(&shells, false)?;
+
+    // Zsh completions require compinit to be enabled. Unlike bash/fish, zsh doesn't
+    // enable its completion system by default - users must explicitly call compinit.
+    // We detect this and show an advisory hint to help users get completions working.
+    //
+    // We only show this advisory during `install`, not `init`, because:
+    // - `init` outputs a script that gets eval'd - advisory would pollute that
+    // - `install` is the user-facing command where hints are appropriate
+    //
+    // We show the advisory when:
+    // - User explicitly runs `install zsh` (they clearly want zsh integration)
+    // - User runs `install` (all shells) AND their $SHELL is zsh (they use zsh daily)
+    //
+    // We skip if:
+    // - User runs `install` but their $SHELL is bash/fish (they may be configuring
+    //   zsh for occasional use; don't nag about their non-primary shell)
+    // - Zsh was already configured (AlreadyExists) - they've seen this before
+    let zsh_was_configured = result
+        .configured
+        .iter()
+        .any(|r| r.shell == Shell::Zsh && !matches!(r.action, ConfigAction::AlreadyExists));
+    let should_check_compinit = zsh_was_configured
+        && (shell_filter == Some(Shell::Zsh)
+            || (shell_filter.is_none() && shell::is_current_shell_zsh()));
+
+    if should_check_compinit {
+        // Probe user's zsh to check if compinit is enabled.
+        // Only show advisory if we positively detect it's missing (Some(false)).
+        // If detection fails (None), stay silent - we can't be sure.
+        if shell::detect_zsh_compinit() == Some(false) {
+            use worktrunk::styling::{WARNING, WARNING_EMOJI, eprintln};
+            eprintln!(
+                "{WARNING_EMOJI} {WARNING}Completions won't work: zsh's compinit is not enabled.{WARNING:#}"
+            );
+            eprintln!("{WARNING}   Add this to ~/.zshrc before the wt line:{WARNING:#}");
+            eprintln!("{WARNING}   autoload -Uz compinit && compinit{WARNING:#}");
+        }
+    }
 
     Ok(ScanResult {
         configured: result.configured,

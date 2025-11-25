@@ -37,6 +37,9 @@ fn test_configure_shell_with_yes() {
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
+        🟡 [33mCompletions won't work: zsh's compinit is not enabled.[0m
+        [33m   Add this to ~/.zshrc before the wt line:[0m
+        [33m   autoload -Uz compinit && compinit[0m
         ");
     });
 
@@ -78,6 +81,9 @@ fn test_configure_shell_specific_shell() {
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
+        🟡 [33mCompletions won't work: zsh's compinit is not enabled.[0m
+        [33m   Add this to ~/.zshrc before the wt line:[0m
+        [33m   autoload -Uz compinit && compinit[0m
         ");
     });
 
@@ -298,6 +304,9 @@ fn test_configure_shell_multiple_configs() {
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
+        🟡 [33mCompletions won't work: zsh's compinit is not enabled.[0m
+        [33m   Add this to ~/.zshrc before the wt line:[0m
+        [33m   autoload -Uz compinit && compinit[0m
         ");
     });
 
@@ -357,6 +366,9 @@ fn test_configure_shell_mixed_states() {
         💡 [2mRestart shell or run: source ~/.zshrc[0m
 
         ----- stderr -----
+        🟡 [33mCompletions won't work: zsh's compinit is not enabled.[0m
+        [33m   Add this to ~/.zshrc before the wt line:[0m
+        [33m   autoload -Uz compinit && compinit[0m
         ");
     });
 
@@ -638,4 +650,88 @@ fn test_install_uninstall_roundtrip() {
         content.contains("export PATH=$HOME/bin:$PATH"),
         "PATH export should be preserved"
     );
+}
+
+/// Test that compinit warning does NOT show when .zshrc has compinit enabled
+#[test]
+fn test_configure_shell_no_warning_when_compinit_enabled() {
+    let repo = TestRepo::new();
+    let temp_home = TempDir::new().unwrap();
+
+    // Create a .zshrc that enables compinit - detection should find it
+    let zshrc_path = temp_home.path().join(".zshrc");
+    fs::write(
+        &zshrc_path,
+        "# Existing config\nautoload -Uz compinit && compinit\n",
+    )
+    .unwrap();
+
+    let settings = setup_home_snapshot_settings(&temp_home);
+    settings.bind(|| {
+        let mut cmd = wt_command();
+        repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/zsh");
+        cmd.env("ZDOTDIR", temp_home.path()); // Point zsh to our test home for config
+        cmd.arg("config")
+            .arg("shell")
+            .arg("install")
+            .arg("zsh")
+            .arg("--force")
+            .current_dir(repo.root_path());
+
+        assert_cmd_snapshot!(cmd, @r"
+        success: true
+        exit_code: 0
+        ----- stdout -----
+        ✅ Added shell extension & completions for [1mzsh[0m @ [1m~/.zshrc[0m
+
+        ✅ Configured 1 shell
+        💡 [2mRestart shell or run: source ~/.zshrc[0m
+
+        ----- stderr -----
+        ");
+    });
+}
+
+/// Test that compinit warning does NOT show when $SHELL is bash (not a zsh user)
+/// Even when installing all shells, we don't warn bash users about zsh compinit
+#[test]
+fn test_configure_shell_no_warning_for_bash_user() {
+    let repo = TestRepo::new();
+    let temp_home = TempDir::new().unwrap();
+
+    // Create config files for both shells (no compinit in zshrc)
+    let zshrc_path = temp_home.path().join(".zshrc");
+    let bashrc_path = temp_home.path().join(".bashrc");
+    fs::write(&zshrc_path, "# Existing zsh config\n").unwrap();
+    fs::write(&bashrc_path, "# Existing bash config\n").unwrap();
+
+    let settings = setup_home_snapshot_settings(&temp_home);
+    settings.bind(|| {
+        let mut cmd = wt_command();
+        repo.clean_cli_env(&mut cmd);
+        set_temp_home_env(&mut cmd, temp_home.path());
+        cmd.env("SHELL", "/bin/bash"); // User's primary shell is bash
+        cmd.arg("config")
+            .arg("shell")
+            .arg("install")
+            .arg("--force")
+            .current_dir(repo.root_path());
+
+        // Should NOT show compinit warning - user is a bash user, not zsh
+        assert_cmd_snapshot!(cmd, @r"
+        success: true
+        exit_code: 0
+        ----- stdout -----
+        ✅ Added shell extension & completions for [1mbash[0m @ [1m~/.bashrc[0m
+        ✅ Added shell extension & completions for [1mzsh[0m @ [1m~/.zshrc[0m
+        💡 [2mSkipped [1mfish[0m; ~/.config/fish/conf.d not found[0m
+
+        ✅ Configured 2 shells
+        💡 [2mRestart shell or run: source ~/.bashrc[0m
+
+        ----- stderr -----
+        ");
+    });
 }
