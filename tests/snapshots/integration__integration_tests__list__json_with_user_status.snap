@@ -24,7 +24,7 @@ exit_code: 0
 ----- stdout -----
 [
   {
-    "head_sha": "b834638e33dbc6b37002685ee0777f4b8f1af904",
+    "head_sha": "f0879504ee3d7dc97723a75c22712f27b604be74",
     "branch": "main",
     "timestamp": 0,
     "commit_message": "Initial commit",
@@ -76,7 +76,7 @@ exit_code: 0
     "is_current": true
   },
   {
-    "head_sha": "b834638e33dbc6b37002685ee0777f4b8f1af904",
+    "head_sha": "f0879504ee3d7dc97723a75c22712f27b604be74",
     "branch": "with-status",
     "timestamp": 0,
     "commit_message": "Initial commit",
@@ -129,7 +129,7 @@ exit_code: 0
     "is_main": false
   },
   {
-    "head_sha": "b834638e33dbc6b37002685ee0777f4b8f1af904",
+    "head_sha": "f0879504ee3d7dc97723a75c22712f27b604be74",
     "branch": "without-status",
     "timestamp": 0,
     "commit_message": "Initial commit",

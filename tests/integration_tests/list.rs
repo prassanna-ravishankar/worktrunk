@@ -1,4 +1,4 @@
-use crate::common::{TestRepo, list_snapshots, setup_snapshot_settings, wt_command};
+use crate::common::{DAY, HOUR, TestRepo, list_snapshots, setup_snapshot_settings, wt_command};
 use insta::Settings;
 use insta_cmd::assert_cmd_snapshot;
 use std::path::Path;
@@ -709,7 +709,7 @@ fn test_list_primary_on_different_branch() {
 #[test]
 fn test_list_with_user_status() {
     let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    repo.commit_with_age("Initial commit", DAY);
 
     // Worktree with user status only (no git changes)
     repo.add_worktree("clean-with-status");
@@ -749,7 +749,7 @@ fn test_list_with_user_status() {
 #[test]
 fn test_list_json_with_user_status() {
     let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    repo.commit_with_age("Initial commit", DAY);
 
     // Worktree with user status (emoji only)
     repo.add_worktree("with-status");
@@ -828,35 +828,20 @@ fn test_list_user_status_with_special_characters() {
 #[test]
 fn test_readme_example_simple_list() {
     let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+    // Initial commit on main - oldest (1 day ago)
+    repo.commit_with_age("Initial commit", DAY);
     repo.setup_remote("main");
 
     // Create worktrees with various states
     let feature_x = repo.add_worktree("feature-x");
     let bugfix_y = repo.add_worktree("bugfix-y");
 
-    // feature-x: ahead with uncommitted changes
-    // Make 3 commits
-    for i in 1..=3 {
-        std::fs::write(
-            feature_x.join(format!("file{}.txt", i)),
-            format!("content {}", i),
-        )
-        .unwrap();
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["add", &format!("file{}.txt", i)])
-            .current_dir(&feature_x)
-            .output()
-            .unwrap();
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["commit", "-m", &format!("Add file {}", i)])
-            .current_dir(&feature_x)
-            .output()
-            .unwrap();
-    }
-    // Add unstaged changes (+5 -2 lines)
+    // feature-x: ahead with uncommitted changes (3 commits, most recent 10min ago)
+    repo.commit_with_age_in("Add file 1", 3 * HOUR, &feature_x);
+    repo.commit_with_age_in("Add file 2", 2 * HOUR, &feature_x);
+    repo.commit_with_age_in("Add file 3", HOUR, &feature_x);
+
+    // Add staged changes (+5 lines)
     std::fs::write(
         feature_x.join("modified.txt"),
         "line1\nline2\nline3\nline4\nline5\n",
@@ -869,20 +854,8 @@ fn test_readme_example_simple_list() {
         .output()
         .unwrap();
 
-    // bugfix-y: 1 commit ahead, clean tree
-    std::fs::write(bugfix_y.join("bugfix.txt"), "fix content").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "bugfix.txt"])
-        .current_dir(&bugfix_y)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Fix bug"])
-        .current_dir(&bugfix_y)
-        .output()
-        .unwrap();
+    // bugfix-y: 1 commit ahead (2 hours ago), clean tree
+    repo.commit_with_age_in("Fix bug", 2 * HOUR, &bugfix_y);
 
     snapshot_list("readme_example_simple_list", &repo);
 }

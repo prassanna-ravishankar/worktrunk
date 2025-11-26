@@ -36,6 +36,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::TempDir;
 
+/// Time constants for `commit_with_age()` - use as `5 * MINUTE`, `2 * HOUR`, etc.
+pub const MINUTE: i64 = 60;
+pub const HOUR: i64 = 60 * MINUTE;
+pub const DAY: i64 = 24 * HOUR;
+pub const WEEK: i64 = 7 * DAY;
+
 /// Create a `wt` CLI command with standardized test environment settings.
 ///
 /// The command has the following guarantees:
@@ -327,6 +333,87 @@ impl TestRepo {
         self.git_command(&["add", "."]).output().unwrap();
 
         self.git_command(&["commit", "-m", message])
+            .output()
+            .unwrap();
+    }
+
+    /// Create a commit with a specific age relative to SOURCE_DATE_EPOCH
+    ///
+    /// This allows creating commits that display specific relative ages
+    /// in the Age column (e.g., "10m", "1h", "1d").
+    ///
+    /// # Arguments
+    /// * `message` - The commit message
+    /// * `age_seconds` - How many seconds ago the commit should appear
+    ///
+    /// # Example
+    /// ```ignore
+    /// repo.commit_with_age("Initial commit", 86400);  // Shows "1d"
+    /// repo.commit_with_age("Fix bug", 3600);          // Shows "1h"
+    /// repo.commit_with_age("Add feature", 600);       // Shows "10m"
+    /// ```
+    pub fn commit_with_age(&self, message: &str, age_seconds: i64) {
+        // SOURCE_DATE_EPOCH used in tests - must match configure_git_cmd/test_env_vars
+        const SOURCE_DATE_EPOCH: i64 = 1761609600;
+        let commit_time = SOURCE_DATE_EPOCH - age_seconds;
+        let timestamp = format!("@{}", commit_time);
+
+        // Use file.txt like commit() does - allows multiple commits to the same file
+        let file_path = self.root.join("file.txt");
+        std::fs::write(&file_path, message).unwrap();
+
+        self.git_command(&["add", "."]).output().unwrap();
+
+        // Create commit with custom timestamp
+        let mut cmd = Command::new("git");
+        cmd.env("GIT_CONFIG_GLOBAL", &self.git_config_path);
+        cmd.env("GIT_CONFIG_SYSTEM", "/dev/null");
+        cmd.env("GIT_AUTHOR_DATE", &timestamp);
+        cmd.env("GIT_COMMITTER_DATE", &timestamp);
+        cmd.env("LC_ALL", "C");
+        cmd.env("LANG", "C");
+        cmd.args(["commit", "-m", message])
+            .current_dir(&self.root)
+            .output()
+            .unwrap();
+    }
+
+    /// Create a commit with a specific age in a given directory (e.g., a worktree)
+    ///
+    /// Like `commit_with_age()` but for any git working directory.
+    /// Uses `file.txt` with the message as content for deterministic commits.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let feature_wt = repo.add_worktree("feature", "feature");
+    /// repo.commit_with_age_in("Feature work", 2 * HOUR, &feature_wt);
+    /// ```
+    pub fn commit_with_age_in(&self, message: &str, age_seconds: i64, dir: &Path) {
+        // SOURCE_DATE_EPOCH used in tests - must match configure_git_cmd/test_env_vars
+        const SOURCE_DATE_EPOCH: i64 = 1761609600;
+        let commit_time = SOURCE_DATE_EPOCH - age_seconds;
+        let timestamp = format!("@{}", commit_time);
+
+        // Use file.txt with message as content - deterministic for same message
+        let file_path = dir.join("file.txt");
+        std::fs::write(&file_path, message).unwrap();
+
+        // Stage the file
+        let mut cmd = Command::new("git");
+        cmd.env("GIT_CONFIG_GLOBAL", &self.git_config_path);
+        cmd.env("GIT_CONFIG_SYSTEM", "/dev/null");
+        cmd.args(["add", "."]).current_dir(dir).output().unwrap();
+
+        // Create commit with custom timestamp
+        let mut cmd = Command::new("git");
+        cmd.env("GIT_CONFIG_GLOBAL", &self.git_config_path);
+        cmd.env("GIT_CONFIG_SYSTEM", "/dev/null");
+        cmd.env("GIT_AUTHOR_DATE", &timestamp);
+        cmd.env("GIT_COMMITTER_DATE", &timestamp);
+        cmd.env("LC_ALL", "C");
+        cmd.env("LANG", "C");
+        cmd.args(["commit", "-m", message])
+            .current_dir(dir)
             .output()
             .unwrap();
     }
@@ -973,6 +1060,23 @@ pub fn wait_for_file_lines(path: &Path, expected_lines: usize, timeout: std::tim
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_commit_with_age() {
+        let repo = TestRepo::new();
+        repo.commit("Initial commit");
+
+        // Create commits with specific ages
+        repo.commit_with_age("One hour ago", HOUR);
+        repo.commit_with_age("One day ago", DAY);
+        repo.commit_with_age("One week ago", WEEK);
+        repo.commit_with_age("Ten minutes ago", 10 * MINUTE);
+
+        // Verify commits were created (git log shows 5 commits)
+        let output = repo.git_command(&["log", "--oneline"]).output().unwrap();
+        let log = String::from_utf8_lossy(&output.stdout);
+        assert_eq!(log.lines().count(), 5);
+    }
 
     #[test]
     fn test_validate_ansi_codes_no_leak() {
