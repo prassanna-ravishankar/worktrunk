@@ -80,7 +80,7 @@ fn setup_repo_with_commits_ahead() -> TestRepo {
     repo.setup_remote("main");
 
     // Create feature branch with commits ahead
-    let feature_path = repo.add_worktree("feature", "feature");
+    let feature_path = repo.add_worktree("feature");
 
     // Add commits in the feature worktree
     std::fs::write(feature_path.join("feature.txt"), "feature content").unwrap();
@@ -137,9 +137,9 @@ fn test_statusline_commits_ahead() {
 fn claude_code_snapshot_settings(repo: &TestRepo) -> insta::Settings {
     let mut settings = insta::Settings::clone_current();
     // The path gets fish-style abbreviated, so filter the abbreviated form
-    // e.g., /private/var/folders/.../test-repo -> /p/v/f/.../test-repo
-    // We replace everything up to "test-repo" with [PATH]
-    settings.add_filter(r"(?m)^.*test-repo", "[PATH]");
+    // e.g., /private/var/folders/.../repo -> /p/v/f/.../repo
+    // We replace everything up to "repo" with [PATH]
+    settings.add_filter(r"(?m)^.*repo", "[PATH]");
     // Also filter the raw path in case it appears
     settings.add_filter(&repo.root_path().display().to_string(), "[PATH]");
     settings

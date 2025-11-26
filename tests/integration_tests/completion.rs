@@ -66,7 +66,7 @@ fn test_complete_switch_shows_all_branches_including_worktrees() {
     temp.commit("initial");
 
     // Create worktree (this creates a new branch "feature/new")
-    temp.add_worktree("feature-worktree", "feature/new");
+    temp.add_worktree("feature/new");
 
     // Create another branch without worktree
     Command::new("git")
@@ -94,7 +94,7 @@ fn test_complete_push_shows_all_branches() {
     temp.commit("initial");
 
     // Create worktree (creates "feature/new" branch)
-    temp.add_worktree("feature-worktree", "feature/new");
+    temp.add_worktree("feature/new");
 
     // Create another branch without worktree
     Command::new("git")
@@ -365,8 +365,8 @@ fn test_complete_switch_shows_all_branches_even_with_worktrees() {
     temp.commit("initial");
 
     // Create two branches, both with worktrees
-    temp.add_worktree("feature-worktree", "feature/new");
-    temp.add_worktree("hotfix-worktree", "hotfix/bug");
+    temp.add_worktree("feature/new");
+    temp.add_worktree("hotfix/bug");
 
     // From the main worktree, test completion - should show all branches
     let output = temp.completion_cmd(&["wt", "switch", ""]).output().unwrap();
@@ -463,7 +463,7 @@ fn test_complete_merge_shows_branches() {
     temp.commit("initial");
 
     // Create worktree (creates "feature/new" branch)
-    temp.add_worktree("feature-worktree", "feature/new");
+    temp.add_worktree("feature/new");
 
     // Create another branch without worktree
     Command::new("git")
@@ -664,7 +664,7 @@ fn test_complete_remove_shows_branches() {
     temp.commit("initial");
 
     // Create worktree (creates "feature/new" branch)
-    temp.add_worktree("feature-worktree", "feature/new");
+    temp.add_worktree("feature/new");
 
     // Create another branch without worktree
     Command::new("git")
@@ -1024,8 +1024,8 @@ fn test_complete_remove_flexible_argument_ordering() {
     temp.commit("initial");
 
     // Create two worktrees
-    temp.add_worktree("feature-worktree", "feature");
-    temp.add_worktree("bugfix-worktree", "bugfix");
+    temp.add_worktree("feature");
+    temp.add_worktree("bugfix");
 
     // Test that .last(true) allows positional before flags
     // wt remove feature --no-delete-branch <cursor>

@@ -675,7 +675,7 @@ mod tests {
         repo.commit("Initial commit");
 
         // Create a worktree that already exists
-        repo.add_worktree("existing", "existing");
+        repo.add_worktree("existing");
 
         // Try to create it again - should fail
         let output = exec_through_wrapper(shell, &repo, "switch", &["--create", "existing"]);
@@ -736,7 +736,7 @@ mod tests {
         repo.commit("Initial commit");
 
         // Create a worktree to remove
-        repo.add_worktree("to-remove", "to-remove");
+        repo.add_worktree("to-remove");
 
         let output = exec_through_wrapper(shell, &repo, "remove", &["to-remove"]);
 
@@ -759,7 +759,7 @@ mod tests {
         repo.commit("Initial commit");
 
         // Create a feature branch
-        repo.add_worktree("feature", "feature");
+        repo.add_worktree("feature");
 
         let output = exec_through_wrapper(shell, &repo, "merge", &["main"]);
 
@@ -893,7 +893,7 @@ watch = "echo 'Watching for file changes'"
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo 'Installing dependencies...'",
     "echo 'Building project...'",
@@ -941,7 +941,7 @@ test = "echo '✓ All 47 tests passed in 2.3s'"
         repo.commit("Add pre-merge validation");
 
         // Create a main worktree
-        let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -950,7 +950,7 @@ test = "echo '✓ All 47 tests passed in 2.3s'"
             .unwrap();
 
         // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree("feature", "feature");
+        let feature_wt = repo.add_worktree("feature");
         fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
         let mut cmd = Command::new("git");
@@ -972,7 +972,7 @@ test = "echo '✓ All 47 tests passed in 2.3s'"
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo '✓ Code formatting check passed'",
     "echo '✓ Linting passed - no warnings'",
@@ -1022,7 +1022,7 @@ test = "echo '✗ Test suite failed: 3 tests failing' && exit 1"
         repo.commit("Add failing pre-merge validation");
 
         // Create a main worktree
-        let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -1031,7 +1031,7 @@ test = "echo '✗ Test suite failed: 3 tests failing' && exit 1"
             .unwrap();
 
         // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree("feature-fail", "feature-fail");
+        let feature_wt = repo.add_worktree("feature-fail");
         fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
         let mut cmd = Command::new("git");
@@ -1053,7 +1053,7 @@ test = "echo '✗ Test suite failed: 3 tests failing' && exit 1"
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo '✓ Code formatting check passed'",
     "echo '✗ Test suite failed: 3 tests failing' && exit 1",
@@ -1110,7 +1110,7 @@ check2 = "{} check2 3"
         repo.commit("Add pre-merge validation with mixed output");
 
         // Create a main worktree
-        let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -1119,7 +1119,7 @@ check2 = "{} check2 3"
             .unwrap();
 
         // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree("feature", "feature");
+        let feature_wt = repo.add_worktree("feature");
         fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
         let mut cmd = Command::new("git");
@@ -1142,7 +1142,7 @@ check2 = "{} check2 3"
             format!(
                 r#"worktree-path = "../{{{{ main_worktree }}}}.{{{{ branch }}}}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "{} check1 3",
     "{} check2 3",
@@ -1197,7 +1197,7 @@ approved-commands = [
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'test command executed'"]
 "#,
         )
@@ -1317,7 +1317,7 @@ approved-commands = ["echo 'test command executed'"]
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'background task'"]
 "#,
         )
@@ -1385,7 +1385,7 @@ approved-commands = ["echo 'background task'"]
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'fish background task'"]
 "#,
         )
@@ -1630,7 +1630,7 @@ approved-commands = ["echo 'fish background task'"]
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'background job'"]
 "#,
         )
@@ -1685,7 +1685,7 @@ approved-commands = ["echo 'background job'"]
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'bash background'"]
 "#,
         )
@@ -2072,7 +2072,7 @@ approved-commands = ["echo 'bash background'"]
             repo.test_config_path(),
             r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'cleanup test'"]
 "#,
         )
@@ -2221,7 +2221,7 @@ fi
             .unwrap();
 
         // Create a worktree for main
-        let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
         let mut cmd = Command::new("git");
         repo.configure_git_cmd(&mut cmd);
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -2230,7 +2230,7 @@ fi
             .unwrap();
 
         // Create a feature worktree and make multiple commits
-        let feature_wt = repo.add_worktree("feature-auth", "feature-auth");
+        let feature_wt = repo.add_worktree("feature-auth");
 
         // First commit - create initial auth.py with login endpoint
         fs::create_dir_all(feature_wt.join("api")).unwrap();
@@ -2348,7 +2348,7 @@ def refresh_token(token: str) -> Optional[Dict]:
         // Configure LLM in worktrunk config
         let llm_path = bin_dir.join("llm");
         let worktrunk_config = format!(
-            r#"worktree-path = "../test-repo.{{{{ branch }}}}"
+            r#"worktree-path = "../repo.{{{{ branch }}}}"
 
 [commit-generation]
 command = "{}"

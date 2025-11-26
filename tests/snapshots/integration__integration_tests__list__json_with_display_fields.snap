@@ -114,7 +114,7 @@ exit_code: 0
     "branch_diff_display": "/u001b[32m+1/u001b[0m",
     "status_line": "feature-ahead  /u001b[36m!?/u001b[0m  ±/u001b[32m+1/u001b[0m /u001b[31m-1/u001b[0m  /u001b[32m↑2/u001b[0m /u001b[2m/u001b[31m↓2/u001b[0m",
     "type": "worktree",
-    "path": "[WORKTREE_FEATURE_AHEAD]",
+    "path": "[REPO].feature-ahead",
     "bare": false,
     "detached": false,
     "working_tree_diff": {
@@ -164,7 +164,7 @@ exit_code: 0
     "commits_display": "/u001b[2m/u001b[31m↓2/u001b[0m",
     "status_line": "feature-behind  /u001b[2m∅/u001b[0m  /u001b[2m/u001b[31m↓2/u001b[0m",
     "type": "worktree",
-    "path": "[WORKTREE_FEATURE_BEHIND]",
+    "path": "[REPO].feature-behind",
     "bare": false,
     "detached": false,
     "working_tree_diff": {

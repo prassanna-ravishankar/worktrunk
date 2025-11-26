@@ -24,7 +24,7 @@ fn main() {
     }
     fs::create_dir(&temp_base).unwrap();
 
-    let root = temp_base.join("test-repo");
+    let root = temp_base.join("repo");
     fs::create_dir(&root).unwrap();
     let root = root.canonicalize().unwrap();
 

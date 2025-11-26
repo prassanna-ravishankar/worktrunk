@@ -19,7 +19,7 @@ fn test_list_config_full_enabled() {
         global_config_dir.join("config.toml"),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo".list]
+[projects."repo".list]
 full = true
 "#,
     )
@@ -59,7 +59,7 @@ fn test_list_config_branches_enabled() {
         global_config_dir.join("config.toml"),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo".list]
+[projects."repo".list]
 branches = true
 "#,
     )
@@ -99,7 +99,7 @@ fn test_list_config_cli_override() {
         global_config_dir.join("config.toml"),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo".list]
+[projects."repo".list]
 branches = false
 "#,
     )
@@ -142,7 +142,7 @@ fn test_list_config_full_and_branches() {
         global_config_dir.join("config.toml"),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo".list]
+[projects."repo".list]
 full = true
 branches = true
 "#,

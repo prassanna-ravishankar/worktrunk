@@ -35,7 +35,7 @@ fn test_shell_integration_post_start_background(#[case] shell: &str) {
         repo.test_config_path(),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["sleep 0.05 && echo 'Background task done' > bg_marker.txt"]
 "#,
     )
@@ -68,11 +68,7 @@ approved-commands = ["sleep 0.05 && echo 'Background task done' > bg_marker.txt"
     );
 
     // Verify background command actually ran
-    let worktree_path = repo
-        .root_path()
-        .parent()
-        .unwrap()
-        .join("test-repo.bg-feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.bg-feature");
 
     // First check if log file was created (proves process was spawned)
     // Logs are centralized in the common git directory
@@ -135,7 +131,7 @@ task2 = "sleep 0.05 && echo 'Task 2' > task2.txt"
         repo.test_config_path(),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "sleep 0.05 && echo 'Task 1' > task1.txt",
     "sleep 0.05 && echo 'Task 2' > task2.txt",
@@ -171,7 +167,7 @@ approved-commands = [
         .root_path()
         .parent()
         .unwrap()
-        .join("test-repo.parallel-test");
+        .join("repo.parallel-test");
 
     wait_for_file(
         worktree_path.join("task1.txt").as_path(),
@@ -205,7 +201,7 @@ fn test_bash_shell_integration_post_create_blocks() {
         repo.test_config_path(),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'Setup done' > setup.txt"]
 "#,
     )
@@ -218,7 +214,7 @@ approved-commands = ["echo 'Setup done' > setup.txt"]
         .root_path()
         .parent()
         .unwrap()
-        .join("test-repo.blocking-test");
+        .join("repo.blocking-test");
     let script = format!(
         r#"
         export PATH="{}:$PATH"
@@ -279,7 +275,7 @@ fish_bg = "sleep 0.05 && echo 'Fish background done' > fish_bg.txt"
         repo.test_config_path(),
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["sleep 0.05 && echo 'Fish background done' > fish_bg.txt"]
 "#,
     )
@@ -309,11 +305,7 @@ approved-commands = ["sleep 0.05 && echo 'Fish background done' > fish_bg.txt"]
     );
 
     // Wait for background command AND flush content (allow plenty of margin on CI)
-    let worktree_path = repo
-        .root_path()
-        .parent()
-        .unwrap()
-        .join("test-repo.fish-bg-test");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.fish-bg-test");
     let marker_file = worktree_path.join("fish_bg.txt");
     wait_for_file_content(marker_file.as_path(), Duration::from_secs(2));
 

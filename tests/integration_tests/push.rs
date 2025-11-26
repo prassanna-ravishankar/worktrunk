@@ -21,7 +21,7 @@ fn test_push_fast_forward() {
     repo.setup_remote("main");
 
     // Create a worktree for main (checking out existing branch)
-    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -30,7 +30,7 @@ fn test_push_fast_forward() {
         .unwrap();
 
     // Make a commit in a feature worktree
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("test.txt"), "test content").unwrap();
 
     let mut cmd = Command::new("git");
@@ -75,7 +75,7 @@ fn test_push_not_fast_forward() {
         .output()
         .unwrap();
 
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
     let mut cmd = Command::new("git");
@@ -102,7 +102,7 @@ fn test_push_to_default_branch() {
     repo.commit("Initial commit");
     repo.setup_remote("main");
 
-    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -110,7 +110,7 @@ fn test_push_to_default_branch() {
         .output()
         .unwrap();
 
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
     let mut cmd = Command::new("git");
@@ -140,7 +140,7 @@ fn test_push_with_dirty_target() {
     // Make main worktree (repo root) dirty with a conflicting file
     std::fs::write(repo.root_path().join("conflict.txt"), "old content").unwrap();
 
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("conflict.txt"), "new content").unwrap();
 
     let mut cmd = Command::new("git");
@@ -192,7 +192,7 @@ fn test_push_dirty_target_autostash() {
     // Make main worktree (repo root) dirty with a non-conflicting file
     std::fs::write(repo.root_path().join("notes.txt"), "temporary notes").unwrap();
 
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
     let mut cmd = Command::new("git");
@@ -243,7 +243,7 @@ fn test_push_error_not_fast_forward() {
     repo.setup_remote("main");
 
     // Create feature branch from initial commit
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
 
     // Make a commit in the main worktree (repo root) and push it
     std::fs::write(repo.root_path().join("main-file.txt"), "main content").unwrap();
@@ -302,7 +302,7 @@ fn test_push_error_with_merge_commits() {
     repo.setup_remote("main");
 
     // Create feature branch
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("file1.txt"), "content1").unwrap();
 
     let mut cmd = Command::new("git");
@@ -374,7 +374,7 @@ fn test_push_with_merge_commits_allowed() {
     repo.setup_remote("main");
 
     // Create feature branch
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("file1.txt"), "content1").unwrap();
 
     let mut cmd = Command::new("git");
@@ -446,7 +446,7 @@ fn test_push_no_remote() {
     // Deliberately NOT calling setup_remote to test the error case
 
     // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
     let mut cmd = Command::new("git");

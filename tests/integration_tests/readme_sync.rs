@@ -42,7 +42,7 @@ static HASH_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[HASH\]").un
 
 /// Regex for TMPDIR paths
 static TMPDIR_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[TMPDIR\]/test-repo\.([^\s/]+)").unwrap());
+    LazyLock::new(|| Regex::new(r"\[TMPDIR\]/repo\.([^\s/]+)").unwrap());
 
 /// Regex for REPO placeholder
 static REPO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[REPO\]").unwrap());

@@ -9,7 +9,7 @@ exit_code: 1
 💡 [2mIn CI/CD, use --force to skip prompts. To pre-approve commands, use 'wt config approvals add'[0m
 
 ----- stderr -----
-🟡 [33m[1m[33mtest-repo[0m[33m needs approval to execute [1m[33m4[0m[33m commands:[0m
+🟡 [33m[1m[33mrepo[0m[33m needs approval to execute [1m[33m4[0m[33m commands:[0m
 
 ⚪ post-create:
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'Branch: test-nested-branch'[0m[2m[0m
@@ -18,7 +18,7 @@ exit_code: 1
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'Worktree: [REPO].test-nested-branch'[0m[2m[0m
 
 ⚪ post-create:
-[107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'Repo: test-repo'[0m[2m[0m
+[107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'Repo: repo'[0m[2m[0m
 
 ⚪ post-create:
 [107m [0m  [2m[0m[2m[34mcd[0m[2m [REPO].test-nested-branch [0m[2m[36m&&[0m[2m [0m[2m[34mpwd[0m[2m[0m

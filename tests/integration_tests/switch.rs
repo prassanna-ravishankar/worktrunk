@@ -61,7 +61,7 @@ fn test_switch_create_existing_branch_error() {
     let mut repo = setup_switch_repo();
 
     // Create a branch first
-    repo.add_worktree("feature-y", "feature-y");
+    repo.add_worktree("feature-y");
 
     // Try to create it again - should error
     snapshot_switch(
@@ -117,7 +117,7 @@ fn test_switch_existing_branch() {
     let mut repo = setup_switch_repo();
 
     // Create a worktree for a branch
-    repo.add_worktree("feature-z", "feature-z");
+    repo.add_worktree("feature-z");
 
     // Switch to it (should find existing worktree)
     snapshot_switch("switch_existing_branch", &repo, &["feature-z"]);
@@ -144,7 +144,7 @@ fn test_switch_existing_with_shell_integration_configured() {
     .unwrap();
 
     // Create a worktree first
-    repo.add_worktree("shell-configured", "shell-configured");
+    repo.add_worktree("shell-configured");
 
     // Switch to existing worktree - should show success + "cd with: wt switch" hint
     // NOT the warning about "cannot cd (no shell integration)"
@@ -196,7 +196,7 @@ fn test_switch_internal_mode() {
 fn test_switch_existing_worktree_internal() {
     let mut repo = setup_switch_repo();
 
-    repo.add_worktree("existing-wt", "existing-wt");
+    repo.add_worktree("existing-wt");
 
     snapshot_switch_with_global_flags(
         "switch_existing_internal",
@@ -225,7 +225,7 @@ fn test_switch_error_missing_worktree_directory() {
     let mut repo = setup_switch_repo();
 
     // Create a worktree
-    let wt_path = repo.add_worktree("missing-wt", "missing-wt");
+    let wt_path = repo.add_worktree("missing-wt");
 
     // Remove the worktree directory (but leave it registered in git)
     std::fs::remove_dir_all(&wt_path).unwrap();
@@ -274,7 +274,7 @@ fn test_switch_execute_with_existing_worktree() {
     let mut repo = setup_switch_repo();
 
     // Create a worktree first
-    repo.add_worktree("existing-exec", "existing-exec");
+    repo.add_worktree("existing-exec");
 
     let create_file_cmd = "echo 'existing worktree' > existing.txt";
 
@@ -368,7 +368,7 @@ fn test_switch_no_config_commands_with_existing_worktree() {
     let mut repo = setup_switch_repo();
 
     // Create a worktree first
-    repo.add_worktree("existing-no-hooks", "existing-no-hooks");
+    repo.add_worktree("existing-no-hooks");
 
     // With --no-hooks, the --execute command should still run
     snapshot_switch(
@@ -438,7 +438,7 @@ fn test_switch_primary_on_different_branch() {
     );
 
     // Also test switching to an existing branch
-    repo.add_worktree("existing-branch", "existing-branch");
+    repo.add_worktree("existing-branch");
     snapshot_switch(
         "switch_to_existing_primary_on_different_branch",
         &repo,

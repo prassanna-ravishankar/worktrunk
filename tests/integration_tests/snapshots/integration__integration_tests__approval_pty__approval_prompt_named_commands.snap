@@ -4,7 +4,7 @@ expression: normalized
 ---
 y
 
-🟡 [33m[1m[33mtest-repo[0m[33m needs approval to execute [1m[33m3[0m[33m commands:[0m
+🟡 [33m[1m[33mrepo[0m[33m needs approval to execute [1m[33m3[0m[33m commands:[0m
 
 ⚪ post-create [1minstall[0m:
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'Installing dependencies...'[0m[2m[0m
@@ -25,5 +25,5 @@ y
 🔄 [36mRunning post-create [1mtest[0m:[0m
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'Running tests...'[0m[2m[0m
 [0mRunning tests...
-✅ [32mCreated new worktree for [1m[32mtest-named[0m[32m from [1m[32mmain[0m[32m at [1m[32m[REPO]/test-repo.test-named[0m[0m
+✅ [32mCreated new worktree for [1m[32mtest-named[0m[32m from [1m[32mmain[0m[32m at [1m[32m[REPO]/repo.test-named[0m[0m
 💡 [2m[2mRun `wt config shell install` to enable automatic cd[0m[0m

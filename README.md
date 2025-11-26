@@ -63,10 +63,10 @@ merge, cleanup.
 
 ```console
 $ wt list
-  Branch     Status         HEAD±    main↕  Path         Remote⇅  Commit    Age   Message
-@ main           ^                          ./test-repo   ⇡0  ⇣0  b834638e  10mo  Initial commit
-+ bugfix-y       ↑                  ↑1      ./bugfix-y            412a27c8  10mo  Fix bug
-+ feature-x  +   ↑        +5        ↑3      ./feature-x           7fd821aa  10mo  Add file 3
+  Branch     Status         HEAD±    main↕  Path              Remote⇅  Commit    Age   Message
+@ main           ^                          ./repo             ⇡0  ⇣0  b834638e  10mo  Initial commit
++ bugfix-y       ↑                  ↑1      ./repo.bugfix-y            412a27c8  10mo  Fix bug
++ feature-x  +   ↑        +5        ↑3      ./repo.feature-x           7fd821aa  10mo  Add file 3
 
 ⚪ Showing 3 worktrees, 1 with changes, 2 ahead
 ```
@@ -931,12 +931,12 @@ git config worktrunk.status.feature-x "💬"
 
 ```console
 $ wt list
-  Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
-@ main                   ^                          ./test-repo                   b834638e  10mo  Initial commit
-+ clean-no-status       ∅                           ./clean-no-status             b834638e  10mo  Initial commit
-+ clean-with-status     ∅   💬                      ./clean-with-status           b834638e  10mo  Initial commit
-+ dirty-no-status     !           +1   -1           ./dirty-no-status             b834638e  10mo  Initial commit
-+ dirty-with-status    ?∅   🤖                      ./dirty-with-status           b834638e  10mo  Initial commit
+  Branch             Status         HEAD±    main↕  Path                      Remote⇅  Commit    Age   Message
+@ main                   ^                          ./repo                             b834638e  10mo  Initial commit
++ clean-no-status       ∅                           ./repo.clean-no-status             b834638e  10mo  Initial commit
++ clean-with-status     ∅   💬                      ./repo.clean-with-status           b834638e  10mo  Initial commit
++ dirty-no-status     !           +1   -1           ./repo.dirty-no-status             b834638e  10mo  Initial commit
++ dirty-with-status    ?∅   🤖                      ./repo.dirty-with-status           b834638e  10mo  Initial commit
 
 ⚪ Showing 5 worktrees, 1 with changes
 ```
@@ -960,12 +960,12 @@ When using Claude:
 
 ```console
 $ wt list
-  Branch             Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
-@ main                   ^                          ./test-repo                   b834638e  10mo  Initial commit
-+ clean-no-status       ∅                           ./clean-no-status             b834638e  10mo  Initial commit
-+ clean-with-status     ∅   💬                      ./clean-with-status           b834638e  10mo  Initial commit
-+ dirty-no-status     !           +1   -1           ./dirty-no-status             b834638e  10mo  Initial commit
-+ dirty-with-status    ?∅   🤖                      ./dirty-with-status           b834638e  10mo  Initial commit
+  Branch             Status         HEAD±    main↕  Path                      Remote⇅  Commit    Age   Message
+@ main                   ^                          ./repo                             b834638e  10mo  Initial commit
++ clean-no-status       ∅                           ./repo.clean-no-status             b834638e  10mo  Initial commit
++ clean-with-status     ∅   💬                      ./repo.clean-with-status           b834638e  10mo  Initial commit
++ dirty-no-status     !           +1   -1           ./repo.dirty-no-status             b834638e  10mo  Initial commit
++ dirty-with-status    ?∅   🤖                      ./repo.dirty-with-status           b834638e  10mo  Initial commit
 
 ⚪ Showing 5 worktrees, 1 with changes
 ```
@@ -1048,7 +1048,7 @@ Commands from project hooks and LLM configuration require approval on first run.
 <!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_approval_prompt.snap — edit source to update -->
 
 ```
-🟡 test-repo needs approval to execute 3 commands:
+🟡 repo needs approval to execute 3 commands:
 
 ⚪ post-create install:
    echo 'Installing dependencies...'

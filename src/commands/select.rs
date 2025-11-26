@@ -473,6 +473,11 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
     // Initialize preview mode state file (auto-cleanup on drop)
     let _state = PreviewState::new();
 
+    // Load config (or use default) for path mismatch detection
+    let config = WorktrunkConfig::load()
+        .inspect_err(|e| log::warn!("Config load failed, using defaults: {}", e))
+        .unwrap_or_default();
+
     // Gather list data using simplified collection (buffered mode)
     let Some(list_data) = collect::collect(
         &repo, true,  // show_branches (include branches without worktrees)
@@ -482,6 +487,7 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
         false, // check_conflicts (no conflict checking with select command)
         false, // show_progress (no progress bars)
         false, // render_table (select renders its own UI)
+        &config,
     )?
     else {
         return Ok(());

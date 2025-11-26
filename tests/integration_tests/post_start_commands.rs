@@ -57,7 +57,7 @@ fn test_post_create_single_command() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'Setup complete'"]
 "#,
     );
@@ -84,7 +84,7 @@ fn test_post_create_multiple_commands_array() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo 'First'",
     "echo 'Second'",
@@ -119,7 +119,7 @@ setup = "echo 'Running setup'"
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo 'Installing deps'",
     "echo 'Running setup'",
@@ -149,7 +149,7 @@ fn test_post_create_failing_command() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["exit 1"]
 "#,
     );
@@ -180,11 +180,11 @@ fn test_post_create_template_expansion() {
     repo.commit("Add config with templates");
 
     // Pre-approve all commands in isolated test config
-    let repo_name = "test-repo";
+    let repo_name = "repo";
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo 'Repo: {{ main_worktree }}' > info.txt",
     "echo 'Branch: {{ branch }}' >> info.txt",
@@ -249,7 +249,7 @@ fn test_post_start_single_background_command() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["sleep 0.1 && echo 'Background task done' > background.txt"]
 "#,
     );
@@ -262,7 +262,7 @@ approved-commands = ["sleep 0.1 && echo 'Background task done' > background.txt"
     );
 
     // Verify log file was created in the common git directory
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     let git_common_dir = resolve_git_common_dir(&worktree_path);
     let log_dir = git_common_dir.join("wt-logs");
     assert!(log_dir.exists(), "Log directory should be created");
@@ -291,7 +291,7 @@ task2 = "echo 'Task 2 running' > task2.txt"
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo 'Task 1 running' > task1.txt",
     "echo 'Task 2 running' > task2.txt",
@@ -307,7 +307,7 @@ approved-commands = [
     );
 
     // Wait for both background commands
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     wait_for_file(
         worktree_path.join("task1.txt").as_path(),
         Duration::from_secs(5),
@@ -338,7 +338,7 @@ server = "sleep 0.05 && echo 'Server running' > server.txt"
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo 'Setup done' > setup.txt",
     "sleep 0.05 && echo 'Server running' > server.txt",
@@ -350,7 +350,7 @@ approved-commands = [
     snapshot_switch("both_create_and_start", &repo, &["--create", "feature"]);
 
     // Setup file should exist immediately (post-create is blocking)
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     assert!(
         worktree_path.join("setup.txt").exists(),
         "Post-create command should have completed before wt exits"
@@ -395,7 +395,7 @@ fn test_post_start_log_file_captures_output() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'stdout output' && echo 'stderr output' >&2"]
 "#,
     );
@@ -407,7 +407,7 @@ approved-commands = ["echo 'stdout output' && echo 'stderr output' >&2"]
     );
 
     // Wait for log file to be created (not just the directory)
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     let git_common_dir = resolve_git_common_dir(&worktree_path);
     let log_dir = git_common_dir.join("wt-logs");
     wait_for_file_count(&log_dir, "log", 1, Duration::from_secs(5));
@@ -454,7 +454,7 @@ fn test_post_start_invalid_command_handling() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'unclosed quote"]
 "#,
     );
@@ -467,7 +467,7 @@ approved-commands = ["echo 'unclosed quote"]
     );
 
     // Verify worktree was created despite command error
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     assert!(
         worktree_path.exists(),
         "Worktree should be created even if post-start command fails"
@@ -494,7 +494,7 @@ task3 = "echo 'TASK3_OUTPUT'"
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = [
     "echo 'TASK1_OUTPUT'",
     "echo 'TASK2_OUTPUT'",
@@ -506,7 +506,7 @@ approved-commands = [
     snapshot_switch("post_start_separate_logs", &repo, &["--create", "feature"]);
 
     // Wait for all 3 log files to be created (poll, don't use fixed sleep)
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     let git_common_dir = resolve_git_common_dir(&worktree_path);
     let log_dir = git_common_dir.join("wt-logs");
     wait_for_file_count(&log_dir, "log", 3, Duration::from_secs(5));
@@ -572,7 +572,7 @@ fn test_execute_flag_with_post_start_commands() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'Background task' > background.txt"]
 "#,
     );
@@ -589,7 +589,7 @@ approved-commands = ["echo 'Background task' > background.txt"]
         ],
     );
 
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
 
     // Execute flag file should exist immediately (synchronous)
     assert!(
@@ -620,7 +620,7 @@ fn test_post_start_complex_shell_commands() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'line1\nline2\nline3' | grep line2 > filtered.txt"]
 "#,
     );
@@ -628,7 +628,7 @@ approved-commands = ["echo 'line1\nline2\nline3' | grep line2 > filtered.txt"]
     snapshot_switch("post_start_complex_shell", &repo, &["--create", "feature"]);
 
     // Wait for background command to create the file AND flush content
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     let filtered_file = worktree_path.join("filtered.txt");
     wait_for_file_content(filtered_file.as_path(), Duration::from_secs(5));
 
@@ -661,7 +661,7 @@ echo 'third line' >> multiline.txt
     repo.write_test_config(&format!(
         r#"worktree-path = "../{{{{ main_worktree }}}}.{{{{ branch }}}}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["""
 {}"""]
 "#,
@@ -675,7 +675,7 @@ approved-commands = ["""
     );
 
     // Wait for background command to write all 3 lines (not just the first)
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     let output_file = worktree_path.join("multiline.txt");
     wait_for_file_lines(output_file.as_path(), 3, Duration::from_secs(5));
 
@@ -716,7 +716,7 @@ fi
     repo.write_test_config(&format!(
         r#"worktree-path = "../{{{{ main_worktree }}}}.{{{{ branch }}}}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["""
 {}"""]
 "#,
@@ -730,7 +730,7 @@ approved-commands = ["""
     );
 
     // Verify the command executed correctly
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     let result_file = worktree_path.join("result.txt");
     assert!(
         result_file.exists(),
@@ -763,7 +763,7 @@ fn test_post_start_skipped_on_existing_worktree() {
     repo.write_test_config(
         r#"worktree-path = "../{{ main_worktree }}.{{ branch }}"
 
-[projects."test-repo"]
+[projects."repo"]
 approved-commands = ["echo 'POST-START-RAN' > post_start_marker.txt"]
 "#,
     );
@@ -776,7 +776,7 @@ approved-commands = ["echo 'POST-START-RAN' > post_start_marker.txt"]
     );
 
     // Wait for background post-start command to complete
-    let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
     let marker_file = worktree_path.join("post_start_marker.txt");
     wait_for_file(marker_file.as_path(), Duration::from_secs(5));
 

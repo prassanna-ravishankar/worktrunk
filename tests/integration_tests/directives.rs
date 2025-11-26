@@ -128,7 +128,7 @@ fn test_merge_internal_no_remove() {
     repo.setup_remote("main");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -137,7 +137,7 @@ fn test_merge_internal_no_remove() {
         .unwrap();
 
     // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
     let mut cmd = Command::new("git");
@@ -182,7 +182,7 @@ fn test_merge_internal_remove() {
     repo.setup_remote("main");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -191,7 +191,7 @@ fn test_merge_internal_remove() {
         .unwrap();
 
     // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
     std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
 
     let mut cmd = Command::new("git");

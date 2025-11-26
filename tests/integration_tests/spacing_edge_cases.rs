@@ -31,9 +31,9 @@ fn test_short_branch_names_shorter_than_header() {
     repo.commit("Initial commit");
 
     // Create worktrees with very short branch names (shorter than "Branch" header)
-    repo.add_worktree("a", "a");
-    repo.add_worktree("bb", "bb");
-    repo.add_worktree("ccc", "ccc");
+    repo.add_worktree("a");
+    repo.add_worktree("bb");
+    repo.add_worktree("ccc");
 
     snapshot_list("short_branch_names", &repo);
 }
@@ -44,15 +44,9 @@ fn test_long_branch_names_longer_than_header() {
     repo.commit("Initial commit");
 
     // Create worktrees with very long branch names
-    repo.add_worktree(
-        "very-long-feature-branch-name",
-        "very-long-feature-branch-name",
-    );
-    repo.add_worktree(
-        "another-extremely-long-name-here",
-        "another-extremely-long-name-here",
-    );
-    repo.add_worktree("short", "short");
+    repo.add_worktree("very-long-feature-branch-name");
+    repo.add_worktree("another-extremely-long-name-here");
+    repo.add_worktree("short");
 
     snapshot_list("long_branch_names", &repo);
 }
@@ -64,9 +58,9 @@ fn test_unicode_branch_names_width_calculation() {
 
     // Create worktrees with unicode characters that have different visual widths
     // Note: Git may have restrictions on branch names, so use valid characters
-    repo.add_worktree("café", "cafe");
-    repo.add_worktree("naïve", "naive");
-    repo.add_worktree("résumé", "resume");
+    repo.add_worktree("cafe");
+    repo.add_worktree("naive");
+    repo.add_worktree("resume");
 
     snapshot_list("unicode_branch_names", &repo);
 }
@@ -77,12 +71,9 @@ fn test_mixed_length_branch_names() {
     repo.commit("Initial commit");
 
     // Mix of very short, medium, and very long branch names
-    repo.add_worktree("x", "x");
-    repo.add_worktree("medium-length-name", "medium");
-    repo.add_worktree(
-        "extremely-long-branch-name-that-might-cause-layout-issues",
-        "long",
-    );
+    repo.add_worktree("x");
+    repo.add_worktree("medium");
+    repo.add_worktree("extremely-long-branch-name-that-might-cause-layout-issues");
 
     snapshot_list("mixed_length_branch_names", &repo);
 }
@@ -96,9 +87,9 @@ fn test_column_alignment_varying_diff_widths() {
     repo.commit("Initial commit");
 
     // Create worktrees with varying diff sizes to test alignment
-    repo.add_worktree("feature-small", "feature-small");
-    repo.add_worktree("feature-medium", "feature-medium");
-    repo.add_worktree("feature-large", "feature-large");
+    repo.add_worktree("feature-small");
+    repo.add_worktree("feature-medium");
+    repo.add_worktree("feature-large");
 
     // Add files to create diffs with different digit counts
     let small_path = repo.worktrees.get("feature-small").unwrap();
@@ -126,13 +117,13 @@ fn test_column_alignment_with_empty_diffs() {
     repo.commit("Initial commit");
 
     // Mix of worktrees with and without diffs
-    repo.add_worktree("no-changes", "no-changes");
+    repo.add_worktree("no-changes");
 
-    repo.add_worktree("with-changes", "with-changes");
+    repo.add_worktree("with-changes");
     let changes_path = repo.worktrees.get("with-changes").unwrap();
     std::fs::write(changes_path.join("file.txt"), "content").unwrap();
 
-    repo.add_worktree("also-no-changes", "also-no-changes");
+    repo.add_worktree("also-no-changes");
 
     // Path column should align even when some rows have diffs and others don't
     snapshot_list_with_width("alignment_empty_diffs", &repo, 180);
@@ -144,8 +135,8 @@ fn test_column_alignment_extreme_diff_sizes() {
     repo.commit("Initial commit");
 
     // Create worktrees with extreme diff size differences
-    repo.add_worktree("tiny", "tiny");
-    repo.add_worktree("huge", "huge");
+    repo.add_worktree("tiny");
+    repo.add_worktree("huge");
 
     let tiny_path = repo.worktrees.get("tiny").unwrap();
     std::fs::write(tiny_path.join("file.txt"), "x").unwrap();

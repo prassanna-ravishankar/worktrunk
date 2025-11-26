@@ -18,12 +18,13 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: true
 exit_code: 0
 ----- stdout -----
-cd '[WORKTREE_EXISTING_WT]'
+cd '[REPO].existing-wt'
 
 ----- stderr -----
-✅ [32mSwitched to worktree for [1m[32mexisting-wt[0m[32m at [1m[32m[WORKTREE_EXISTING_WT][0m[0m
+✅ [32mSwitched to worktree for [1m[32mexisting-wt[0m[32m at [1m[32m[REPO].existing-wt[0m[0m

@@ -13,7 +13,7 @@ fn test_status_column_alignment_with_header() {
     repo.commit("Initial commit");
 
     // Create worktree with status symbols
-    let wt = repo.add_worktree("test", "test");
+    let wt = repo.add_worktree("test");
     std::fs::write(wt.join("file.txt"), "content").unwrap();
 
     let mut cmd = std::process::Command::new("git");
@@ -46,7 +46,7 @@ fn test_status_column_width_consistency() {
     repo.commit("Initial commit");
 
     // Create multiple worktrees with different status symbol combinations
-    let wt1 = repo.add_worktree("simple", "simple");
+    let wt1 = repo.add_worktree("simple");
     std::fs::write(wt1.join("file.txt"), "content").unwrap();
 
     let mut cmd = std::process::Command::new("git");
@@ -61,7 +61,7 @@ fn test_status_column_width_consistency() {
         .output()
         .unwrap();
 
-    let wt2 = repo.add_worktree("complex", "complex");
+    let wt2 = repo.add_worktree("complex");
     std::fs::write(wt2.join("file.txt"), "content").unwrap();
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["add", "file.txt"])

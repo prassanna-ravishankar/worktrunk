@@ -57,7 +57,7 @@ fn test_remove_switch_to_default() {
 fn test_remove_from_worktree() {
     let mut repo = setup_remove_repo();
 
-    let worktree_path = repo.add_worktree("feature-wt", "feature-wt");
+    let worktree_path = repo.add_worktree("feature-wt");
 
     // Run remove from within the worktree
     snapshot_remove("remove_from_worktree", &repo, &[], Some(&worktree_path));
@@ -67,7 +67,7 @@ fn test_remove_from_worktree() {
 fn test_remove_internal_mode() {
     let mut repo = setup_remove_repo();
 
-    let worktree_path = repo.add_worktree("feature-internal", "feature-internal");
+    let worktree_path = repo.add_worktree("feature-internal");
 
     snapshot_remove_with_global_flags(
         "remove_internal_mode",
@@ -93,7 +93,7 @@ fn test_remove_by_name_from_main() {
     let mut repo = setup_remove_repo();
 
     // Create a worktree
-    let _worktree_path = repo.add_worktree("feature-a", "feature-a");
+    let _worktree_path = repo.add_worktree("feature-a");
 
     // Remove it by name from main repo
     snapshot_remove("remove_by_name_from_main", &repo, &["feature-a"], None);
@@ -104,8 +104,8 @@ fn test_remove_by_name_from_other_worktree() {
     let mut repo = setup_remove_repo();
 
     // Create two worktrees
-    let worktree_a = repo.add_worktree("feature-a", "feature-a");
-    let _worktree_b = repo.add_worktree("feature-b", "feature-b");
+    let worktree_a = repo.add_worktree("feature-a");
+    let _worktree_b = repo.add_worktree("feature-b");
 
     // From worktree A, remove worktree B by name
     snapshot_remove(
@@ -120,7 +120,7 @@ fn test_remove_by_name_from_other_worktree() {
 fn test_remove_current_by_name() {
     let mut repo = setup_remove_repo();
 
-    let worktree_path = repo.add_worktree("feature-current", "feature-current");
+    let worktree_path = repo.add_worktree("feature-current");
 
     // Remove current worktree by specifying its name
     snapshot_remove(
@@ -143,7 +143,7 @@ fn test_remove_nonexistent_worktree() {
 fn test_remove_by_name_dirty_target() {
     let mut repo = setup_remove_repo();
 
-    let worktree_path = repo.add_worktree("feature-dirty", "feature-dirty");
+    let worktree_path = repo.add_worktree("feature-dirty");
 
     // Create a dirty file in the target worktree
     std::fs::write(worktree_path.join("dirty.txt"), "uncommitted changes").unwrap();
@@ -162,9 +162,9 @@ fn test_remove_multiple_worktrees() {
     let mut repo = setup_remove_repo();
 
     // Create three worktrees
-    let _worktree_a = repo.add_worktree("feature-a", "feature-a");
-    let _worktree_b = repo.add_worktree("feature-b", "feature-b");
-    let _worktree_c = repo.add_worktree("feature-c", "feature-c");
+    let _worktree_a = repo.add_worktree("feature-a");
+    let _worktree_b = repo.add_worktree("feature-b");
+    let _worktree_c = repo.add_worktree("feature-c");
 
     // Remove all three at once from main repo
     snapshot_remove(
@@ -180,9 +180,9 @@ fn test_remove_multiple_including_current() {
     let mut repo = setup_remove_repo();
 
     // Create three worktrees
-    let worktree_a = repo.add_worktree("feature-a", "feature-a");
-    let _worktree_b = repo.add_worktree("feature-b", "feature-b");
-    let _worktree_c = repo.add_worktree("feature-c", "feature-c");
+    let worktree_a = repo.add_worktree("feature-a");
+    let _worktree_b = repo.add_worktree("feature-b");
+    let _worktree_c = repo.add_worktree("feature-c");
 
     // From worktree A, remove all three (including current)
     snapshot_remove(
@@ -198,7 +198,7 @@ fn test_remove_branch_not_fully_merged() {
     let mut repo = setup_remove_repo();
 
     // Create a worktree with an unmerged commit
-    let worktree_path = repo.add_worktree("feature-unmerged", "feature-unmerged");
+    let worktree_path = repo.add_worktree("feature-unmerged");
 
     // Add a commit to the feature branch that's not in main
     std::fs::write(worktree_path.join("feature.txt"), "new feature").unwrap();
@@ -226,7 +226,7 @@ fn test_remove_foreground() {
     let mut repo = setup_remove_repo();
 
     // Create a worktree
-    let _worktree_path = repo.add_worktree("feature-fg", "feature-fg");
+    let _worktree_path = repo.add_worktree("feature-fg");
 
     // Remove it with --no-background flag from main repo
     snapshot_remove(
@@ -242,7 +242,7 @@ fn test_remove_no_delete_branch() {
     let mut repo = setup_remove_repo();
 
     // Create a worktree
-    let _worktree_path = repo.add_worktree("feature-keep", "feature-keep");
+    let _worktree_path = repo.add_worktree("feature-keep");
 
     // Remove worktree but keep the branch using --no-delete-branch flag
     snapshot_remove(

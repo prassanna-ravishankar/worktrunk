@@ -123,7 +123,7 @@ fn test_list_pty_status_column_padding_with_emoji() {
     repo.commit("Initial commit");
 
     // Create wli-sequence worktree with large diff
-    let wli_seq = repo.add_worktree("wli-sequence", "wli-sequence");
+    let wli_seq = repo.add_worktree("wli-sequence");
 
     // Create initial content: 200 lines
     let initial_content = (1..=200)
@@ -169,7 +169,7 @@ fn test_list_pty_status_column_padding_with_emoji() {
         .unwrap();
 
     // Create pr-link worktree with emoji
-    let pr_link = repo.add_worktree("pr-link", "pr-link");
+    let pr_link = repo.add_worktree("pr-link");
     std::fs::write(pr_link.join("pr.txt"), "PR commit").unwrap();
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["add", "pr.txt"])
@@ -189,7 +189,7 @@ fn test_list_pty_status_column_padding_with_emoji() {
         .unwrap();
 
     // Create main-symbol worktree with emoji
-    let main_symbol = repo.add_worktree("main-symbol", "main-symbol");
+    let main_symbol = repo.add_worktree("main-symbol");
     std::fs::write(main_symbol.join("symbol.txt"), "Symbol commit").unwrap();
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["add", "symbol.txt"])

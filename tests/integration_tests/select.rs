@@ -205,7 +205,7 @@ fn normalize_output(output: &str) -> String {
 
     let output = lines.join("\n");
 
-    // Replace temp paths like /var/folders/.../test-repo.XXX with [REPO]
+    // Replace temp paths like /var/folders/.../repo.XXX with [REPO]
     let re = regex::Regex::new(r"/[^\s]+\.tmp[^\s/]*").unwrap();
     let output = re.replace_all(&output, "[REPO]");
 
@@ -249,8 +249,8 @@ fn test_select_abort_with_escape() {
 fn test_select_with_multiple_worktrees() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    repo.add_worktree("feature-one", "feature-one");
-    repo.add_worktree("feature-two", "feature-two");
+    repo.add_worktree("feature-one");
+    repo.add_worktree("feature-two");
 
     let env_vars = repo.test_env_vars();
     let (raw_output, exit_code) = exec_in_pty_with_input(
@@ -273,7 +273,7 @@ fn test_select_with_multiple_worktrees() {
 fn test_select_with_branches() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    repo.add_worktree("active-worktree", "active-worktree");
+    repo.add_worktree("active-worktree");
     // Create a branch without a worktree
     let output = repo
         .git_command(&["branch", "orphan-branch"])
@@ -303,7 +303,7 @@ fn test_select_with_branches() {
 fn test_select_preview_panel_uncommitted() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    let feature_path = repo.add_worktree("feature", "feature");
+    let feature_path = repo.add_worktree("feature");
 
     // First, create and commit a file so we have something to modify
     std::fs::write(feature_path.join("tracked.txt"), "Original content\n").unwrap();
@@ -354,7 +354,7 @@ fn test_select_preview_panel_uncommitted() {
 fn test_select_preview_panel_history() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    let feature_path = repo.add_worktree("feature", "feature");
+    let feature_path = repo.add_worktree("feature");
 
     // Make several commits in the feature worktree
     for i in 1..=5 {
@@ -404,7 +404,7 @@ fn test_select_preview_panel_history() {
 fn test_select_preview_panel_main_diff() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    let feature_path = repo.add_worktree("feature", "feature");
+    let feature_path = repo.add_worktree("feature");
 
     // Make commits in the feature worktree that differ from main
     std::fs::write(

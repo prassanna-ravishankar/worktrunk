@@ -89,6 +89,10 @@ pub struct WorktreeData {
     /// Whether this was the previous worktree (from WT_PREVIOUS_BRANCH)
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub is_previous: bool,
+    /// Whether the worktree path doesn't match what the template would generate.
+    /// Only true when: has branch name, not main worktree, and path differs from template.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub path_mismatch: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub working_diff_display: Option<String>,
 }
@@ -420,13 +424,15 @@ impl ListItem {
                 // Full status computation for worktrees
                 // Use default_branch directly (None for main worktree)
 
-                // Worktree state - priority: prunable > locked (1 char max)
-                let worktree_state = if data.prunable.is_some() {
-                    "⌫".to_string() // Prunable (directory missing)
+                // Worktree state - priority: path_mismatch > prunable > locked
+                let worktree_state = if data.path_mismatch {
+                    WorktreeState::PathMismatch
+                } else if data.prunable.is_some() {
+                    WorktreeState::Prunable
                 } else if data.locked.is_some() {
-                    "⊠".to_string() // Locked (protected)
+                    WorktreeState::Locked
                 } else {
-                    String::new()
+                    WorktreeState::None
                 };
 
                 // Determine base branch state (only for non-main worktrees with base branch)
@@ -487,7 +493,7 @@ impl ListItem {
 
                 self.status_symbols = Some(StatusSymbols {
                     branch_op_state,
-                    worktree_state: "⎇".to_string(), // Branch indicator
+                    worktree_state: WorktreeState::Branch,
                     main_divergence,
                     upstream_divergence,
                     working_tree: String::new(),
@@ -661,6 +667,50 @@ impl UpstreamDivergence {
     }
 }
 
+/// Worktree state indicator
+///
+/// Shows the "location" state of a worktree or branch:
+/// - For worktrees: whether the path matches the template, or has issues
+/// - For branches (without worktree): shows ⎇ to distinguish from worktrees
+///
+/// Priority order for worktrees: PathMismatch > Prunable > Locked
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::IntoStaticStr)]
+pub enum WorktreeState {
+    #[strum(serialize = "")]
+    /// Normal worktree (path matches template, not locked or prunable)
+    #[default]
+    None,
+    /// Path doesn't match what the template would generate (white flag = "not at home")
+    PathMismatch,
+    /// Prunable (worktree directory missing)
+    Prunable,
+    /// Locked (protected from removal)
+    Locked,
+    /// Branch indicator (for branches without worktrees)
+    Branch,
+}
+
+impl std::fmt::Display for WorktreeState {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::None => Ok(()),
+            Self::PathMismatch => write!(f, "⚐"),
+            Self::Prunable => write!(f, "⌫"),
+            Self::Locked => write!(f, "⊠"),
+            Self::Branch => write!(f, "⎇"),
+        }
+    }
+}
+
+impl serde::Serialize for WorktreeState {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
 /// Combined branch and operation state
 ///
 /// Represents the primary state of a branch/worktree in a single position.
@@ -772,7 +822,7 @@ impl PositionMask {
             1, // BRANCH_OP_STATE: ✖↻⋈⚠≡∅ (1 char, priority: conflicts > rebase > merge > merge-tree > no-commits > matches)
             1, // MAIN_DIVERGENCE: ^, ↑, ↓, ↕ (1 char)
             1, // UPSTREAM_DIVERGENCE: ⇡, ⇣, ⇅ (1 char)
-            1, // WORKTREE_STATE: ⎇ for branches, ⌫⊠ for worktrees (priority-only: prunable > locked)
+            1, // WORKTREE_STATE: ⎇ for branches, ⚐⌫⊠ for worktrees (priority: path_mismatch > prunable > locked)
             2, // USER_STATUS: single emoji or two chars (allocate 2)
         ],
     };
@@ -790,7 +840,7 @@ impl PositionMask {
 /// - Branch/op state: ✖, ↻, ⋈, ⚠, ≡, ∅ (combined position with priority)
 /// - Main divergence: ^, ↑, ↓, ↕
 /// - Upstream divergence: ⇡, ⇣, ⇅
-/// - Worktree state: ⎇ for branches, ⌫⊠ for worktrees (priority-only)
+/// - Worktree state: ⎇ for branches, ⚐⌫⊠ for worktrees (priority-only)
 /// - User status: custom labels, emoji
 ///
 /// ## Mutual Exclusivity
@@ -809,8 +859,8 @@ impl PositionMask {
 /// - ⇡ vs ⇣ vs ⇅: Upstream divergence (UpstreamDivergence enum)
 ///
 /// **Priority-only (can co-occur but only highest priority shown):**
-/// - ⌫ vs ⊠: Worktree attrs (priority: prunable ⌫ > locked ⊠)
-/// - ⎇: Branch indicator (mutually exclusive with ⌫⊠ as branches can't have worktree attrs)
+/// - ⚐ vs ⌫ vs ⊠: Worktree attrs (priority: path_mismatch ⚐ > prunable ⌫ > locked ⊠)
+/// - ⎇: Branch indicator (mutually exclusive with ⚐⌫⊠ as branches can't have worktree attrs)
 ///
 /// **NOT mutually exclusive (can co-occur):**
 /// - Working tree symbols (+!?): Can have multiple types of changes
@@ -820,9 +870,8 @@ pub struct StatusSymbols {
     /// Priority: Conflicts (✖) > Rebase (↻) > Merge (⋈) > MergeTreeConflicts (⚠) > MatchesMain (≡) > NoCommits (∅)
     pub(crate) branch_op_state: BranchOpState,
 
-    /// Worktree state: ⎇ for branches, ⌫⊠ for worktrees (priority-only: prunable > locked)
-    /// Priority-only rendering (shows highest priority symbol when multiple states exist)
-    pub(crate) worktree_state: String,
+    /// Worktree state: ⎇ for branches, ⚐⌫⊠ for worktrees (priority: path_mismatch > prunable > locked)
+    pub(crate) worktree_state: WorktreeState,
 
     /// Main branch divergence state (mutually exclusive)
     pub(crate) main_divergence: MainDivergence,
@@ -884,15 +933,10 @@ impl StatusSymbols {
         let (staged_str, has_staged) = style_working('+');
         let (modified_str, has_modified) = style_working('!');
         let (untracked_str, has_untracked) = style_working('?');
-        let worktree_state_str = if !self.worktree_state.is_empty() {
-            // Branch indicator (⎇) is informational (dimmed), worktree attrs (⌫⊠) are warnings (yellow)
-            if self.worktree_state == "⎇" {
-                format!("{HINT}{}{HINT:#}", self.worktree_state)
-            } else {
-                format!("{WARNING}{}{WARNING:#}", self.worktree_state)
-            }
-        } else {
-            String::new()
+        let worktree_state_str = match self.worktree_state {
+            WorktreeState::None => String::new(),
+            WorktreeState::Branch => format!("{HINT}{}{HINT:#}", self.worktree_state),
+            _ => format!("{WARNING}{}{WARNING:#}", self.worktree_state),
         };
         let user_status_str = self.user_status.as_deref().unwrap_or("").to_string();
 
@@ -924,7 +968,7 @@ impl StatusSymbols {
             (
                 PositionMask::WORKTREE_STATE,
                 worktree_state_str,
-                !self.worktree_state.is_empty(),
+                self.worktree_state != WorktreeState::None,
             ),
             (
                 PositionMask::USER_STATUS,
@@ -960,7 +1004,7 @@ impl StatusSymbols {
     /// Check if symbols are empty
     pub fn is_empty(&self) -> bool {
         self.branch_op_state == BranchOpState::None
-            && self.worktree_state.is_empty()
+            && self.worktree_state == WorktreeState::None
             && self.main_divergence == MainDivergence::None
             && self.upstream_divergence == UpstreamDivergence::None
             && self.working_tree.is_empty()
@@ -983,9 +1027,12 @@ impl StatusSymbols {
             result.push_str(&styled);
         }
 
-        // Worktree state (locked/prunable) - skip branch indicator (⎇)
+        // Worktree state (path mismatch/locked/prunable) - skip branch indicator (⎇)
         // Note: ⎇ only appears for branch-only items, never for worktrees (statusline context)
-        if !self.worktree_state.is_empty() && self.worktree_state != "⎇" {
+        if matches!(
+            self.worktree_state,
+            WorktreeState::PathMismatch | WorktreeState::Prunable | WorktreeState::Locked
+        ) {
             result.push_str(&format!("{WARNING}{}{WARNING:#}", self.worktree_state));
         }
 
@@ -1061,16 +1108,8 @@ impl serde::Serialize for StatusSymbols {
         let main_divergence_variant: &'static str = self.main_divergence.into();
         let upstream_divergence_variant: &'static str = self.upstream_divergence.into();
 
-        // Worktree state: ⎇ = Branch, ⌫ = Prunable, ⊠ = Locked
-        let worktree_state_variant = if self.worktree_state.contains('⌫') {
-            "Prunable"
-        } else if self.worktree_state.contains('⊠') {
-            "Locked"
-        } else if self.worktree_state.contains('⎇') {
-            "Branch"
-        } else {
-            ""
-        };
+        // Worktree state (derived via strum::IntoStaticStr)
+        let worktree_state_variant: &'static str = self.worktree_state.into();
 
         let queryable_status = QueryableStatus {
             working_tree: WorkingTreeChanges::from_symbols(&self.working_tree),
@@ -1086,7 +1125,7 @@ impl serde::Serialize for StatusSymbols {
             branch_op_state: self.branch_op_state.to_string(),
             main_divergence: self.main_divergence.to_string(),
             upstream_divergence: self.upstream_divergence.to_string(),
-            worktree_state: self.worktree_state.clone(),
+            worktree_state: self.worktree_state.to_string(),
             user_status: self.user_status.clone(),
         };
 

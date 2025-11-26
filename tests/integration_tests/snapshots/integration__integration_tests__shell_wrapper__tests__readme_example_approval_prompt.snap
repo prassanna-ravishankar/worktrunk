@@ -2,7 +2,7 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: prompt_only
 ---
-🟡 test-repo needs approval to execute 3 commands:
+🟡 repo needs approval to execute 3 commands:
 
 ⚪ post-create install:
    echo 'Installing dependencies...'

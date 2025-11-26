@@ -139,7 +139,7 @@ fn setup_timestamped_worktrees(repo: &mut TestRepo) -> std::path::PathBuf {
     }
 
     // 1. Create feature-current (01:00) - we'll run test from here
-    let current_path = repo.add_worktree("feature-current", "feature-current");
+    let current_path = repo.add_worktree("feature-current");
     commit_at_time(
         repo,
         &current_path,
@@ -149,7 +149,7 @@ fn setup_timestamped_worktrees(repo: &mut TestRepo) -> std::path::PathBuf {
     );
 
     // 2. Create feature-newest (03:00) - most recent, should be 3rd
-    let newest_path = repo.add_worktree("feature-newest", "feature-newest");
+    let newest_path = repo.add_worktree("feature-newest");
     commit_at_time(
         repo,
         &newest_path,
@@ -159,7 +159,7 @@ fn setup_timestamped_worktrees(repo: &mut TestRepo) -> std::path::PathBuf {
     );
 
     // 3. Create feature-middle (02:00) - should be 4th
-    let middle_path = repo.add_worktree("feature-middle", "feature-middle");
+    let middle_path = repo.add_worktree("feature-middle");
     commit_at_time(
         repo,
         &middle_path,
@@ -169,7 +169,7 @@ fn setup_timestamped_worktrees(repo: &mut TestRepo) -> std::path::PathBuf {
     );
 
     // 4. Create feature-oldest (00:30) - should be 5th
-    let oldest_path = repo.add_worktree("feature-oldest", "feature-oldest");
+    let oldest_path = repo.add_worktree("feature-oldest");
     commit_at_time(
         repo,
         &oldest_path,
@@ -214,8 +214,8 @@ fn test_list_multiple_worktrees() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
 
     snapshot_list("multiple_worktrees", &repo);
 }
@@ -226,7 +226,7 @@ fn test_list_previous_worktree_gutter() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    repo.add_worktree("feature", "feature");
+    repo.add_worktree("feature");
 
     // Use wt switch to establish history: main -> feature -> main
     // After this, "feature" is the previous branch
@@ -256,11 +256,24 @@ fn test_list_detached_head() {
 }
 
 #[test]
+fn test_list_detached_head_in_worktree() {
+    // Non-main worktree in detached HEAD SHOULD show path mismatch flag
+    // (detached HEAD = "not at home", not on any branch)
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    repo.add_worktree("feature");
+    repo.detach_head_in_worktree("feature");
+
+    snapshot_list("detached_head_in_worktree", &repo);
+}
+
+#[test]
 fn test_list_locked_worktree() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    repo.add_worktree("locked-feature", "locked-feature");
+    repo.add_worktree("locked-feature");
     repo.lock_worktree("locked-feature", Some("Testing lock functionality"));
 
     snapshot_list("locked_worktree", &repo);
@@ -271,7 +284,7 @@ fn test_list_locked_no_reason() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    repo.add_worktree("locked-no-reason", "locked-no-reason");
+    repo.add_worktree("locked-no-reason");
     repo.lock_worktree("locked-no-reason", None);
 
     snapshot_list("locked_no_reason", &repo);
@@ -286,7 +299,7 @@ fn test_list_long_commit_message() {
     // Create commit with very long message
     repo.commit("This is a very long commit message that should test how the message column handles truncation and word boundary detection in the list output");
 
-    repo.add_worktree("feature-a", "feature-a");
+    repo.add_worktree("feature-a");
     repo.commit("Short message");
 
     snapshot_list("long_commit_message", &repo);
@@ -301,7 +314,7 @@ fn test_list_unicode_commit_message() {
     // Create commit with Unicode message
     repo.commit("Add support for 日本語 and émoji 🎉");
 
-    repo.add_worktree("feature-test", "feature-test");
+    repo.add_worktree("feature-test");
     repo.commit("Fix bug with café ☕ handling");
 
     snapshot_list("unicode_commit_message", &repo);
@@ -313,14 +326,14 @@ fn test_list_many_worktrees_with_varied_stats() {
     repo.commit("Initial commit");
 
     // Create multiple worktrees with different characteristics
-    repo.add_worktree("short", "short");
+    repo.add_worktree("short");
 
-    repo.add_worktree("medium-name", "medium-name");
+    repo.add_worktree("medium-name");
 
-    repo.add_worktree("very-long-branch-name-here", "very-long-branch-name-here");
+    repo.add_worktree("very-long-branch-name-here");
 
     // Add some with files to create diff stats
-    repo.add_worktree("with-changes", "with-changes");
+    repo.add_worktree("with-changes");
 
     snapshot_list("many_worktrees_varied", &repo);
 }
@@ -334,10 +347,10 @@ fn test_list_json_with_metadata() {
     repo.commit("Initial commit");
 
     // Create worktree with detached head
-    repo.add_worktree("feature-detached", "feature-detached");
+    repo.add_worktree("feature-detached");
 
     // Create locked worktree
-    repo.add_worktree("locked-feature", "locked-feature");
+    repo.add_worktree("locked-feature");
     repo.lock_worktree("locked-feature", Some("Testing"));
 
     snapshot_list_json("json_with_metadata", &repo);
@@ -354,7 +367,7 @@ fn test_list_with_branches_flag() {
     create_branch(&repo, "fix-bug");
 
     // Create one branch with a worktree
-    repo.add_worktree("feature-with-worktree", "feature-with-worktree");
+    repo.add_worktree("feature-with-worktree");
 
     snapshot_list_with_branches("with_branches_flag", &repo);
 }
@@ -365,8 +378,8 @@ fn test_list_with_branches_flag_no_available() {
     repo.commit("Initial commit");
 
     // All branches have worktrees (only main exists and has worktree)
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
 
     snapshot_list_with_branches("with_branches_flag_none_available", &repo);
 }
@@ -451,7 +464,7 @@ fn test_list_with_remotes_filters_existing_worktrees() {
     repo.setup_remote("main");
 
     // Create a worktree and push the branch
-    repo.add_worktree("feature-with-worktree", "feature-with-worktree");
+    repo.add_worktree("feature-with-worktree");
     push_branch(&repo, "feature-with-worktree");
 
     // Create a branch, push it, delete it locally (remote-only)
@@ -478,7 +491,7 @@ fn test_list_json_with_display_fields() {
     repo.commit("Initial commit on main");
 
     // Create feature branch with commits (ahead of main)
-    repo.add_worktree("feature-ahead", "feature-ahead");
+    repo.add_worktree("feature-ahead");
 
     // Make commits in the feature worktree
     let feature_path = repo.worktree_path("feature-ahead");
@@ -510,7 +523,7 @@ fn test_list_json_with_display_fields() {
     std::fs::write(feature_path.join("feature.txt"), "modified content").unwrap();
 
     // Create another feature that will be behind after main advances
-    repo.add_worktree("feature-behind", "feature-behind");
+    repo.add_worktree("feature-behind");
 
     // Make more commits on main (so feature-behind is behind)
     repo.commit("Main commit 1");
@@ -540,7 +553,7 @@ fn test_list_with_upstream_tracking() {
     repo.setup_remote("main");
 
     // Scenario 1: Branch in sync with remote (should show ↑0 ↓0)
-    let in_sync_wt = repo.add_worktree("in-sync", "in-sync");
+    let in_sync_wt = repo.add_worktree("in-sync");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["push", "-u", "origin", "in-sync"])
@@ -549,7 +562,7 @@ fn test_list_with_upstream_tracking() {
         .unwrap();
 
     // Scenario 2: Branch ahead of remote (should show ↑2)
-    let ahead_wt = repo.add_worktree("ahead", "ahead");
+    let ahead_wt = repo.add_worktree("ahead");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["push", "-u", "origin", "ahead"])
@@ -587,7 +600,7 @@ fn test_list_with_upstream_tracking() {
         .unwrap();
 
     // Scenario 3: Branch behind remote (should show ↓1)
-    let behind_wt = repo.add_worktree("behind", "behind");
+    let behind_wt = repo.add_worktree("behind");
     std::fs::write(behind_wt.join("behind.txt"), "behind").unwrap();
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
@@ -616,7 +629,7 @@ fn test_list_with_upstream_tracking() {
         .unwrap();
 
     // Scenario 4: Branch both ahead and behind (should show ↑1 ↓1)
-    let diverged_wt = repo.add_worktree("diverged", "diverged");
+    let diverged_wt = repo.add_worktree("diverged");
     std::fs::write(diverged_wt.join("diverged.txt"), "diverged").unwrap();
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
@@ -658,7 +671,7 @@ fn test_list_with_upstream_tracking() {
         .unwrap();
 
     // Scenario 5: Branch without upstream (should show blank)
-    repo.add_worktree("no-upstream", "no-upstream");
+    repo.add_worktree("no-upstream");
 
     // Run list --branches --full to show all columns including Remote
     let mut settings = setup_snapshot_settings(&repo);
@@ -687,8 +700,8 @@ fn test_list_primary_on_different_branch() {
     repo.switch_primary_to("develop");
     assert_eq!(repo.current_branch(), "develop");
 
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
 
     snapshot_list("list_primary_on_different_branch", &repo);
 }
@@ -699,7 +712,7 @@ fn test_list_with_user_status() {
     repo.commit("Initial commit");
 
     // Worktree with user status only (no git changes)
-    repo.add_worktree("clean-with-status", "clean-with-status");
+    repo.add_worktree("clean-with-status");
 
     // Set user status (emoji only, branch-keyed)
     let mut cmd = Command::new("git");
@@ -710,7 +723,7 @@ fn test_list_with_user_status() {
         .unwrap();
 
     // Worktree with both git status and user status
-    let dirty_wt = repo.add_worktree("dirty-with-status", "dirty-with-status");
+    let dirty_wt = repo.add_worktree("dirty-with-status");
 
     // Set user status (emoji only, branch-keyed)
     let mut cmd = Command::new("git");
@@ -724,11 +737,11 @@ fn test_list_with_user_status() {
     std::fs::write(dirty_wt.join("new.txt"), "content").unwrap();
 
     // Worktree with git status only (no user status)
-    let dirty_no_status_wt = repo.add_worktree("dirty-no-status", "dirty-no-status");
+    let dirty_no_status_wt = repo.add_worktree("dirty-no-status");
     std::fs::write(dirty_no_status_wt.join("file.txt"), "content").unwrap();
 
     // Worktree with neither (control)
-    repo.add_worktree("clean-no-status", "clean-no-status");
+    repo.add_worktree("clean-no-status");
 
     snapshot_list("with_user_status", &repo);
 }
@@ -739,7 +752,7 @@ fn test_list_json_with_user_status() {
     repo.commit("Initial commit");
 
     // Worktree with user status (emoji only)
-    repo.add_worktree("with-status", "with-status");
+    repo.add_worktree("with-status");
 
     // Set user status (branch-keyed)
     let mut cmd = Command::new("git");
@@ -750,7 +763,7 @@ fn test_list_json_with_user_status() {
         .unwrap();
 
     // Worktree without user status
-    repo.add_worktree("without-status", "without-status");
+    repo.add_worktree("without-status");
 
     snapshot_list_json("json_with_user_status", &repo);
 }
@@ -787,7 +800,7 @@ fn test_list_user_status_with_special_characters() {
     repo.commit("Initial commit");
 
     // Test with single emoji
-    repo.add_worktree("emoji", "emoji");
+    repo.add_worktree("emoji");
 
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
@@ -797,7 +810,7 @@ fn test_list_user_status_with_special_characters() {
         .unwrap();
 
     // Test with compound emoji (multi-codepoint)
-    repo.add_worktree("multi", "multi");
+    repo.add_worktree("multi");
 
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
@@ -819,8 +832,8 @@ fn test_readme_example_simple_list() {
     repo.setup_remote("main");
 
     // Create worktrees with various states
-    let feature_x = repo.add_worktree("feature-x", "feature-x");
-    let bugfix_y = repo.add_worktree("bugfix-y", "bugfix-y");
+    let feature_x = repo.add_worktree("feature-x");
+    let bugfix_y = repo.add_worktree("bugfix-y");
 
     // feature-x: ahead with uncommitted changes
     // Make 3 commits
@@ -878,8 +891,8 @@ fn test_readme_example_simple_list() {
 fn test_list_progressive_flag() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
 
     // Force progressive mode even in non-TTY test environment
     // Output should be identical to buffered mode (only process differs)
@@ -890,7 +903,7 @@ fn test_list_progressive_flag() {
 fn test_list_no_progressive_flag() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    repo.add_worktree("feature", "feature");
+    repo.add_worktree("feature");
 
     // Explicitly force buffered mode
     snapshot_list_no_progressive("no_progressive_flag", &repo);
@@ -902,7 +915,7 @@ fn test_list_progressive_with_branches() {
     repo.commit("Initial commit");
 
     // Create worktrees
-    repo.add_worktree("feature-a", "feature-a");
+    repo.add_worktree("feature-a");
 
     // Create branches without worktrees
     create_branch(&repo, "orphan-1");
@@ -930,9 +943,9 @@ fn test_list_task_dag_multiple_worktrees() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
-    repo.add_worktree("feature-c", "feature-c");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
+    repo.add_worktree("feature-c");
 
     snapshot_list_task_dag("task_dag_multiple_worktrees", &repo);
 }
@@ -943,11 +956,11 @@ fn test_list_task_dag_full_with_diffs() {
     repo.commit("Initial commit");
 
     // Create worktree with changes
-    let feature_a = repo.add_worktree("feature-a", "feature-a");
+    let feature_a = repo.add_worktree("feature-a");
     std::fs::write(feature_a.join("new.txt"), "content").unwrap();
 
     // Create another worktree with commits
-    let feature_b = repo.add_worktree("feature-b", "feature-b");
+    let feature_b = repo.add_worktree("feature-b");
     std::fs::write(feature_b.join("file.txt"), "test").unwrap();
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
@@ -972,7 +985,7 @@ fn test_list_task_dag_with_upstream() {
     repo.setup_remote("main");
 
     // Branch in sync
-    let in_sync = repo.add_worktree("in-sync", "in-sync");
+    let in_sync = repo.add_worktree("in-sync");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["push", "-u", "origin", "in-sync"])
@@ -981,7 +994,7 @@ fn test_list_task_dag_with_upstream() {
         .unwrap();
 
     // Branch ahead
-    let ahead = repo.add_worktree("ahead", "ahead");
+    let ahead = repo.add_worktree("ahead");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["push", "-u", "origin", "ahead"])
@@ -1009,7 +1022,7 @@ fn test_list_task_dag_many_worktrees() {
 
     // Create 10 worktrees to test parallel processing
     for i in 1..=10 {
-        repo.add_worktree(&format!("feature-{}", i), &format!("feature-{}", i));
+        repo.add_worktree(&format!("feature-{}", i));
     }
 
     snapshot_list_task_dag("task_dag_many_worktrees", &repo);
@@ -1020,8 +1033,8 @@ fn test_list_task_dag_with_locked_worktree() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    repo.add_worktree("normal", "normal");
-    repo.add_worktree("locked", "locked");
+    repo.add_worktree("normal");
+    repo.add_worktree("locked");
     repo.lock_worktree("locked", Some("Testing task DAG with locked worktree"));
 
     snapshot_list_task_dag("task_dag_with_locked", &repo);
@@ -1067,8 +1080,8 @@ fn test_list_progressive_vs_buffered_identical_data() {
     repo.commit("Initial commit");
 
     // Create varied worktrees to test multiple data points
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
 
     // Modify a worktree to have uncommitted changes
     let feature_a_path = repo.worktree_path("feature-a");
@@ -1125,7 +1138,7 @@ fn test_list_error_shows_worktree_context() {
     repo.commit("Initial commit");
 
     // Create a worktree
-    let feature_wt = repo.add_worktree("feature", "feature");
+    let feature_wt = repo.add_worktree("feature");
 
     // Delete the worktree directory manually to trigger an error
     // (but keep the git metadata, so git worktree list still shows it)
@@ -1167,8 +1180,8 @@ fn test_list_with_c_flag() {
     repo.commit("Initial commit");
 
     // Create some worktrees
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
 
     // Run wt -C <repo_path> list from a completely different directory
     let mut settings = list_snapshots::standard_settings(&repo);
@@ -1190,7 +1203,7 @@ fn test_list_large_diffs_alignment() {
 
     // Worktree with large uncommitted changes and ahead commits
     // Use a longer branch name similar to user's "wli-sequence" to trigger column width
-    let large_wt = repo.add_worktree("feature-changes", "feature-changes");
+    let large_wt = repo.add_worktree("feature-changes");
 
     // Create a file with many lines for large diff
     let large_content = (1..=100)
@@ -1240,7 +1253,7 @@ fn test_list_large_diffs_alignment() {
         .unwrap();
 
     // Worktree with short name to show gap before Status column
-    let short_wt = repo.add_worktree("fix", "fix");
+    let short_wt = repo.add_worktree("fix");
     std::fs::write(short_wt.join("quick.txt"), "quick fix").unwrap();
 
     // Set user status for short branch
@@ -1252,7 +1265,7 @@ fn test_list_large_diffs_alignment() {
         .unwrap();
 
     // Worktree with diverged status and working tree changes
-    let diverged_wt = repo.add_worktree("diverged", "diverged");
+    let diverged_wt = repo.add_worktree("diverged");
 
     // Commit some changes
     let diverged_content = (1..=60)
@@ -1297,7 +1310,7 @@ fn test_list_status_column_padding_with_emoji() {
     repo.commit("Initial commit");
 
     // Create worktree matching user's exact scenario: "wli-sequence"
-    let wli_seq = repo.add_worktree("wli-sequence", "wli-sequence");
+    let wli_seq = repo.add_worktree("wli-sequence");
 
     // Create large working tree changes: +164, -111
     // Need ~164 added lines and ~111 deleted lines
@@ -1344,7 +1357,7 @@ fn test_list_status_column_padding_with_emoji() {
         .unwrap();
 
     // Create "pr-link" worktree with different status (fewer symbols, same emoji type)
-    let pr_link = repo.add_worktree("pr-link", "pr-link");
+    let pr_link = repo.add_worktree("pr-link");
 
     // Commit to make it ahead
     std::fs::write(pr_link.join("pr.txt"), "pr content").unwrap();
@@ -1370,7 +1383,7 @@ fn test_list_status_column_padding_with_emoji() {
         .unwrap();
 
     // Create "main-symbol" with different emoji
-    let main_sym = repo.add_worktree("main-symbol", "main-symbol");
+    let main_sym = repo.add_worktree("main-symbol");
     std::fs::write(main_sym.join("sym.txt"), "symbol").unwrap();
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
@@ -1403,7 +1416,7 @@ fn test_list_maximum_working_tree_symbols() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let feature = repo.add_worktree("feature", "feature");
+    let feature = repo.add_worktree("feature");
 
     // Create initial files to manipulate
     std::fs::write(feature.join("file-a.txt"), "original a").unwrap();
@@ -1477,7 +1490,7 @@ fn test_list_maximum_status_with_git_operation() {
     repo.commit("Initial commit");
 
     // Create feature worktree
-    let feature = repo.add_worktree("feature", "feature");
+    let feature = repo.add_worktree("feature");
 
     // Feature makes changes
     std::fs::write(
@@ -1592,7 +1605,7 @@ fn test_list_maximum_status_symbols() {
     repo.commit("Initial commit");
 
     // Create feature worktree
-    let feature = repo.add_worktree("feature", "feature");
+    let feature = repo.add_worktree("feature");
 
     // Make feature diverge from main (ahead) with conflicting change
     std::fs::write(feature.join("shared.txt"), "feature version").unwrap();

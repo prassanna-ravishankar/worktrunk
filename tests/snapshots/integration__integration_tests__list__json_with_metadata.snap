@@ -16,6 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: true
@@ -111,7 +112,7 @@ exit_code: 0
     },
     "status_line": "feature-detached  /u001b[2m∅/u001b[0m",
     "type": "worktree",
-    "path": "[WORKTREE_FEATURE_DETACHED]",
+    "path": "[REPO].feature-detached",
     "bare": false,
     "detached": false,
     "working_tree_diff": {
@@ -162,7 +163,7 @@ exit_code: 0
     },
     "status_line": "locked-feature  /u001b[2m∅/u001b[0m/u001b[33m⊠/u001b[0m",
     "type": "worktree",
-    "path": "[WORKTREE_LOCKED_FEATURE]",
+    "path": "[REPO].locked-feature",
     "bare": false,
     "detached": false,
     "locked": "Testing",

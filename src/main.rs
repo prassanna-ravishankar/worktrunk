@@ -590,7 +590,14 @@ fn main() {
                         _ => None,
                     };
                     let render_mode = RenderMode::detect(progressive_opt, cli.internal);
-                    handle_list(format, show_branches, show_remotes, show_full, render_mode)
+                    handle_list(
+                        format,
+                        show_branches,
+                        show_remotes,
+                        show_full,
+                        render_mode,
+                        &config,
+                    )
                 })
         }
         Commands::Switch {

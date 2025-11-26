@@ -292,6 +292,7 @@ pub fn collect(
     check_merge_tree_conflicts: bool,
     show_progress: bool,
     render_table: bool,
+    config: &worktrunk::config::WorktrunkConfig,
 ) -> anyhow::Result<Option<super::model::ListData>> {
     use super::progressive_table::ProgressiveTable;
 
@@ -317,6 +318,13 @@ pub fn collect(
         &main_worktree,
         current_worktree_path.as_ref(),
     );
+
+    // Get main worktree directory name for path template expansion
+    let main_worktree_name = main_worktree
+        .path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
 
     // Get branches early for layout calculation and skeleton creation (when --branches is used)
     // Sort by timestamp (most recent first)
@@ -347,6 +355,43 @@ pub fn collect(
             let is_previous = previous_branch
                 .as_deref()
                 .is_some_and(|prev| wt.branch.as_deref() == Some(prev));
+
+            // Compute path mismatch: does the actual path match what the template would generate?
+            // Main worktree on default branch is the reference point (no mismatch possible)
+            // Main worktree on OTHER branch should show mismatch (it's "not at home")
+            let path_mismatch = if is_main && wt.branch.as_deref() == Some(default_branch.as_str())
+            {
+                false
+            } else if let Some(branch) = &wt.branch {
+                // Expand template and compare with actual path
+                match config.format_path(main_worktree_name, branch) {
+                    Ok(expected_relative) => {
+                        // Template path is relative to main worktree, resolve it
+                        let expected_path = main_worktree.path.join(&expected_relative);
+                        // Canonicalize both paths for comparison (handles symlinks, .., etc.)
+                        let actual_canonical = wt.path.canonicalize().ok();
+                        let expected_canonical = expected_path.canonicalize().ok();
+                        match (actual_canonical, expected_canonical) {
+                            (Some(actual), Some(expected)) => actual != expected,
+                            // Can't canonicalize one or both paths (e.g., worktree deleted,
+                            // expected parent doesn't exist). Fall back to direct comparison.
+                            _ => wt.path != expected_path,
+                        }
+                    }
+                    Err(e) => {
+                        log::debug!("Template expansion failed for branch {}: {}", branch, e);
+                        false // Template expansion failed, don't mark as mismatch
+                    }
+                }
+            } else {
+                // Detached HEAD - not on any branch, so "not at home"
+                true
+            };
+
+            let mut worktree_data =
+                WorktreeData::from_worktree(wt, is_main, is_current, is_previous);
+            worktree_data.path_mismatch = path_mismatch;
+
             ListItem {
                 head: wt.head.clone(),
                 branch: wt.branch.clone(),
@@ -357,12 +402,7 @@ pub fn collect(
                 pr_status: None,
                 status_symbols: None,
                 display: DisplayFields::default(),
-                kind: ItemKind::Worktree(Box::new(WorktreeData::from_worktree(
-                    wt,
-                    is_main,
-                    is_current,
-                    is_previous,
-                ))),
+                kind: ItemKind::Worktree(Box::new(worktree_data)),
             }
         })
         .collect();

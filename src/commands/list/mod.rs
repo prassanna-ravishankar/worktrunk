@@ -143,6 +143,7 @@ pub fn handle_list(
     show_remotes: bool,
     show_full: bool,
     render_mode: RenderMode,
+    config: &worktrunk::config::WorktrunkConfig,
 ) -> anyhow::Result<()> {
     let repo = Repository::current();
 
@@ -167,6 +168,7 @@ pub fn handle_list(
         check_merge_tree_conflicts,
         show_progress,
         render_table,
+        config,
     )?;
 
     let Some(ListData { items }) = list_data else {

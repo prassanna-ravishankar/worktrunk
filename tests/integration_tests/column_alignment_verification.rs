@@ -314,9 +314,9 @@ fn test_alignment_verification_with_varying_content() {
     repo.commit("Initial commit");
 
     // Create diverse worktrees to test alignment
-    repo.add_worktree("main-feature", "main-feature");
-    repo.add_worktree("short", "short");
-    repo.add_worktree("very-long-branch-name-here", "very-long");
+    repo.add_worktree("main-feature");
+    repo.add_worktree("short");
+    repo.add_worktree("very-long");
 
     // Add files to create working tree diffs
     let feature_path = repo.worktrees.get("main-feature").unwrap();
@@ -352,9 +352,9 @@ fn test_alignment_with_unicode_content() {
     repo.commit("Initial commit with émoji 🎉");
 
     // Create worktrees with unicode in names
-    repo.add_worktree("café", "cafe");
-    repo.add_worktree("naïve-approach", "naive");
-    repo.add_worktree("résumé-feature", "resume");
+    repo.add_worktree("cafe");
+    repo.add_worktree("naive");
+    repo.add_worktree("resume");
 
     // Run wt list
     let mut cmd = wt_command();
@@ -381,17 +381,17 @@ fn test_alignment_with_sparse_columns() {
     repo.commit("Initial commit");
 
     // Create mix of worktrees - some with diffs, some without
-    repo.add_worktree("no-changes-1", "no-changes-1");
+    repo.add_worktree("no-changes-1");
 
-    repo.add_worktree("with-changes", "with-changes");
+    repo.add_worktree("with-changes");
     let changes_path = repo.worktrees.get("with-changes").unwrap();
     for i in 0..100 {
         std::fs::write(changes_path.join(format!("file{}.txt", i)), "content").unwrap();
     }
 
-    repo.add_worktree("no-changes-2", "no-changes-2");
+    repo.add_worktree("no-changes-2");
 
-    repo.add_worktree("small-change", "small-change");
+    repo.add_worktree("small-change");
     let small_path = repo.worktrees.get("small-change").unwrap();
     std::fs::write(small_path.join("one.txt"), "x").unwrap();
 
@@ -421,29 +421,29 @@ fn test_alignment_real_world_scenario() {
 
     // Create feature branches with varying amounts of working tree changes
     // This simulates a real-world scenario with different diff sizes
-    repo.add_worktree("feature-tiny", "feature-tiny");
+    repo.add_worktree("feature-tiny");
     let tiny_path = repo.worktrees.get("feature-tiny").unwrap();
     std::fs::write(tiny_path.join("file.txt"), "x").unwrap();
 
-    repo.add_worktree("feature-small", "feature-small");
+    repo.add_worktree("feature-small");
     let small_path = repo.worktrees.get("feature-small").unwrap();
     for i in 0..10 {
         std::fs::write(small_path.join(format!("file{}.txt", i)), "content").unwrap();
     }
 
-    repo.add_worktree("feature-medium", "feature-medium");
+    repo.add_worktree("feature-medium");
     let medium_path = repo.worktrees.get("feature-medium").unwrap();
     for i in 0..100 {
         std::fs::write(medium_path.join(format!("file{}.txt", i)), "content").unwrap();
     }
 
-    repo.add_worktree("feature-large", "feature-large");
+    repo.add_worktree("feature-large");
     let large_path = repo.worktrees.get("feature-large").unwrap();
     for i in 0..1000 {
         std::fs::write(large_path.join(format!("file{}.txt", i)), "content").unwrap();
     }
 
-    repo.add_worktree("no-changes", "no-changes");
+    repo.add_worktree("no-changes");
     // No changes on this one
 
     // Run wt list at a width where Dirty column is visible
@@ -470,8 +470,8 @@ fn test_alignment_at_different_terminal_widths() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
 
     let path_a = repo.worktrees.get("feature-a").unwrap();
     std::fs::write(path_a.join("file.txt"), "content").unwrap();

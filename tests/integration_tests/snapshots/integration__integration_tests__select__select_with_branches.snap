@@ -4,9 +4,9 @@ expression: normalized
 ---
 > [QUERY]                                                     │[PREVIEW_HEADER]
     Branch           Status         HEAD±    main↕  Path    │ctrl-u/d: scroll
-> @ main                 ^                          ./test..│
-  + active-worktree     ∅                           ./acti..│⚪ No uncommitted changes
-    orphan-branch       ∅  ⎇                              ..│
+> @ main                 ^                          ./repo  │
+  + active-worktree     ∅                           ./repo..│⚪ No uncommitted changes
+    orphan-branch       ∅  ⎇                                │
                                                             │
                                                             │
                                                             │

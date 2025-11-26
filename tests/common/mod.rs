@@ -118,7 +118,7 @@ impl TestRepo {
     pub fn new() -> Self {
         let temp_dir = TempDir::new().unwrap();
         // Create main repo as a subdirectory so worktrees can be siblings
-        let root = temp_dir.path().join("test-repo");
+        let root = temp_dir.path().join("repo");
         std::fs::create_dir(&root).unwrap();
         // Canonicalize to resolve symlinks (important on macOS where /var is symlink to /private/var)
         let root = root.canonicalize().unwrap();
@@ -332,9 +332,15 @@ impl TestRepo {
     }
 
     /// Add a worktree with the given name and branch
-    pub fn add_worktree(&mut self, name: &str, branch: &str) -> PathBuf {
-        // Create worktree inside temp directory to ensure cleanup
-        let worktree_path = self.temp_dir.path().join(name);
+    ///
+    /// The worktree path follows the default template format: `repo.{branch}`
+    /// (sanitized, with slashes replaced by dashes).
+    pub fn add_worktree(&mut self, branch: &str) -> PathBuf {
+        // Sanitize branch name the same way the template does (see src/config/expansion.rs)
+        let safe_branch = branch.replace(['/', '\\'], "-");
+        // Use default template path format: ../{{ main_worktree }}.{{ branch }}
+        // From {temp_dir}/repo, this resolves to {temp_dir}/repo.{branch}
+        let worktree_path = self.temp_dir.path().join(format!("repo.{}", safe_branch));
 
         let mut cmd = Command::new("git");
         self.configure_git_cmd(&mut cmd);
@@ -360,8 +366,9 @@ impl TestRepo {
 
         // Canonicalize worktree path to match what git returns
         let canonical_path = worktree_path.canonicalize().unwrap();
+        // Use branch as key (consistent with path generation)
         self.worktrees
-            .insert(name.to_string(), canonical_path.clone());
+            .insert(branch.to_string(), canonical_path.clone());
         canonical_path
     }
 
@@ -371,7 +378,7 @@ impl TestRepo {
     /// in the standard location expected by merge tests. Returns the path to the
     /// created worktree.
     pub fn add_main_worktree(&self) -> PathBuf {
-        let main_wt = self.root_path().parent().unwrap().join("test-repo.main-wt");
+        let main_wt = self.root_path().parent().unwrap().join("repo.main-wt");
         let mut cmd = Command::new("git");
         self.configure_git_cmd(&mut cmd);
         cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
@@ -381,14 +388,24 @@ impl TestRepo {
         main_wt
     }
 
-    /// Detach HEAD in the repository
+    /// Detach HEAD in the main repository
     pub fn detach_head(&self) {
+        self.detach_head_at(&self.root);
+    }
+
+    /// Detach HEAD in a specific worktree
+    pub fn detach_head_in_worktree(&self, name: &str) {
+        let worktree_path = self.worktree_path(name);
+        self.detach_head_at(worktree_path);
+    }
+
+    fn detach_head_at(&self, path: &Path) {
         // Get current commit SHA
         let mut cmd = Command::new("git");
         self.configure_git_cmd(&mut cmd);
         let output = cmd
             .args(["rev-parse", "HEAD"])
-            .current_dir(&self.root)
+            .current_dir(path)
             .output()
             .unwrap();
 
@@ -397,7 +414,7 @@ impl TestRepo {
         let mut cmd = Command::new("git");
         self.configure_git_cmd(&mut cmd);
         cmd.args(["checkout", "--detach", &sha])
-            .current_dir(&self.root)
+            .current_dir(path)
             .output()
             .unwrap();
     }

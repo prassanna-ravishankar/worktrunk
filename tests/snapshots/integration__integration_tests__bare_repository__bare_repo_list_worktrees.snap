@@ -14,6 +14,7 @@ info:
     LC_ALL: C
     NO_COLOR: ""
     SOURCE_DATE_EPOCH: "1761609600"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: true
@@ -21,8 +22,8 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-  Branch   Status         HEAD±    main↕  Path                 Remote⇅  Commit    Age   Message
-@ main         ^                          ./test-repo.main              6c3da842  10mo  Initial commit on main
-+ feature      ↑                  ↑1      ./test-repo.feature           72413a3b  10mo  Work on feature
+  Branch   Status         HEAD±    main↕  Path            Remote⇅  Commit    Age   Message
+@ main         ^                          ./repo.main              6c3da842  10mo  Initial commit on main
++ feature      ↑ ⚐                ↑1      ./repo.feature           72413a3b  10mo  Work on feature
 
 ⚪ Showing 2 worktrees, 1 ahead

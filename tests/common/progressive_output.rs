@@ -29,7 +29,7 @@
 //! fn test_progressive_rendering() {
 //!     let mut repo = TestRepo::new();
 //!     repo.commit("Initial");
-//!     repo.add_worktree("feature", "feature");
+//!     repo.add_worktree("feature");
 //!
 //!     // Capture using byte-based strategy (deterministic for behavioral tests)
 //!     let output = capture_progressive_output(

@@ -16,6 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: true
@@ -113,7 +114,7 @@ exit_code: 0
     },
     "status_line": "with-status  /u001b[2m∅/u001b[0m🔧",
     "type": "worktree",
-    "path": "[WORKTREE_WITH_STATUS]",
+    "path": "[REPO].with-status",
     "bare": false,
     "detached": false,
     "working_tree_diff": {
@@ -164,7 +165,7 @@ exit_code: 0
     },
     "status_line": "without-status  /u001b[2m∅/u001b[0m",
     "type": "worktree",
-    "path": "[WORKTREE_WITHOUT_STATUS]",
+    "path": "[REPO].without-status",
     "bare": false,
     "detached": false,
     "working_tree_diff": {

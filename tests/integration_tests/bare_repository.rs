@@ -15,7 +15,7 @@ struct BareRepoTest {
 impl BareRepoTest {
     fn new() -> Self {
         let temp_dir = tempfile::TempDir::new().unwrap();
-        let bare_repo_path = temp_dir.path().join("test-repo.git");
+        let bare_repo_path = temp_dir.path().join("repo.git");
         let test_config_path = temp_dir.path().join("test-config.toml");
 
         let mut test = Self {
@@ -160,10 +160,10 @@ fn test_bare_repo_list_worktrees() {
     let test = BareRepoTest::new();
 
     // Create two worktrees
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit on main");
 
-    let feature_worktree = test.create_worktree("feature", "test-repo.feature");
+    let feature_worktree = test.create_worktree("feature", "repo.feature");
     test.commit_in_worktree(&feature_worktree, "Work on feature");
 
     let settings = setup_temp_snapshot_settings(test.temp_path());
@@ -182,7 +182,7 @@ fn test_bare_repo_list_shows_no_bare_entry() {
     let test = BareRepoTest::new();
 
     // Create one worktree
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
     // Run wt list and verify bare repo is NOT shown
@@ -204,7 +204,7 @@ fn test_bare_repo_switch_creates_worktree() {
     let test = BareRepoTest::new();
 
     // Create initial worktree
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
     // Use default template (sibling worktrees): ../{{ main_worktree }}.{{ branch }}
@@ -244,7 +244,7 @@ fn test_bare_repo_switch_creates_worktree() {
     );
 
     // Verify the new worktree was created as sibling with dot separator
-    // Default template: ../{{ main_worktree }}.{{ branch }} -> test-repo.git.feature
+    // Default template: ../{{ main_worktree }}.{{ branch }} -> repo.git.feature
     let bare_name = test.bare_repo_path().file_name().unwrap().to_str().unwrap();
     let expected_path = test.temp_path().join(format!("{}.feature", bare_name));
     assert!(
@@ -277,11 +277,11 @@ fn test_bare_repo_switch_with_default_naming() {
     let test = BareRepoTest::new();
 
     // Create initial worktree
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
     // Use default naming pattern (should still work with bare repos)
-    // Default is "../{{ main_worktree }}.{{ branch }}" which becomes "test-repo.git.feature"
+    // Default is "../{{ main_worktree }}.{{ branch }}" which becomes "repo.git.feature"
     let mut cmd = wt_command();
     test.configure_wt_cmd(&mut cmd);
     cmd.args(["switch", "--create", "feature", "--internal"])
@@ -312,10 +312,10 @@ fn test_bare_repo_remove_worktree() {
     let test = BareRepoTest::new();
 
     // Create two worktrees
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
-    let feature_worktree = test.create_worktree("feature", "test-repo.feature");
+    let feature_worktree = test.create_worktree("feature", "repo.feature");
     test.commit_in_worktree(&feature_worktree, "Feature work");
 
     // Remove feature worktree from main worktree
@@ -349,11 +349,11 @@ fn test_bare_repo_identifies_primary_correctly() {
     let test = BareRepoTest::new();
 
     // Create multiple worktrees
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Main commit");
 
-    let _feature1 = test.create_worktree("feature1", "test-repo.feature1");
-    let _feature2 = test.create_worktree("feature2", "test-repo.feature2");
+    let _feature1 = test.create_worktree("feature1", "repo.feature1");
+    let _feature2 = test.create_worktree("feature2", "repo.feature2");
 
     // Run wt list to see which is marked as primary
     let mut cmd = wt_command();
@@ -373,7 +373,7 @@ fn test_bare_repo_worktree_base_used_for_paths() {
     let test = BareRepoTest::new();
 
     // Create initial worktree
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
     // Use default template - creates sibling worktrees with dot separator
@@ -388,7 +388,7 @@ fn test_bare_repo_worktree_base_used_for_paths() {
     cmd.output().unwrap();
 
     // Verify path is created as sibling to bare repo (using worktree_base)
-    // Default template: ../{{ main_worktree }}.{{ branch }} -> test-repo.git.dev
+    // Default template: ../{{ main_worktree }}.{{ branch }} -> repo.git.dev
     let bare_name = test.bare_repo_path().file_name().unwrap().to_str().unwrap();
     let expected = test.temp_path().join(format!("{}.dev", bare_name));
     assert!(
@@ -452,7 +452,7 @@ fn test_bare_repo_commands_from_bare_directory() {
     let test = BareRepoTest::new();
 
     // Create a worktree so the repo has some content
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
     // Run wt list from the bare repo directory itself (not from a worktree)
@@ -482,7 +482,7 @@ fn test_bare_repo_merge_workflow() {
     let test = BareRepoTest::new();
 
     // Create main worktree
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit on main");
 
     // Use default template - creates sibling worktrees with dot separator
@@ -561,7 +561,7 @@ fn test_bare_repo_background_logs_location() {
     let test = BareRepoTest::new();
 
     // Create main worktree
-    let main_worktree = test.create_worktree("main", "test-repo.main");
+    let main_worktree = test.create_worktree("main", "repo.main");
     test.commit_in_worktree(&main_worktree, "Initial commit");
 
     // Create feature worktree

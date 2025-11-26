@@ -23,7 +23,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-🟡 [33mWorktree for [1m[33mfeature-z[0m[33m at [1m[33m[WORKTREE_FEATURE_Z][0m[33m; cannot cd (no shell integration)[0m
+🟡 [33mWorktree for [1m[33mfeature-z[0m[33m at [1m[33m[REPO].feature-z[0m[33m; cannot cd (no shell integration)[0m
 💡 [2m[2mRun `wt config shell install` to enable automatic cd[0m[0m
 
 ----- stderr -----

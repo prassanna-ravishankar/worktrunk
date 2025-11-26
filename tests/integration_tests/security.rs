@@ -295,7 +295,7 @@ fn test_commit_message_with_directive_not_executed() {
     repo.commit_with_message(malicious_message);
 
     // Create a worktree
-    let _feature_wt = repo.add_worktree("feature", "feature");
+    let _feature_wt = repo.add_worktree("feature");
 
     let settings = setup_snapshot_settings(&repo);
 

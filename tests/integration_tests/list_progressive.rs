@@ -12,9 +12,9 @@ fn test_list_progressive_rendering_basic() {
     repo.commit("Initial commit");
 
     // Create a few worktrees to have data to render
-    repo.add_worktree("feature-a", "feature-a");
-    repo.add_worktree("feature-b", "feature-b");
-    repo.add_worktree("bugfix", "bugfix");
+    repo.add_worktree("feature-a");
+    repo.add_worktree("feature-b");
+    repo.add_worktree("bugfix");
 
     // Capture progressive output using byte-based strategy (deterministic)
     let output = capture_progressive_output(
@@ -62,7 +62,7 @@ fn test_list_progressive_dots_decrease() {
 
     // Create multiple worktrees to ensure progressive rendering is observable
     for i in 1..=5 {
-        repo.add_worktree(&format!("branch-{}", i), &format!("branch-{}", i));
+        repo.add_worktree(&format!("branch-{}", i));
     }
 
     let output = capture_progressive_output(
@@ -80,7 +80,7 @@ fn test_list_progressive_dots_decrease() {
 fn test_list_progressive_timing() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    repo.add_worktree("feature", "feature");
+    repo.add_worktree("feature");
 
     let output = capture_progressive_output(
         &repo,
@@ -109,7 +109,7 @@ fn test_list_progressive_timing() {
 fn test_list_progressive_snapshot_at() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    repo.add_worktree("feature", "feature");
+    repo.add_worktree("feature");
 
     let output = capture_progressive_output(
         &repo,
@@ -142,7 +142,7 @@ fn test_list_progressive_many_worktrees() {
 
     // Create many worktrees to ensure rendering takes time
     for i in 1..=10 {
-        repo.add_worktree(&format!("worktree-{:02}", i), &format!("branch-{:02}", i));
+        repo.add_worktree(&format!("branch-{:02}", i));
     }
 
     let output = capture_progressive_output(
