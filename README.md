@@ -16,56 +16,6 @@ Worktrunk is a CLI for Git worktree management, designed for parallel AI agent w
 
 ![Worktrunk Demo](dev/wt-demo/out/wt-demo.gif)
 
-## Why worktrees?
-
-Parallel agents need isolated working directories that share one Git history.
-
-We can get that a few ways:
-
-- multiple clones — slow to set up, waste disk, drift out of sync
-- one working tree with many branches — constant stashing, rebasing, and conflict risk
-- git worktrees — multiple directories backed by a single `.git` directory
-
-So we use git worktrees: many working directories, one repository.
-
-## Why Worktrunk?
-
-Three commands:
-
-| Command     | What it does                                    |
-| ----------- | ----------------------------------------------- |
-| `wt switch` | Create or jump to a worktree                    |
-| `wt merge`  | Squash, rebase, run hooks, merge, clean up      |
-| `wt list`   | Show status across all worktrees and branches   |
-
-**Create worktree and start Claude**
-
-```bash
-wt:   wt switch --create feature -x claude
-git:  git worktree add -b feature ../repo.feature main && cd ../repo.feature && claude
-```
-
-**Merge and clean up**
-
-```bash
-wt:   wt merge
-git:  cd ../repo && git merge feature && git worktree remove ../repo.feature && git branch -d feature
-```
-
-**Full merge workflow**
-
-```bash
-wt:   wt merge  # with hooks configured
-git:  git add -A
-      git reset --soft $(git merge-base HEAD main)                        # squash
-      git diff --staged | llm "write a commit message" | git commit -F -  # commit-generation
-      git rebase main
-      cargo test                                       # pre-merge hook
-      cd ../repo && git merge --ff-only feature
-      git worktree remove ../repo.feature && git branch -d feature
-      cargo install --path .                           # post-merge hook
-```
-
 ## Quick Start
 
 ### 1. Install
@@ -124,6 +74,61 @@ $ wt list
 <!-- END AUTO-GENERATED -->
 
 `--full` adds CI status and conflicts. `--branches` includes all branches.
+
+## Why worktrees?
+
+Parallel agents need isolated working directories that share one Git history.
+
+We can get that a few ways:
+
+- multiple clones — slow to set up, waste disk, drift out of sync
+- one working tree with many branches — constant stashing, rebasing, and conflict risk
+- git worktrees — multiple directories backed by a single `.git` directory
+
+So we use git worktrees: many working directories, one repository.
+
+## Why Worktrunk?
+
+Git's worktree commands handle the basics, but leave lifecycle management to you.
+Worktrunk wraps creation, hooks, merging, and cleanup into three commands — `wt switch`, `wt merge`, `wt list`. A comparison:
+
+<table>
+<tr>
+<th>Task</th>
+<th>Worktrunk</th>
+<th>Plain git</th>
+</tr>
+<tr>
+<td>Create + start Claude</td>
+<td><pre lang="bash">wt switch -c feature -x claude</pre></td>
+<td><pre lang="bash">git worktree add -b feature ../repo.feature main
+cd ../repo.feature && claude</pre></td>
+</tr>
+<tr>
+<td>Merge + clean up</td>
+<td><pre lang="bash">wt merge</pre></td>
+<td><pre lang="bash">cd ../repo && git merge feature
+git worktree remove ../repo.feature
+git branch -d feature</pre></td>
+</tr>
+<tr>
+<td>Full workflow</td>
+<td><pre lang="bash"># after configuring hooks
+wt merge</pre></td>
+<td><pre lang="bash">git add -A
+git reset --soft $(git merge-base HEAD main)
+# commit-generation
+git diff --staged | llm "msg" | git commit -F -
+git rebase main
+# pre-merge hook
+cargo test
+cd ../repo && git merge --ff-only feature
+git worktree remove ../repo.feature
+git branch -d feature
+# post-merge hook
+cargo install --path .</pre></td>
+</tr>
+</table>
 
 ## Automation
 
