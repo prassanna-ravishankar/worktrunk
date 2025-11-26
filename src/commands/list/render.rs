@@ -1,8 +1,8 @@
 use crate::display::{format_relative_time_short, shorten_path, truncate_at_word_boundary};
-use anstyle::{AnsiColor, Color, Style};
+use anstyle::Style;
 use std::path::Path;
 use unicode_width::UnicodeWidthStr;
-use worktrunk::styling::{CURRENT, StyledLine};
+use worktrunk::styling::StyledLine;
 
 use super::ci_status::PrStatus;
 use super::columns::{ColumnKind, DiffVariant};
@@ -14,14 +14,13 @@ use super::model::{
 };
 use worktrunk::git::LineDiff;
 
-/// Compute style for branch/path based on worktree state
-fn position_style(is_current: bool, is_main: bool, default: Style) -> Style {
+/// Compute style for branch/path based on worktree state.
+///
+/// Uses bold only for current worktree - no colors. Gutter symbols (^@-+)
+/// already communicate position, so color adds no information.
+fn position_style(is_current: bool, default: Style) -> Style {
     if is_current {
-        CURRENT.bold()
-    } else if is_main {
-        Style::new()
-            .fg_color(Some(Color::Ansi(AnsiColor::Cyan)))
-            .bold()
+        Style::new().bold()
     } else {
         default
     }
@@ -401,12 +400,12 @@ impl LayoutConfig {
                 }
                 ColumnKind::Branch => {
                     // Show actual branch name
-                    cell.push_styled(branch, position_style(is_current, is_main, dim));
+                    cell.push_styled(branch, position_style(is_current, dim));
                     cell.pad_to(col.width);
                 }
                 ColumnKind::Path => {
                     // Show actual path
-                    cell.push_styled(&shortened_path, position_style(is_current, is_main, dim));
+                    cell.push_styled(&shortened_path, position_style(is_current, dim));
                     cell.pad_to(col.width);
                 }
                 ColumnKind::Commit => {
@@ -482,14 +481,12 @@ impl<'a> ListRowContext<'a> {
     }
 
     fn compute_text_style(&self) -> Option<Style> {
-        // Use stored is_current instead of recomputing from paths
-        let base_style =
-            self.worktree_data
-                .and_then(|data| match (self.is_current, data.is_main) {
-                    (true, _) => Some(CURRENT),
-                    (_, true) => Some(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)))),
-                    _ => None,
-                });
+        // Bold for current worktree, no color - gutter symbols already differentiate positions
+        let base_style = if self.is_current {
+            Some(Style::new().bold())
+        } else {
+            None
+        };
 
         if self.item.is_potentially_removable() {
             Some(base_style.unwrap_or_default().dimmed())
@@ -893,10 +890,7 @@ mod tests {
         assert_eq!(branch_ja.width(), 19);
 
         let mut line1 = StyledLine::new();
-        line1.push_styled(
-            branch_ja.to_string(),
-            Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan))),
-        );
+        line1.push_styled(branch_ja.to_string(), Style::new().bold());
         line1.pad_to(20); // Pad to width 20
 
         assert_eq!(line1.width(), 20, "Japanese branch should pad to 20");
@@ -906,10 +900,7 @@ mod tests {
         assert_eq!(branch_ascii.width(), 12);
 
         let mut line2 = StyledLine::new();
-        line2.push_styled(
-            branch_ascii.to_string(),
-            Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan))),
-        );
+        line2.push_styled(branch_ascii.to_string(), Style::new().bold());
         line2.pad_to(20);
 
         assert_eq!(line2.width(), 20, "ASCII branch should pad to 20");

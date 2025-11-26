@@ -858,8 +858,8 @@ impl StatusSymbols {
         // Ordered by importance/actionability
         // Apply colors based on semantic meaning:
         // - Red (ERROR): Actual conflicts (blocking problems)
-        // - Yellow (WARNING): Potential conflicts, git operations, locked/prunable (active/stuck states)
-        // - Cyan: Working tree changes (activity)
+        // - Yellow (WARNING): Git operations, locked/prunable (stuck states needing attention)
+        // - Cyan: Working tree changes (activity indicator)
         // - Dimmed (HINT): Branch state symbols that indicate removability + divergence arrows (low urgency)
         let (branch_op_state_str, has_branch_op_state) = self
             .branch_op_state
@@ -973,7 +973,7 @@ impl StatusSymbols {
 
         let mut result = String::new();
 
-        // Working tree symbols (compact, no padding)
+        // Working tree symbols (compact, no padding) - cyan for activity
         if !self.working_tree.is_empty() {
             result.push_str(&format!("{CYAN}{}{CYAN:#}", self.working_tree));
         }
