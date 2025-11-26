@@ -444,6 +444,20 @@ impl WorktrunkConfig {
         }
     }
 
+    /// Format a string array as multiline TOML for readability
+    ///
+    /// TODO: toml_edit doesn't provide a built-in multiline array format option.
+    /// Consider replacing with a dependency if one emerges that handles this automatically.
+    fn format_multiline_array<'a>(items: impl Iterator<Item = &'a String>) -> toml_edit::Array {
+        let mut array: toml_edit::Array = items.collect();
+        for item in array.iter_mut() {
+            item.decor_mut().set_prefix("\n    ");
+        }
+        array.set_trailing("\n");
+        array.set_trailing_comma(true);
+        array
+    }
+
     /// Save the current configuration to a specific file path
     ///
     /// Use this in tests to save to a temporary location instead of the user's config.
@@ -487,17 +501,41 @@ impl WorktrunkConfig {
                     if !projects.contains_key(project_id) {
                         projects[project_id] = toml_edit::Item::Table(toml_edit::Table::new());
                     }
-                    let commands: toml_edit::Array =
-                        project_config.approved_commands.iter().collect();
+                    let commands =
+                        Self::format_multiline_array(project_config.approved_commands.iter());
                     projects[project_id]["approved-commands"] = toml_edit::value(commands);
                 }
             }
 
             doc.to_string()
         } else {
-            // No existing file, create from scratch
-            toml::to_string_pretty(self)
-                .map_err(|e| ConfigError::Message(format!("Failed to serialize config: {}", e)))?
+            // No existing file, create from scratch using toml_edit for consistent formatting
+            let mut doc = toml_edit::DocumentMut::new();
+            doc["worktree-path"] = toml_edit::value(&self.worktree_path);
+
+            // commit-generation section
+            doc["commit-generation"] = toml_edit::Item::Table(toml_edit::Table::new());
+            let commit_args: toml_edit::Array = self.commit_generation.args.iter().collect();
+            doc["commit-generation"]["args"] = toml_edit::value(commit_args);
+            if let Some(ref cmd) = self.commit_generation.command {
+                doc["commit-generation"]["command"] = toml_edit::value(cmd);
+            }
+
+            // projects section with multiline arrays
+            if !self.projects.is_empty() {
+                let mut projects_table = toml_edit::Table::new();
+                projects_table.set_implicit(true); // Don't emit [projects] header
+                for (project_id, project_config) in &self.projects {
+                    let mut table = toml_edit::Table::new();
+                    let commands =
+                        Self::format_multiline_array(project_config.approved_commands.iter());
+                    table["approved-commands"] = toml_edit::value(commands);
+                    projects_table[project_id] = toml_edit::Item::Table(table);
+                }
+                doc["projects"] = toml_edit::Item::Table(projects_table);
+            }
+
+            doc.to_string()
         };
 
         std::fs::write(config_path, toml_string)

@@ -39,7 +39,9 @@ fn test_approval_saves_to_disk() {
     args = []
 
     [projects."github.com/test/repo"]
-    approved-commands = ["test command"]
+    approved-commands = [
+        "test command",
+    ]
     "#);
 
     // Verify approval is in memory
@@ -93,7 +95,9 @@ fn test_duplicate_approvals_not_saved_twice() {
     args = []
 
     [projects."github.com/test/repo"]
-    approved-commands = ["test"]
+    approved-commands = [
+        "test",
+    ]
     "#);
 }
 
@@ -143,10 +147,15 @@ fn test_multiple_project_approvals() {
     args = []
 
     [projects."github.com/user1/repo1"]
-    approved-commands = ["npm install", "npm test"]
+    approved-commands = [
+        "npm install",
+        "npm test",
+    ]
 
     [projects."github.com/user2/repo2"]
-    approved-commands = ["cargo build"]
+    approved-commands = [
+        "cargo build",
+    ]
     "#);
 }
 
@@ -225,8 +234,6 @@ fn test_force_flag_does_not_save_approval() {
 
     [commit-generation]
     args = []
-
-    [projects]
     "#);
 }
 
@@ -263,7 +270,9 @@ fn test_force_flag_saves_to_new_config_file() {
     args = []
 
     [projects."github.com/test/nested"]
-    approved-commands = ["test command"]
+    approved-commands = [
+        "test command",
+    ]
     "#);
 }
 
