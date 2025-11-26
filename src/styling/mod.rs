@@ -512,4 +512,298 @@ command = "npm install"
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "verylongwordthatcannotbewrapped");
     }
+
+    #[test]
+    fn test_wrap_styled_text_preserves_dim_across_wrap_points() {
+        // This test verifies that wrap_ansi preserves dim styling across wrap points.
+        // This was a bug where wrap_ansi lost track of ANSI state at line breaks,
+        // causing text after the wrap to lose its dim styling.
+        //
+        // Simulate what format_bash_with_gutter produces:
+        // - Starts with dim
+        // - Highlighted tokens have styles like bold+dim+color
+        // - After each highlight, we reset then restore dim: [0m[2m
+        // - Unhighlighted text stays dimmed
+
+        let dim = Style::new().dimmed();
+        let reset = anstyle::Reset;
+        let cmd_style = Style::new()
+            .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue)))
+            .bold()
+            .dimmed();
+
+        // Create a styled line exactly like the highlighter produces:
+        // [dim][cmd_style]cp[reset][dim] -cR {{ repo_root }}/target/debug/build {{ worktree }}/target/debug/
+        let styled = format!(
+            "{dim}{cmd_style}cp{reset}{dim} -cR {{{{ repo_root }}}}/target/debug/build {{{{ worktree }}}}/target/debug/"
+        );
+
+        // Wrap at a width that forces a break in the middle of unhighlighted text
+        let result = wrap_styled_text(&styled, 40);
+
+        // Should wrap into multiple lines
+        assert!(
+            result.len() > 1,
+            "Should wrap into multiple lines, got {} lines: {:?}",
+            result.len(),
+            result
+        );
+
+        // The key assertion: each wrapped line should start with dim
+        // wrap_ansi should restore the dim state at the start of each wrapped line
+        let dim_code = "\x1b[2m";
+
+        for (i, line) in result.iter().enumerate() {
+            // Every line should start with dim code
+            // Line 0: starts with our initial dim
+            // Line 1+: wrap_ansi should prepend dim to maintain state
+            assert!(
+                line.starts_with(dim_code),
+                "Line {} should START with dim code, but got: {:?}",
+                i + 1,
+                &line[..line.len().min(30)]
+            );
+        }
+    }
+
+    #[test]
+    fn test_format_bash_with_gutter_template_command() {
+        // Test that format_bash_with_gutter produces consistent dim styling
+        // for a realistic command with Jinja-style template variables.
+        // This is a regression test for wrap-point discontinuity.
+
+        let command = "cp -cR {{ repo_root }}/target/debug/.fingerprint {{ repo_root }}/target/debug/build {{ worktree }}/target/debug/";
+
+        // Get the result (will use actual terminal width, but we can still check structure)
+        let result = format_bash_with_gutter(command, "");
+
+        // Snapshot the raw output to verify ANSI codes are consistent
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn test_format_bash_multiline_command_consistent_styling() {
+        // This test simulates the REAL user scenario: a multi-line command
+        // where each line is processed separately by tree-sitter.
+        //
+        // The user's actual command:
+        // ```
+        // [ -d {{ repo_root }}/target/debug/deps ] && [ ! -e {{ worktree }}/target ] &&
+        // mkdir -p {{ worktree }}/target/debug/deps &&
+        // cp -c {{ repo_root }}/target/debug/deps/*.rlib ... {{ worktree
+        // }}/target/debug/deps/ &&
+        // ```
+        //
+        // Note: line 3 ends with `{{ worktree` and line 4 starts with `}}`
+        // These should have IDENTICAL styling since both are unhighlighted text.
+
+        let multiline_command = r#"[ -d {{ repo_root }}/target/debug/deps ] && [ ! -e {{ worktree }}/target ] &&
+mkdir -p {{ worktree }}/target/debug/deps &&
+cp -c {{ repo_root }}/target/debug/deps/*.rlib {{ repo_root }}/target/debug/deps/*.rmeta {{ worktree
+}}/target/debug/deps/ &&
+cp -cR {{ repo_root }}/target/debug/.fingerprint {{ repo_root }}/target/debug/build {{ worktree
+}}/target/debug/"#;
+
+        let result = format_bash_with_gutter(multiline_command, "");
+
+        // Snapshot the output - each line should have consistent dim styling
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn test_unhighlighted_text_has_consistent_dim_across_lines() {
+        // Verify that unhighlighted text (like template variables) has consistent
+        // styling whether it appears at the end of one line or start of another.
+        //
+        // The template text `{{ worktree` and `}}` should have identical ANSI codes.
+
+        let multiline = "echo {{ worktree\n}}/path";
+        let result = format_bash_with_gutter(multiline, "");
+
+        let lines: Vec<&str> = result.lines().collect();
+        assert_eq!(lines.len(), 2, "Should have 2 lines");
+
+        // Extract the styling for unhighlighted text on each line
+        // Line 1 ends with `{{ worktree` - find what style it's under
+        // Line 2 starts with `}}` - find what style it's under
+
+        let dim_code = "\x1b[2m";
+
+        // Both lines should contain dim code for the unhighlighted text
+        // Line 1: after "echo" (highlighted), the `{{ worktree` should be dimmed
+        // Line 2: the `}}` at the start should be dimmed
+
+        // Check that line 2 starts with dim after the gutter
+        // Gutter pattern: [107m [0m  (then content)
+        // The search string "\x1b[0m  " is 6 characters, so content starts at index + 6
+        let line2 = lines[1];
+        let content_start = line2.find("\x1b[0m  ").map(|i| i + 6);
+        if let Some(start) = content_start {
+            let content = &line2[start..];
+            assert!(
+                content.starts_with(dim_code),
+                "Line 2 content should start with dim for `}}`, got: {:?}",
+                &content[..content.len().min(20)]
+            );
+        }
+
+        // Snapshot for visual verification
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn test_syntax_highlighting_produces_multiple_colors() {
+        // Verify that bash syntax highlighting produces different colors for different
+        // token types, not just a single dim color for everything.
+        //
+        // This catches regressions where all text becomes the same color.
+
+        let command = "echo 'hello' | grep hello > output.txt && cat output.txt";
+        let result = format_bash_with_gutter(command, "");
+
+        // Check for presence of different ANSI color codes:
+        // - Blue (34m) for commands like echo, grep, cat
+        // - Green (32m) for strings like 'hello'
+        // - Cyan (36m) for operators like |, >
+        let has_blue = result.contains("\x1b[34m");
+        let has_green = result.contains("\x1b[32m");
+        let has_cyan = result.contains("\x1b[36m");
+
+        assert!(
+            has_blue,
+            "Output should contain blue (34m) for commands, got: {:?}",
+            result
+        );
+        assert!(
+            has_green,
+            "Output should contain green (32m) for strings, got: {:?}",
+            result
+        );
+        assert!(
+            has_cyan,
+            "Output should contain cyan (36m) for operators, got: {:?}",
+            result
+        );
+
+        // Also verify dim is present (base styling)
+        assert!(
+            result.contains("\x1b[2m"),
+            "Output should contain dim (2m) for base styling"
+        );
+
+        // Snapshot for visual verification
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn test_no_color_discontinuity_in_template_variables() {
+        // Regression test: wrap_ansi injects [39m (reset foreground color) at line ends
+        // when it thinks a color is "open". This creates visual discontinuity where
+        // template variables like `{{ worktree` on line N and `}}` on line N+1 have
+        // different styling even though both should just be dim.
+        //
+        // We never emit [39m ourselves - all our resets use [0m (full reset).
+        // So any [39m in the output is an artifact from wrap_ansi that we must strip.
+        //
+        // This is the actual post-start command from user config that exposed the bug.
+        let command = r#"[ -d {{ repo_root }}/target/debug/deps ] && [ ! -e {{ worktree }}/target ] &&
+mkdir -p {{ worktree }}/target/debug/deps &&
+cp -c {{ repo_root }}/target/debug/deps/*.rlib {{ repo_root }}/target/debug/deps/*.rmeta {{ worktree
+}}/target/debug/deps/ &&
+cp -cR {{ repo_root }}/target/debug/.fingerprint {{ repo_root }}/target/debug/build {{ worktree
+}}/target/debug/"#;
+
+        let result = format_bash_with_gutter(command, "");
+
+        // The critical assertion: NO [39m codes should appear anywhere in the output.
+        // [39m is "reset foreground to default" - we never emit this, only [0m (full reset).
+        assert!(
+            !result.contains("\x1b[39m"),
+            "Output should NOT contain [39m (foreground reset) - this indicates wrap_ansi discontinuity.\n\
+             Found [39m in output:\n{}",
+            result
+                .lines()
+                .filter(|line| line.contains("\x1b[39m"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+
+        // Similarly, [49m (reset background) shouldn't appear - we use [0m for all resets.
+        assert!(
+            !result.contains("\x1b[49m"),
+            "Output should NOT contain [49m (background reset)"
+        );
+
+        // Verify we DO have the expected codes:
+        // - [2m for dim (base styling)
+        // - [0m for reset
+        // - Various color codes (34m blue, 36m cyan) for syntax highlighting
+        assert!(
+            result.contains("\x1b[2m"),
+            "Output should contain [2m (dim)"
+        );
+        assert!(
+            result.contains("\x1b[0m"),
+            "Output should contain [0m (reset)"
+        );
+    }
+
+    #[test]
+    fn test_no_bold_dim_conflict() {
+        // Regression test: We must never mix bold (SGR 1) and dim (SGR 2) in the same
+        // sequence because they are mutually exclusive in some terminals like Alacritty.
+        //
+        // The problematic pattern was [2m][1m][2m][34m] where dim, then bold, then dim
+        // again would cause the final dim to not render correctly.
+        //
+        // The fix: token styles use dim+color only (no bold). This test ensures we
+        // don't regress by checking that [2m][1m][2m] never appears.
+        let command = "cp -cR path/to/source path/to/dest";
+        let result = format_bash_with_gutter(command, "");
+
+        // The problematic pattern is [2m] followed by [1m] followed by [2m]
+        // This happens when: line starts with dim, style adds bold+dim
+        assert!(
+            !result.contains("\x1b[2m\x1b[1m\x1b[2m"),
+            "Output should NOT contain [2m][1m][2m] - this indicates redundant dim in token styles.\n\
+             Token styles should not include .dimmed() since the line already starts dim.\n\
+             Found pattern in output:\n{:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_all_tokens_are_dimmed() {
+        // Regression test: All highlighted tokens should be dimmed to match the base text.
+        // We don't use bold because bold (SGR 1) and dim (SGR 2) are mutually exclusive
+        // in some terminals like Alacritty.
+        //
+        // Token styles should emit [2m] (dim) along with their color.
+        let command = "cp -cR path/to/source path/to/dest";
+        let result = format_bash_with_gutter(command, "");
+
+        // Verify commands are dim+blue: [0m][2m][34m] (reset, dim, blue)
+        assert!(
+            result.contains("\x1b[0m\x1b[2m\x1b[34m"),
+            "Commands should be dim+blue [0m][2m][34m].\n\
+             Output:\n{:?}",
+            result
+        );
+
+        // Verify flags are dim+cyan: [0m][2m][36m] (reset, dim, cyan)
+        assert!(
+            result.contains("\x1b[0m\x1b[2m\x1b[36m"),
+            "Flags should be dim+cyan [0m][2m][36m].\n\
+             Output:\n{:?}",
+            result
+        );
+
+        // Verify NO bold codes appear (we removed bold to avoid bold/dim conflict)
+        assert!(
+            !result.contains("\x1b[1m"),
+            "Output should NOT contain [1m] (bold) - we use dim instead.\n\
+             Output:\n{:?}",
+            result
+        );
+    }
 }

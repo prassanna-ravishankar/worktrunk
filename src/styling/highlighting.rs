@@ -24,37 +24,60 @@ use synoptic::{TokOpt, from_extension};
 /// - "embedded": embedded content
 #[cfg(feature = "syntax-highlighting")]
 pub(super) fn bash_token_style(kind: &str) -> Option<Style> {
+    // All styles include .dimmed() so highlighted tokens match the dim base text.
+    // We do NOT use .bold() because bold (SGR 1) and dim (SGR 2) are mutually
+    // exclusive in some terminals like Alacritty - bold would cancel dim.
     match kind {
-        // Commands (npm, git, cargo, echo, cd, etc.) - bold blue
+        // Commands (npm, git, cargo, echo, cd, etc.) - dim blue
         "function" => Some(
             Style::new()
                 .fg_color(Some(Color::Ansi(AnsiColor::Blue)))
-                .bold(),
+                .dimmed(),
         ),
 
-        // Keywords (if, then, for, while, do, done, etc.) - bold magenta
+        // Keywords (if, then, for, while, do, done, etc.) - dim magenta
         "keyword" => Some(
             Style::new()
                 .fg_color(Some(Color::Ansi(AnsiColor::Magenta)))
-                .bold(),
+                .dimmed(),
         ),
 
-        // Strings (quoted values) - green
-        "string" => Some(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)))),
+        // Strings (quoted values) - dim green
+        "string" => Some(
+            Style::new()
+                .fg_color(Some(Color::Ansi(AnsiColor::Green)))
+                .dimmed(),
+        ),
 
-        // Operators (&&, ||, |, $, -, >, <, etc.) - cyan
-        "operator" => Some(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)))),
+        // Operators (&&, ||, |, $, -, >, <, etc.) - dim cyan
+        "operator" => Some(
+            Style::new()
+                .fg_color(Some(Color::Ansi(AnsiColor::Cyan)))
+                .dimmed(),
+        ),
 
         // Variables ($VAR, ${VAR}) - tree-sitter-bash 0.25 uses "property" not "variable"
-        "property" => Some(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)))),
+        "property" => Some(
+            Style::new()
+                .fg_color(Some(Color::Ansi(AnsiColor::Yellow)))
+                .dimmed(),
+        ),
 
-        // Numbers - yellow
-        "number" => Some(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)))),
+        // Numbers - dim yellow
+        "number" => Some(
+            Style::new()
+                .fg_color(Some(Color::Ansi(AnsiColor::Yellow)))
+                .dimmed(),
+        ),
 
-        // Constants/flags (--flag, -f) - cyan
-        "constant" => Some(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)))),
+        // Constants/flags (--flag, -f) - dim cyan
+        "constant" => Some(
+            Style::new()
+                .fg_color(Some(Color::Ansi(AnsiColor::Cyan)))
+                .dimmed(),
+        ),
 
-        // Comments, embedded content, and everything else - no styling
+        // Comments, embedded content, and everything else - no styling (will use base dim)
         _ => None,
     }
 }

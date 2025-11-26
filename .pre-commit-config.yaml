@@ -56,7 +56,8 @@ repos:
         language: pygrep
         types: ["rust"]
         entry: '\\x1b\['
-        exclude: '^(tests/|.*_test\.rs$|src/styling/(line|mod)\.rs$|src/output/directive\.rs$|src/cli\.rs$)'
+        # format.rs strips ANSI codes injected by wrap_ansi crate
+        exclude: '^(tests/|.*_test\.rs$|src/styling/(line|mod|format)\.rs$|src/output/directive\.rs$|src/cli\.rs$)'
 
 ci:
   # Currently network access isn't supported in the CI product.

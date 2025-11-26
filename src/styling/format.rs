@@ -142,6 +142,11 @@ pub fn format_with_gutter(content: &str, left_margin: &str, max_width: Option<us
 ///
 /// Uses `wrap-ansi` crate which handles ANSI escape sequences, Unicode width,
 /// and OSC 8 hyperlinks automatically.
+///
+/// Note: wrap_ansi injects color reset codes ([39m for foreground, [49m for background)
+/// at line ends to make each line "self-contained". We strip these because:
+/// 1. We never emit [39m/[49m ourselves - all our resets use [0m (full reset)
+/// 2. These injected codes create visual discontinuity when styled text wraps
 pub(super) fn wrap_styled_text(styled: &str, max_width: usize) -> Vec<String> {
     if max_width == 0 {
         return vec![styled.to_string()];
@@ -154,13 +159,20 @@ pub(super) fn wrap_styled_text(styled: &str, max_width: usize) -> Vec<String> {
         return vec![String::new()];
     }
 
-    wrapped.lines().map(|s| s.to_owned()).collect()
+    // Strip color reset codes injected by wrap_ansi - we never emit these ourselves,
+    // so any occurrence is an artifact that creates visual discontinuity
+    let cleaned = wrapped
+        .replace("\x1b[39m", "") // reset foreground to default
+        .replace("\x1b[49m", ""); // reset background to default
+
+    cleaned.lines().map(|s| s.to_owned()).collect()
 }
 
 /// Formats bash/shell commands with syntax highlighting and gutter
 ///
-/// Highlights each original line first (preserving parsing context), then wraps
-/// the styled output. Long lines are wrapped at word boundaries to fit terminal width.
+/// Processes each line separately for highlighting (required for multi-line commands
+/// with `&&` at line ends), then applies template syntax detection to avoid
+/// misinterpreting `}}` as a command when it appears at line start.
 ///
 /// # Example
 /// ```ignore
@@ -172,6 +184,7 @@ pub fn format_bash_with_gutter(content: &str, left_margin: &str) -> String {
 
     let gutter = super::GUTTER;
     let reset = anstyle::Reset;
+    let dim = anstyle::Style::new().dimmed();
     let mut output = String::new();
 
     // Calculate available width for content
@@ -219,16 +232,15 @@ pub fn format_bash_with_gutter(content: &str, left_margin: &str) -> String {
 
     let mut highlighter = Highlighter::new();
 
-    // Process each ORIGINAL line (not wrapped) to preserve parsing context
+    // Process each line separately - this is required because tree-sitter's bash
+    // grammar fails to highlight multi-line commands when `&&` appears at line ends.
+    // Per-line processing gives proper highlighting for each line's content.
     for line in content.lines() {
-        // Step 1: Highlight the complete line with tree-sitter
-        let mut styled_line = String::new();
+        let mut styled_line = format!("{dim}");
 
         let Ok(highlights) = highlighter.highlight(&config, line.as_bytes(), None, |_| None) else {
-            // Fallback: just use the plain line
+            // Fallback: if highlighting fails, use plain dim
             styled_line.push_str(line);
-
-            // Wrap and output with gutter
             for wrapped in wrap_styled_text(&styled_line, available_width) {
                 output.push_str(&format!(
                     "{left_margin}{gutter} {gutter:#}  {wrapped}{reset}\n"
@@ -239,30 +251,51 @@ pub fn format_bash_with_gutter(content: &str, left_margin: &str) -> String {
 
         let line_bytes = line.as_bytes();
 
+        // Track the current highlight type so we can decide styling when we see the actual text
+        let mut pending_highlight: Option<usize> = None;
+
         for event in highlights {
             match event.unwrap() {
                 HighlightEvent::Source { start, end } => {
                     // Output the text for this source region
                     if let Ok(text) = std::str::from_utf8(&line_bytes[start..end]) {
+                        // Apply pending highlight style, but skip command styling for template syntax
+                        // (tree-sitter misinterprets `}}` at line start as a command)
+                        if let Some(idx) = pending_highlight.take() {
+                            let is_template_syntax =
+                                text.starts_with("}}") || text.starts_with("{{");
+                            let is_function = highlight_names
+                                .get(idx)
+                                .is_some_and(|name| *name == "function");
+
+                            // Skip command styling for template syntax, apply normal styling otherwise
+                            if !(is_function && is_template_syntax)
+                                && let Some(name) = highlight_names.get(idx)
+                                && let Some(style) = bash_token_style(name)
+                            {
+                                // Reset before applying style to clear the base dim, then apply token style.
+                                // Token styles use dim+color (not bold) because bold (SGR 1) and dim (SGR 2)
+                                // are mutually exclusive in some terminals like Alacritty.
+                                styled_line.push_str(&format!("{reset}{style}"));
+                            }
+                        }
+
                         styled_line.push_str(text);
                     }
                 }
                 HighlightEvent::HighlightStart(idx) => {
-                    // Start of a highlighted region - apply style
-                    if let Some(name) = highlight_names.get(idx.0)
-                        && let Some(style) = bash_token_style(name)
-                    {
-                        styled_line.push_str(&format!("{style}"));
-                    }
+                    // Remember the highlight type - we'll decide on styling when we see the text
+                    pending_highlight = Some(idx.0);
                 }
                 HighlightEvent::HighlightEnd => {
-                    // End of highlighted region - reset style
-                    styled_line.push_str(&format!("{reset}"));
+                    // End of highlighted region - reset and restore dim for unhighlighted text
+                    pending_highlight = None;
+                    styled_line.push_str(&format!("{reset}{dim}"));
                 }
             }
         }
 
-        // Step 2: Wrap the styled line and output each part with gutter
+        // Wrap and output with gutter
         for wrapped in wrap_styled_text(&styled_line, available_width) {
             output.push_str(&format!(
                 "{left_margin}{gutter} {gutter:#}  {wrapped}{reset}\n"
