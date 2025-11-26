@@ -761,7 +761,11 @@ fn main() {
         // Route through output system to respect mode:
         // - Interactive mode: errors go to stdout
         // - Directive mode: errors go to stderr
-        let _ = output::error(e.to_string());
+        // Skip empty errors (already displayed by the command)
+        let msg = e.to_string();
+        if !msg.is_empty() {
+            let _ = output::error(msg);
+        }
 
         // Preserve exit code from child processes (especially for signals like SIGINT)
         let code = exit_code(&e).unwrap_or(1);

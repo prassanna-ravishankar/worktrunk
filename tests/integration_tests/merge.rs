@@ -3320,3 +3320,24 @@ fn test_step_commit_with_both_flags() {
         ],
     );
 }
+
+#[test]
+fn test_step_commit_nothing_to_commit() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // No changes made - commit should fail with "nothing to commit"
+    snapshot_step_commit_with_env(
+        "step_commit_nothing_to_commit",
+        &repo,
+        &["--stage=none"],
+        None,
+        &[
+            ("WORKTRUNK_COMMIT_GENERATION__COMMAND", "echo"),
+            (
+                "WORKTRUNK_COMMIT_GENERATION__ARGS",
+                "feat: this should fail",
+            ),
+        ],
+    );
+}

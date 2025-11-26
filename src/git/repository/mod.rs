@@ -1177,7 +1177,14 @@ impl Repository {
             for line in stderr.trim().lines() {
                 log::debug!("  ! {}", line);
             }
-            bail!("{}", stderr);
+            // Some git commands print errors to stdout (e.g., `commit` with nothing to commit)
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let error_msg = [stderr.trim(), stdout.trim()]
+                .into_iter()
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n");
+            bail!("{}", error_msg);
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout).into_owned();

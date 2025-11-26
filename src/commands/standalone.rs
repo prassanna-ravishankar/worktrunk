@@ -1,7 +1,7 @@
 use anyhow::{Context, bail};
 use worktrunk::HookType;
 use worktrunk::git::Repository;
-use worktrunk::styling::{AnstyleStyle, CYAN, CYAN_BOLD, GREEN_BOLD, format_with_gutter};
+use worktrunk::styling::{AnstyleStyle, CYAN, CYAN_BOLD, ERROR, GREEN_BOLD, format_with_gutter};
 
 use super::commit::{CommitGenerator, CommitOptions};
 use super::context::CommandEnv;
@@ -250,8 +250,11 @@ pub fn handle_squash(
     }
 
     // Commit with the generated message
-    repo.run_command(&["commit", "-m", &commit_message])
-        .context("Failed to create squash commit")?;
+    if let Err(e) = repo.run_command(&["commit", "-m", &commit_message]) {
+        crate::output::error(format!("{ERROR}Failed to create squash commit{ERROR:#}"))?;
+        crate::output::gutter(format_with_gutter(&e.to_string(), "", None))?;
+        bail!("");
+    }
 
     // Get commit hash for display
     let commit_hash = repo
