@@ -156,43 +156,8 @@ fn combine_stdout_stderr(stdout: &str, stderr: &str) -> String {
     result.join("\n")
 }
 
-/// Regex to extract program and args from YAML front matter
-static YAML_ARGS_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?s)program:\s*(\S+).*?args:\s*\n((?:\s*-\s*[^\n]+\n?)*)").unwrap()
-});
-
-/// Parse command line from snapshot YAML front matter
-fn parse_command_from_snapshot(content: &str) -> Option<String> {
-    if !content.starts_with("---") {
-        return None;
-    }
-
-    let parts: Vec<&str> = content.splitn(3, "---").collect();
-    if parts.len() < 2 {
-        return None;
-    }
-
-    let yaml = parts[1];
-    YAML_ARGS_PATTERN.captures(yaml).map(|cap| {
-        let program = cap.get(1).unwrap().as_str();
-        let args_block = cap.get(2).unwrap().as_str();
-        let args: Vec<&str> = args_block
-            .lines()
-            .filter_map(|line| {
-                let trimmed = line.trim();
-                if trimmed.starts_with("- ") {
-                    Some(trimmed.trim_start_matches("- ").trim_matches('"'))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        format!("$ {} {}", program, args.join(" "))
-    })
-}
-
-/// Parse content from an insta snapshot file, optionally including command line
-/// Prefers the README command if provided, falls back to YAML program/args.
+/// Parse content from an insta snapshot file, optionally including command line.
+/// Command line comes from the README (preserved during update), not the snapshot.
 fn parse_snapshot_with_command(
     path: &Path,
     readme_command: Option<&str>,
@@ -200,13 +165,9 @@ fn parse_snapshot_with_command(
     let raw = fs::read_to_string(path)
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
 
-    // Prefer README command (user-facing), fall back to YAML (test implementation detail)
-    let command = readme_command
-        .map(String::from)
-        .or_else(|| parse_command_from_snapshot(&raw));
     let content = parse_snapshot_content(&raw)?;
 
-    Ok(match command {
+    Ok(match readme_command {
         Some(cmd) => format!("{}\n{}", cmd, content),
         None => content,
     })
@@ -264,16 +225,9 @@ fn parse_snapshot_content(content: &str) -> Result<String, String> {
     Ok(strip_ansi(&content))
 }
 
-/// Normalize snapshot output for README display
-fn normalize_for_readme(content: &str) -> String {
-    // Real SHAs flow through from deterministic tests (fixed dates + git identity)
-    let content = HASH_REGEX.replace_all(content, "a1b2c3d");
-    let content = TMPDIR_REGEX.replace_all(&content, "../repo.$1");
-    let content = REPO_REGEX.replace_all(&content, "../repo");
-
-    // Trim trailing whitespace from each line and overall trailing newlines
-    // NOTE: We use trim_end() not trim() to preserve leading spaces on the first line
-    // (e.g., the two-space gutter before table headers in `wt list` output)
+/// Trim trailing whitespace from each line and overall.
+/// Preserves leading spaces (e.g., two-space gutter before table headers in `wt list`).
+fn trim_lines(content: &str) -> String {
     content
         .lines()
         .map(|line| line.trim_end())
@@ -283,15 +237,13 @@ fn normalize_for_readme(content: &str) -> String {
         .to_string()
 }
 
-/// Normalize README content for comparison
-fn normalize_readme_content(content: &str) -> String {
-    content
-        .lines()
-        .map(|line| line.trim_end())
-        .collect::<Vec<_>>()
-        .join("\n")
-        .trim_end()
-        .to_string()
+/// Normalize snapshot output for README display (replace placeholders, trim whitespace)
+fn normalize_for_readme(content: &str) -> String {
+    // Real SHAs flow through from deterministic tests (fixed dates + git identity)
+    let content = HASH_REGEX.replace_all(content, "a1b2c3d");
+    let content = TMPDIR_REGEX.replace_all(&content, "../repo.$1");
+    let content = REPO_REGEX.replace_all(&content, "../repo");
+    trim_lines(&content)
 }
 
 /// Get help output for a command
@@ -385,7 +337,7 @@ fn update_readme_section(
         .map(|cap| {
             let full_match = cap.get(0).unwrap();
             let id = cap.get(1).unwrap().as_str().to_string();
-            let current = normalize_readme_content(cap.get(2).unwrap().as_str());
+            let current = trim_lines(cap.get(2).unwrap().as_str());
             (full_match.start(), full_match.end(), id, current)
         })
         .collect();
