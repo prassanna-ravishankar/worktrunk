@@ -1,4 +1,5 @@
 use anyhow::Context;
+use color_print::cformat;
 use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -6,10 +7,7 @@ use worktrunk::config::{find_unknown_project_keys, find_unknown_user_keys};
 use worktrunk::git::Repository;
 use worktrunk::path::format_path_for_display;
 use worktrunk::shell::Shell;
-use worktrunk::styling::{
-    AnstyleStyle, CYAN, GREEN, GREEN_BOLD, HINT, HINT_EMOJI, INFO_EMOJI, WARNING, WARNING_BOLD,
-    WARNING_EMOJI, format_toml, format_with_gutter,
-};
+use worktrunk::styling::{HINT_EMOJI, INFO_EMOJI, WARNING_EMOJI, format_toml, format_with_gutter};
 
 use super::configure_shell::{ConfigAction, scan_shell_configs};
 use super::list::ci_status::CachedCiStatus;
@@ -52,17 +50,16 @@ pub fn handle_config_create() -> anyhow::Result<()> {
 
     // Check if file already exists
     if config_path.exists() {
-        let bold = AnstyleStyle::new().bold();
-        output::info(format!(
-            "Global config already exists: {bold}{}{bold:#}",
+        output::info(cformat!(
+            "Global config already exists: <bold>{}</>",
             format_path_for_display(&config_path)
         ))?;
         output::blank()?;
-        output::hint(format!(
-            "{HINT}Use 'wt config show' to view existing configuration{HINT:#}"
+        output::hint(cformat!(
+            "<dim>Use 'wt config show' to view existing configuration</>"
         ))?;
-        output::hint(format!(
-            "{HINT}Use 'wt config create --help' for config format reference{HINT:#}"
+        output::hint(cformat!(
+            "<dim>Use 'wt config create --help' for config format reference</>"
         ))?;
         return Ok(());
     }
@@ -78,14 +75,13 @@ pub fn handle_config_create() -> anyhow::Result<()> {
     std::fs::write(&config_path, commented_config).context("Failed to write config file")?;
 
     // Success message
-    let green_bold = GREEN.bold();
-    output::success(format!(
-        "{GREEN}Created config file: {green_bold}{}{green_bold:#}{GREEN:#}",
+    output::success(cformat!(
+        "<green>Created config file: <bold>{}</></>",
         format_path_for_display(&config_path)
     ))?;
     output::blank()?;
-    output::hint(format!(
-        "{HINT}Edit this file to customize worktree paths and LLM settings{HINT:#}"
+    output::hint(cformat!(
+        "<dim>Edit this file to customize worktree paths and LLM settings</>"
     ))?;
 
     Ok(())
@@ -118,8 +114,6 @@ pub fn handle_config_show() -> anyhow::Result<()> {
 }
 
 fn render_global_config(out: &mut String) -> anyhow::Result<()> {
-    let bold = AnstyleStyle::new().bold();
-
     // Get config path
     let config_path = get_global_config_path().ok_or_else(|| {
         anyhow::anyhow!(
@@ -129,16 +123,24 @@ fn render_global_config(out: &mut String) -> anyhow::Result<()> {
 
     writeln!(
         out,
-        "{INFO_EMOJI} Global Config: {bold}{}{bold:#}",
-        format_path_for_display(&config_path)
+        "{}",
+        cformat!(
+            "{INFO_EMOJI} Global Config: <bold>{}</>",
+            format_path_for_display(&config_path)
+        )
     )?;
 
     // Check if file exists
     if !config_path.exists() {
-        writeln!(out, "{HINT_EMOJI} {HINT}Not found (using defaults){HINT:#}")?;
         writeln!(
             out,
-            "{HINT_EMOJI} {HINT}Run 'wt config create' to create a config file{HINT:#}"
+            "{}",
+            cformat!("{HINT_EMOJI} <dim>Not found (using defaults)</>")
+        )?;
+        writeln!(
+            out,
+            "{}",
+            cformat!("{HINT_EMOJI} <dim>Run 'wt config create' to create a config file</>")
         )?;
         writeln!(out)?;
         let default_config =
@@ -153,7 +155,8 @@ fn render_global_config(out: &mut String) -> anyhow::Result<()> {
     if contents.trim().is_empty() {
         writeln!(
             out,
-            "{HINT_EMOJI} {HINT}Empty file (using defaults){HINT:#}"
+            "{}",
+            cformat!("{HINT_EMOJI} <dim>Empty file (using defaults)</>")
         )?;
         return Ok(());
     }
@@ -172,16 +175,14 @@ fn warn_unknown_keys(out: &mut String, unknown_keys: &[String]) -> anyhow::Resul
     for key in unknown_keys {
         writeln!(
             out,
-            "{WARNING_EMOJI} {WARNING}Unknown key {WARNING_BOLD}{key}{WARNING_BOLD:#}{WARNING} will be ignored{WARNING:#}"
+            "{}",
+            cformat!("{WARNING_EMOJI} <yellow>Unknown key <bold>{key}</> will be ignored</>")
         )?;
     }
     Ok(())
 }
 
 fn render_project_config(out: &mut String) -> anyhow::Result<()> {
-    let bold = AnstyleStyle::new().bold();
-    let dim = AnstyleStyle::new().dimmed();
-
     // Try to get current repository root
     let repo = Repository::current();
     let repo_root = match repo.worktree_root() {
@@ -189,7 +190,8 @@ fn render_project_config(out: &mut String) -> anyhow::Result<()> {
         Err(_) => {
             writeln!(
                 out,
-                "{INFO_EMOJI} {dim}Project Config: Not in a git repository{dim:#}"
+                "{}",
+                cformat!("{INFO_EMOJI} <dim>Project Config: Not in a git repository</>")
             )?;
             return Ok(());
         }
@@ -198,13 +200,16 @@ fn render_project_config(out: &mut String) -> anyhow::Result<()> {
 
     writeln!(
         out,
-        "{INFO_EMOJI} Project Config: {bold}{}{bold:#}",
-        format_path_for_display(&config_path)
+        "{}",
+        cformat!(
+            "{INFO_EMOJI} Project Config: <bold>{}</>",
+            format_path_for_display(&config_path)
+        )
     )?;
 
     // Check if file exists
     if !config_path.exists() {
-        writeln!(out, "{HINT_EMOJI} {HINT}Not found{HINT:#}")?;
+        writeln!(out, "{}", cformat!("{HINT_EMOJI} <dim>Not found</>"))?;
         return Ok(());
     }
 
@@ -212,7 +217,7 @@ fn render_project_config(out: &mut String) -> anyhow::Result<()> {
     let contents = std::fs::read_to_string(&config_path).context("Failed to read config file")?;
 
     if contents.trim().is_empty() {
-        writeln!(out, "{HINT_EMOJI} {HINT}Empty file{HINT:#}")?;
+        writeln!(out, "{}", cformat!("{HINT_EMOJI} <dim>Empty file</>"))?;
         return Ok(());
     }
 
@@ -226,16 +231,14 @@ fn render_project_config(out: &mut String) -> anyhow::Result<()> {
 }
 
 fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
-    let bold = AnstyleStyle::new().bold();
-    let dim = AnstyleStyle::new().dimmed();
-
     // Use the same detection logic as `wt config shell install`
     let scan_result = match scan_shell_configs(None, true) {
         Ok(r) => r,
         Err(e) => {
             writeln!(
                 out,
-                "{HINT_EMOJI} {HINT}Could not determine shell status: {e}{HINT:#}"
+                "{}",
+                cformat!("{HINT_EMOJI} <dim>Could not determine shell status: {e}</>")
             )?;
             return Ok(());
         }
@@ -260,14 +263,20 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
             ConfigAction::AlreadyExists => {
                 writeln!(
                     out,
-                    "{INFO_EMOJI} Already configured {what} for {bold}{shell}{bold:#} @ {path}"
+                    "{}",
+                    cformat!(
+                        "{INFO_EMOJI} Already configured {what} for <bold>{shell}</> @ {path}"
+                    )
                 )?;
 
                 // Check if zsh has compinit enabled (required for completions)
                 if matches!(shell, Shell::Zsh) && check_zsh_compinit_missing() {
                     writeln!(
                         out,
-                        "{WARNING_EMOJI} {WARNING}Completions won't work; add to ~/.zshrc before the wt line:{WARNING:#}"
+                        "{}",
+                        cformat!(
+                            "{WARNING_EMOJI} <yellow>Completions won't work; add to ~/.zshrc before the wt line:</>"
+                        )
                     )?;
                     write!(
                         out,
@@ -284,13 +293,19 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
                     if completion_path.exists() {
                         writeln!(
                             out,
-                            "{INFO_EMOJI} Already configured completions for {bold}{shell}{bold:#} @ {completion_display}"
+                            "{}",
+                            cformat!(
+                                "{INFO_EMOJI} Already configured completions for <bold>{shell}</> @ {completion_display}"
+                            )
                         )?;
                     } else {
                         any_not_configured = true;
                         writeln!(
                             out,
-                            "{HINT_EMOJI} {HINT}Not configured completions for {shell} @ {completion_display}{HINT:#}"
+                            "{}",
+                            cformat!(
+                                "{HINT_EMOJI} <dim>Not configured completions for {shell} @ {completion_display}</>"
+                            )
                         )?;
                     }
                 }
@@ -299,7 +314,8 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
                 any_not_configured = true;
                 writeln!(
                     out,
-                    "{HINT_EMOJI} {HINT}Not configured {what} for {shell} @ {path}{HINT:#}"
+                    "{}",
+                    cformat!("{HINT_EMOJI} <dim>Not configured {what} for {shell} @ {path}</>")
                 )?;
             }
             _ => {} // Added/Created won't appear in dry_run mode
@@ -309,7 +325,11 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
     // Show skipped (not installed) shells
     for (shell, path) in &scan_result.skipped {
         let path = format_path_for_display(path);
-        writeln!(out, "{dim}⚪ Skipped {shell}; {path} not found{dim:#}")?;
+        writeln!(
+            out,
+            "{}",
+            cformat!("<dim>⚪ Skipped {shell}; {path} not found</>")
+        )?;
     }
 
     // Summary hint
@@ -317,7 +337,10 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
         writeln!(out)?;
         writeln!(
             out,
-            "{HINT_EMOJI} {HINT}Run 'wt config shell install' to enable shell integration{HINT:#}"
+            "{}",
+            cformat!(
+                "{HINT_EMOJI} <dim>Run 'wt config shell install' to enable shell integration</>"
+            )
         )?;
     }
 
@@ -393,9 +416,8 @@ pub fn handle_config_status_set(value: String, branch: Option<String>) -> anyhow
     let config_key = format!("worktrunk.status.{}", branch_name);
     repo.run_command(&["config", &config_key, &value])?;
 
-    let branch_bold = GREEN.bold();
-    crate::output::success(format!(
-        "{GREEN}Set status for {branch_bold}{branch_name}{branch_bold:#}{GREEN} to {GREEN_BOLD}{value}{GREEN_BOLD:#}{GREEN:#}"
+    crate::output::success(cformat!(
+        "<green>Set status for <bold>{branch_name}</> to <bold>{value}</></>"
     ))?;
 
     Ok(())
@@ -422,8 +444,8 @@ pub fn handle_config_status_unset(target: String) -> anyhow::Result<()> {
         if cleared_count == 0 {
             crate::output::info("No statuses to clear")?;
         } else {
-            crate::output::success(format!(
-                "{GREEN}Cleared {GREEN_BOLD}{cleared_count}{GREEN_BOLD:#}{GREEN} status{}{GREEN:#}",
+            crate::output::success(cformat!(
+                "<green>Cleared <bold>{cleared_count}</> status{}</>",
                 if cleared_count == 1 { "" } else { "es" }
             ))?;
         }
@@ -439,9 +461,8 @@ pub fn handle_config_status_unset(target: String) -> anyhow::Result<()> {
         repo.run_command(&["config", "--unset", &config_key])
             .context("Failed to unset status (may not be set)")?;
 
-        let branch_bold = GREEN.bold();
-        crate::output::success(format!(
-            "{GREEN}Cleared status for {branch_bold}{branch_name}{branch_bold:#}{GREEN:#}"
+        crate::output::success(cformat!(
+            "<green>Cleared status for <bold>{branch_name}</></>"
         ))?;
     }
 
@@ -450,12 +471,10 @@ pub fn handle_config_status_unset(target: String) -> anyhow::Result<()> {
 
 /// Handle the cache show command
 pub fn handle_cache_show() -> anyhow::Result<()> {
-    use worktrunk::styling::HINT;
-
     let repo = Repository::current();
 
     // Show default branch cache
-    crate::output::info(format!("{HINT}Default branch cache:{HINT:#}"))?;
+    crate::output::info(cformat!("<dim>Default branch cache:</>"))?;
     match repo.default_branch() {
         Ok(branch) => crate::output::data(format!("  {branch}"))?,
         Err(_) => crate::output::data("  (not cached)")?,
@@ -463,7 +482,7 @@ pub fn handle_cache_show() -> anyhow::Result<()> {
     crate::output::blank()?;
 
     // Show CI status cache
-    crate::output::info(format!("{HINT}CI status cache:{HINT:#}"))?;
+    crate::output::info(cformat!("<dim>CI status cache:</>"))?;
 
     let entries = CachedCiStatus::list_all(&repo);
     if entries.is_empty() {
@@ -499,8 +518,8 @@ pub fn handle_cache_clear(cache_type: Option<String>) -> anyhow::Result<()> {
             if cleared == 0 {
                 crate::output::info("No CI cache entries to clear")?;
             } else {
-                crate::output::success(format!(
-                    "{GREEN}Cleared {GREEN_BOLD}{cleared}{GREEN_BOLD:#}{GREEN} CI cache entr{}{GREEN:#}",
+                crate::output::success(cformat!(
+                    "<green>Cleared <bold>{cleared}</> CI cache entr{}</>",
                     if cleared == 1 { "y" } else { "ies" }
                 ))?;
             }
@@ -510,7 +529,7 @@ pub fn handle_cache_clear(cache_type: Option<String>) -> anyhow::Result<()> {
                 .run_command(&["config", "--unset", "worktrunk.defaultBranch"])
                 .is_ok()
             {
-                crate::output::success(format!("{GREEN}Cleared default branch cache{GREEN:#}"))?;
+                crate::output::success(cformat!("<green>Cleared default branch cache</>"))?;
             } else {
                 crate::output::info("No default branch cache to clear")?;
             }
@@ -522,7 +541,7 @@ pub fn handle_cache_clear(cache_type: Option<String>) -> anyhow::Result<()> {
             let cleared_ci = CachedCiStatus::clear_all(&repo) > 0;
 
             if cleared_default || cleared_ci {
-                crate::output::success(format!("{GREEN}Cleared all caches{GREEN:#}"))?;
+                crate::output::success(cformat!("<green>Cleared all caches</>"))?;
             } else {
                 crate::output::info("No caches to clear")?;
             }
@@ -539,15 +558,11 @@ pub fn handle_cache_clear(cache_type: Option<String>) -> anyhow::Result<()> {
 pub fn handle_cache_refresh() -> anyhow::Result<()> {
     let repo = Repository::current();
 
-    crate::output::progress(format!(
-        "{CYAN}Querying remote for default branch...{CYAN:#}"
-    ))?;
+    crate::output::progress(cformat!("<cyan>Querying remote for default branch...</>"))?;
 
     let branch = repo.refresh_default_branch()?;
 
-    crate::output::success(format!(
-        "{GREEN}Cache refreshed: {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN:#}"
-    ))?;
+    crate::output::success(cformat!("<green>Cache refreshed: <bold>{branch}</></>"))?;
 
     Ok(())
 }

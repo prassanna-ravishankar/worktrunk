@@ -26,6 +26,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mBranch [1m[31mfeature-y[0m[31m already exists[0m
+❌ [31mBranch [1mfeature-y[22m already exists[39m
 
-💡 [2mRemove --create flag to switch to it[0m
+💡 [2mRemove --create flag to switch to it[22m

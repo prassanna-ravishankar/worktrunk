@@ -1,33 +1,71 @@
 //! Style constants and emojis for terminal output
 //!
-//! Provides semantic constants for consistent styling across the codebase.
+//! # Two Styling Approaches
+//!
+//! This codebase uses two complementary styling approaches:
+//!
+//! ## 1. `color-print` for format strings (preferred for messages)
+//!
+//! Use `cformat!` with HTML-like tags for user-facing messages. Nesting is automatic:
+//!
+//! ```rust,ignore
+//! use color_print::cformat;
+//!
+//! // Simple styling
+//! cformat!("<green>Success message</>")
+//!
+//! // Nested styles - bold inherits green, nesting "just works"
+//! cformat!("<green>Removed branch <bold>{branch}</> successfully</>")
+//!
+//! // Semantic mapping:
+//! // - Errors: <red>...</>
+//! // - Warnings: <yellow>...</>
+//! // - Hints: <dim>...</>
+//! // - Progress: <cyan>...</>
+//! // - Success: <green>...</>
+//! ```
+//!
+//! ## 2. `anstyle` for programmatic styling
+//!
+//! Use `Style` constants for `StyledLine`, table rendering, and computed styles.
+//!
+//! # Semantic Color Reference
+//!
+//! | Semantic | color-print tag | anstyle constant |
+//! |----------|-----------------|------------------|
+//! | Error | `<red>` | `ERROR` |
+//! | Warning | `<yellow>` | `WARNING` |
+//! | Hint | `<dim>` | `HINT` |
+//! | Progress | `<cyan>` | `CYAN` |
+//! | Success | `<green>` | `GREEN` |
+//! | Secondary | `<bright-black>` | `GRAY` |
 
 use anstyle::{AnsiColor, Color, Style};
 
 // ============================================================================
-// Semantic Style Constants
+// Semantic Style Constants (for programmatic use with StyledLine, etc.)
 // ============================================================================
 
-/// Error style (red) - use as `{ERROR}text{ERROR:#}`
+/// Error style (red) - for programmatic use; prefer `<red>` in cformat!
 pub const ERROR: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
 
-/// Error bold style (red + bold) - use as `{ERROR_BOLD}text{ERROR_BOLD:#}`
+/// Error bold style (red + bold) - for programmatic use
 pub const ERROR_BOLD: Style = Style::new()
     .fg_color(Some(Color::Ansi(AnsiColor::Red)))
     .bold();
 
-/// Warning style (yellow) - use as `{WARNING}text{WARNING:#}`
+/// Warning style (yellow) - for programmatic use; prefer `<yellow>` in cformat!
 pub const WARNING: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
 
-/// Warning bold style (yellow + bold) - use as `{WARNING_BOLD}text{WARNING_BOLD:#}`
+/// Warning bold style (yellow + bold) - for programmatic use
 pub const WARNING_BOLD: Style = Style::new()
     .fg_color(Some(Color::Ansi(AnsiColor::Yellow)))
     .bold();
 
-/// Hint style (dimmed) - use as `{HINT}text{HINT:#}`
+/// Hint style (dimmed) - for programmatic use; prefer `<dim>` in cformat!
 pub const HINT: Style = Style::new().dimmed();
 
-/// Hint bold style (dimmed + bold) - use as `{HINT_BOLD}text{HINT_BOLD:#}`
+/// Hint bold style (dimmed + bold) - for programmatic use
 pub const HINT_BOLD: Style = Style::new().dimmed().bold();
 
 /// Addition style for diffs (green)
@@ -36,23 +74,23 @@ pub const ADDITION: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Gr
 /// Deletion style for diffs (red)
 pub const DELETION: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
 
-/// Cyan style - use as `{CYAN}text{CYAN:#}`
+/// Cyan style - for programmatic use; prefer `<cyan>` in cformat!
 pub const CYAN: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
 
-/// Cyan bold style - use as `{CYAN_BOLD}text{CYAN_BOLD:#}`
+/// Cyan bold style - for programmatic use
 pub const CYAN_BOLD: Style = Style::new()
     .fg_color(Some(Color::Ansi(AnsiColor::Cyan)))
     .bold();
 
-/// Green style - use as `{GREEN}text{GREEN:#}`
+/// Green style - for programmatic use; prefer `<green>` in cformat!
 pub const GREEN: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
 
-/// Green bold style - use as `{GREEN_BOLD}text{GREEN_BOLD:#}`
+/// Green bold style - for programmatic use
 pub const GREEN_BOLD: Style = Style::new()
     .fg_color(Some(Color::Ansi(AnsiColor::Green)))
     .bold();
 
-/// Gray style for secondary/metadata text - use as `{GRAY}text{GRAY:#}`
+/// Gray style for secondary/metadata text - for programmatic use; prefer `<bright-black>` in cformat!
 pub const GRAY: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightBlack)));
 
 /// Gutter style for quoted content (commands, config, error details)
@@ -70,22 +108,22 @@ pub const GUTTER: Style = Style::new().bg_color(Some(Color::Ansi(AnsiColor::Brig
 // Message Emojis
 // ============================================================================
 
-/// Progress emoji - use with cyan style: `println!("{PROGRESS_EMOJI} {cyan}message{cyan:#}");`
+/// Progress emoji: `cprintln!("{PROGRESS_EMOJI} <cyan>message</>");`
 pub const PROGRESS_EMOJI: &str = "🔄";
 
-/// Success emoji - use with GREEN style: `println!("{SUCCESS_EMOJI} {GREEN}message{GREEN:#}");`
+/// Success emoji: `cprintln!("{SUCCESS_EMOJI} <green>message</>");`
 pub const SUCCESS_EMOJI: &str = "✅";
 
-/// Error emoji - use with ERROR style: `println!("{ERROR_EMOJI} {ERROR}message{ERROR:#}");`
+/// Error emoji: `cprintln!("{ERROR_EMOJI} <red>message</>");`
 pub const ERROR_EMOJI: &str = "❌";
 
-/// Warning emoji - use with WARNING style: `println!("{WARNING_EMOJI} {WARNING}message{WARNING:#}");`
+/// Warning emoji: `cprintln!("{WARNING_EMOJI} <yellow>message</>");`
 pub const WARNING_EMOJI: &str = "🟡";
 
-/// Hint emoji - use with HINT style: `println!("{HINT_EMOJI} {HINT}message{HINT:#}");`
+/// Hint emoji: `cprintln!("{HINT_EMOJI} <dim>message</>");`
 pub const HINT_EMOJI: &str = "💡";
 
 /// Info emoji - use for neutral status (primary status NOT dimmed, metadata may be dimmed)
 /// Primary status: `output::info("All commands already approved")?;`
-/// Metadata: `println!("{INFO_EMOJI} {dim}Showing 5 worktrees...{dim:#}");`
+/// Metadata: `cprintln!("{INFO_EMOJI} <dim>Showing 5 worktrees...</>");`
 pub const INFO_EMOJI: &str = "⚪";

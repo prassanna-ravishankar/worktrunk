@@ -26,6 +26,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mCannot create worktree for [1m[31moccupied-branch[0m[31m: target path already exists[0m
+❌ [31mCannot create worktree for [1moccupied-branch[22m: target path already exists[39m
 
-💡 [2mReuse the existing worktree at [REPO]/../repo.occupied-branch or remove it before retrying[0m
+💡 [2mReuse the existing worktree at [REPO]/../repo.occupied-branch or remove it before retrying[22m

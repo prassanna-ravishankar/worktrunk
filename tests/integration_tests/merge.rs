@@ -2454,11 +2454,11 @@ fn test_merge_no_commit_with_clean_tree() {
         ----- stdout -----
 
         ----- stderr -----
-        🔄 [36mMerging 1 commit to [1m[36mmain[0m[36m @ [2m[36m6551244[0m[36m (no commit/squash/rebase needed)[0m
+        🔄 [36mMerging 1 commit to [1mmain[22m @ [2m6551244[22m (no commit/squash/rebase needed)[39m
         [107m [0m  * [33m6551244[m Add feature file
         [107m [0m   feature.txt | 1 [32m+[m
         [107m [0m   1 file changed, 1 insertion(+)
-        ✅ [32mMerged to [1m[32mmain[0m[32m (1 commit, 1 file, [32m+1[0m)[0m
+        ✅ [32mMerged to [1mmain[22m (1 commit, 1 file, [32m+1[0m)[39m
         ⚪ Worktree preserved (--no-remove)
         ");
     });
@@ -2502,9 +2502,9 @@ fn test_merge_no_commit_with_dirty_tree() {
         ----- stdout -----
 
         ----- stderr -----
-        ❌ [31mCannot merge with --no-commit: working tree has uncommitted changes[0m
+        ❌ [31mCannot merge with --no-commit: working tree has uncommitted changes[39m
 
-        💡 [2mCommit or stash them first[0m
+        💡 [2mCommit or stash them first[22m
         ");
     });
 }
@@ -2557,11 +2557,11 @@ fn test_merge_no_commit_no_squash_no_remove_redundant() {
         ----- stdout -----
 
         ----- stderr -----
-        🔄 [36mMerging 1 commit to [1m[36mmain[0m[36m @ [2m[36m6551244[0m[36m (no commit/squash/rebase needed)[0m
+        🔄 [36mMerging 1 commit to [1mmain[22m @ [2m6551244[22m (no commit/squash/rebase needed)[39m
         [107m [0m  * [33m6551244[m Add feature file
         [107m [0m   feature.txt | 1 [32m+[m
         [107m [0m   1 file changed, 1 insertion(+)
-        ✅ [32mMerged to [1m[32mmain[0m[32m (1 commit, 1 file, [32m+1[0m)[0m
+        ✅ [32mMerged to [1mmain[22m (1 commit, 1 file, [32m+1[0m)[39m
         ⚪ Worktree preserved (--no-remove)
         ");
     });

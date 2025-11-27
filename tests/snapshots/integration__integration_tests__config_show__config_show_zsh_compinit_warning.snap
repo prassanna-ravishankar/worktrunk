@@ -16,7 +16,7 @@ info:
     HOME: "[TEST_HOME]"
     LANG: C
     LC_ALL: C
-    SOURCE_DATE_EPOCH: "1761609600"
+    SOURCE_DATE_EPOCH: "1735776000"
     WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
     XDG_CONFIG_HOME: "[TEST_CONFIG_HOME]"
@@ -26,14 +26,14 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-⚪ Global Config: [1m~/.config/worktrunk/config.toml[0m
-💡 [2mEmpty file (using defaults)[0m
+⚪ Global Config: [1m~/.config/worktrunk/config.toml[22m
+💡 [2mEmpty file (using defaults)[22m
 
-⚪ Project Config: [1m[REPO]/.config/wt.toml[0m
-💡 [2mNot found[0m
+⚪ Project Config: [1m[REPO]/.config/wt.toml[22m
+💡 [2mNot found[22m
 
-⚪ Already configured shell extension & completions for [1mzsh[0m @ ~/.zshrc
-🟡 [33mCompletions won't work; add to ~/.zshrc before the wt line:[0m
+⚪ Already configured shell extension & completions for [1mzsh[22m @ ~/.zshrc
+🟡 [33mCompletions won't work; add to ~/.zshrc before the wt line:[39m
 [107m [0m  autoload -Uz compinit && compinit
-[2m⚪ Skipped bash; ~/.bashrc not found[0m
-[2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
+[2m⚪ Skipped bash; ~/.bashrc not found[22m
+[2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m

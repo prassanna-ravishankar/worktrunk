@@ -119,7 +119,7 @@ fn test_statusline_basic() {
 fn test_statusline_with_changes() {
     let repo = setup_repo_with_changes();
     let output = run_statusline(&repo, &[], None);
-    assert_snapshot!(output, @"main  [36m?[0m");
+    assert_snapshot!(output, @"main  [36m?[39m");
 }
 
 #[test]
@@ -169,7 +169,7 @@ fn test_statusline_claude_code_full_context() {
 
     let output = run_statusline(&repo, &["--claude-code"], Some(&json));
     claude_code_snapshot_settings(&repo).bind(|| {
-        assert_snapshot!(output, @"[PATH]  main  [36m?[0m  | Opus");
+        assert_snapshot!(output, @"[PATH]  main  [36m?[39m  | Opus");
     });
 }
 

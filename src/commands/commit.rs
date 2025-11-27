@@ -1,7 +1,8 @@
 use anyhow::Context;
+use color_print::cformat;
 use worktrunk::config::CommitGenerationConfig;
 use worktrunk::git::Repository;
-use worktrunk::styling::{AnstyleStyle, CYAN, GREEN, HINT, format_with_gutter};
+use worktrunk::styling::format_with_gutter;
 
 use super::command_executor::CommandContext;
 use super::hooks::HookPipeline;
@@ -46,14 +47,13 @@ impl<'a> CommitGenerator<'a> {
     }
 
     pub fn format_message_for_display(&self, message: &str) -> String {
-        let bold = AnstyleStyle::new().bold();
         let lines: Vec<&str> = message.lines().collect();
 
         if lines.is_empty() {
             return String::new();
         }
 
-        let mut result = format!("{bold}{}{bold:#}", lines[0]);
+        let mut result = cformat!("<bold>{}</>", lines[0]);
 
         if lines.len() > 1 {
             for line in &lines[1..] {
@@ -67,8 +67,8 @@ impl<'a> CommitGenerator<'a> {
 
     pub fn emit_hint_if_needed(&self) -> anyhow::Result<()> {
         if !self.config.is_configured() {
-            crate::output::hint(format!(
-                "{HINT}Using fallback commit message. Run 'wt config --help' for LLM setup guide{HINT:#}"
+            crate::output::hint(cformat!(
+                "<dim>Using fallback commit message. Run 'wt config --help' for LLM setup guide</>"
             ))?;
         }
         Ok(())
@@ -103,9 +103,9 @@ impl<'a> CommitGenerator<'a> {
         }
 
         let full_progress_msg = if parts.is_empty() {
-            format!("{CYAN}{action}{CYAN:#}")
+            cformat!("<cyan>{action}</>")
         } else {
-            format!("{CYAN}{action} ({}){CYAN:#}", parts.join(", "))
+            cformat!("<cyan>{action} ({})</>", parts.join(", "))
         };
 
         crate::output::progress(full_progress_msg)?;
@@ -124,9 +124,8 @@ impl<'a> CommitGenerator<'a> {
             .trim()
             .to_string();
 
-        let green_dim = GREEN.dimmed();
-        crate::output::success(format!(
-            "{GREEN}Committed changes @ {green_dim}{commit_hash}{green_dim:#}{GREEN:#}"
+        crate::output::success(cformat!(
+            "<green>Committed changes @ <dim>{commit_hash}</></>"
         ))?;
 
         Ok(())
@@ -143,9 +142,7 @@ impl CommitOptions<'_> {
             .unwrap_or(false);
 
         if self.no_verify && has_pre_commit {
-            crate::output::hint(format!(
-                "{HINT}Skipping pre-commit hook (--no-verify){HINT:#}"
-            ))?;
+            crate::output::hint(cformat!("<dim>Skipping pre-commit hook (--no-verify)</>"))?;
         } else if let Some(ref config) = project_config {
             let pipeline = HookPipeline::new(*self.ctx);
             pipeline.run_pre_commit(config, self.target_branch, self.auto_trust)?;

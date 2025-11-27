@@ -72,6 +72,7 @@ pub use handlers::{
     execute_command_in_worktree, execute_user_command, handle_remove_output, handle_switch_output,
 };
 
+use color_print::cformat;
 use std::path::Path;
 use worktrunk::path::format_path_for_display;
 
@@ -87,8 +88,6 @@ pub(crate) fn format_switch_success_message(
     base_branch: Option<&str>,
     from_remote: Option<&str>,
 ) -> String {
-    use worktrunk::styling::{GREEN, GREEN_BOLD};
-
     // Determine action and source based on how the worktree was created
     // Priority: explicit --create > DWIM from remote > existing local branch
     let (action, source) = if created_branch {
@@ -99,14 +98,13 @@ pub(crate) fn format_switch_success_message(
         ("Switched to worktree for", None)
     };
 
-    // Re-establish GREEN after each green_bold reset to prevent color leak
     match source {
-        Some(src) => format!(
-            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN} from {GREEN_BOLD}{src}{GREEN_BOLD:#}{GREEN} at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
+        Some(src) => cformat!(
+            "<green>{action} <bold>{branch}</> from <bold>{src}</> at <bold>{}</></>",
             format_path_for_display(path)
         ),
-        None => format!(
-            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN} at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
+        None => cformat!(
+            "<green>{action} <bold>{branch}</> at <bold>{}</></>",
             format_path_for_display(path)
         ),
     }

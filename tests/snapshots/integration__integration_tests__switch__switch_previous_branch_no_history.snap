@@ -25,4 +25,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mNo previous branch found in history. Use 'wt list' to see available worktrees.[0m
+❌ [31mNo previous branch found in history. Use 'wt list' to see available worktrees.[39m

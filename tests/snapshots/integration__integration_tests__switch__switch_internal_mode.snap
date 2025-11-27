@@ -18,7 +18,8 @@ info:
     HOME: "[TEST_HOME]"
     LANG: C
     LC_ALL: C
-    SOURCE_DATE_EPOCH: "1761609600"
+    SOURCE_DATE_EPOCH: "1735776000"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: true
@@ -27,4 +28,4 @@ exit_code: 0
 cd '[REPO].internal-test'
 
 ----- stderr -----
-✅ [32mCreated new worktree for [1m[32minternal-test[0m[32m from [1m[32mmain[0m[32m at [1m[32m[REPO].internal-test[0m[0m
+✅ [32mCreated new worktree for [1minternal-test[22m from [1mmain[22m at [1m[REPO].internal-test[39m[22m

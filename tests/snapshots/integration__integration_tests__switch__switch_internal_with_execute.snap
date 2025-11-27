@@ -20,7 +20,7 @@ info:
     HOME: "[TEST_HOME]"
     LANG: C
     LC_ALL: C
-    SOURCE_DATE_EPOCH: "1761609600"
+    SOURCE_DATE_EPOCH: "1735776000"
     WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
@@ -32,7 +32,7 @@ echo 'line1'
 echo 'line2'
 
 ----- stderr -----
-✅ [32mCreated new worktree for [1m[32mexec-internal[0m[32m from [1m[32mmain[0m[32m at [1m[32m[REPO].exec-internal[0m[0m
-🔄 [36mExecuting (--execute):[0m
+✅ [32mCreated new worktree for [1mexec-internal[22m from [1mmain[22m at [1m[REPO].exec-internal[39m[22m
+🔄 [36mExecuting (--execute):[39m
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'line1'[0m[2m[0m
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'line2'[0m[2m[0m

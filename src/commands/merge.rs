@@ -1,7 +1,8 @@
+use color_print::cformat;
 use worktrunk::HookType;
 use worktrunk::config::{Command, CommandPhase, ProjectConfig};
 use worktrunk::git::Repository;
-use worktrunk::styling::{ERROR, ERROR_EMOJI, HINT, HINT_EMOJI};
+use worktrunk::styling::{ERROR_EMOJI, HINT_EMOJI};
 
 use super::command_approval::approve_command_batch;
 use super::command_executor::CommandContext;
@@ -93,7 +94,11 @@ pub fn handle_merge(
     // Validate --no-commit flag compatibility
     if !commit && remove {
         return Err(anyhow::anyhow!(
-            "{ERROR_EMOJI} {ERROR}--no-commit requires --no-remove{ERROR:#}\n\n{HINT_EMOJI} {HINT}Cannot remove active worktree when skipping commit/rebase{HINT:#}"
+            "{}\n\n{}",
+            cformat!("{ERROR_EMOJI} <red>--no-commit requires --no-remove</>"),
+            cformat!(
+                "{HINT_EMOJI} <dim>Cannot remove active worktree when skipping commit/rebase</>"
+            )
         ));
     }
 

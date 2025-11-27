@@ -17,7 +17,8 @@ info:
     HOME: "[TEST_HOME]"
     LANG: C
     LC_ALL: C
-    SOURCE_DATE_EPOCH: "1761609600"
+    SOURCE_DATE_EPOCH: "1735776000"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
     XDG_CONFIG_HOME: "[TEST_CONFIG_HOME]"
 ---
@@ -26,12 +27,12 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-⚪ Global Config: [1m~/.config/worktrunk/config.toml[0m
+⚪ Global Config: [1m~/.config/worktrunk/config.toml[22m
 [107m [0m  worktree-path = [32m"../{{ main_worktree }}.{{ branch }}"[0m
 
-⚪ Project Config: [1m[REPO]/.config/wt.toml[0m
-💡 [2mNot found[0m
+⚪ Project Config: [1m[REPO]/.config/wt.toml[22m
+💡 [2mNot found[22m
 
-[2m⚪ Skipped bash; ~/.bashrc not found[0m
-[2m⚪ Skipped zsh; ~/.zshrc not found[0m
-[2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
+[2m⚪ Skipped bash; ~/.bashrc not found[22m
+[2m⚪ Skipped zsh; ~/.zshrc not found[22m
+[2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m

@@ -1,11 +1,11 @@
-use anstyle::Style;
 use anyhow::Context;
 use clap::FromArgMatches;
+use color_print::cformat;
 use std::process;
 use worktrunk::config::{WorktrunkConfig, set_config_path};
 use worktrunk::git::{Repository, exit_code, is_command_not_approved, set_base_path};
 use worktrunk::path::format_path_for_display;
-use worktrunk::styling::{HINT, format_with_gutter, println};
+use worktrunk::styling::{format_with_gutter, println};
 
 mod cli;
 mod commands;
@@ -161,7 +161,6 @@ fn main() {
         env_logger::Env::default().default_filter_or(if cli.verbose { "debug" } else { "off" }),
     )
     .format(|buf, record| {
-        use anstyle::Style;
         use std::io::Write;
 
         let msg = record.args().to_string();
@@ -183,31 +182,30 @@ fn main() {
             })
             .unwrap_or('?');
 
-        let dim = Style::new().dimmed();
-
         // Commands start with $, make only the command bold (not $ or [worktree])
         if let Some(rest) = msg.strip_prefix("$ ") {
-            let bold = Style::new().bold();
-
             // Split: "git command [worktree]" -> ("git command", " [worktree]")
             if let Some(bracket_pos) = rest.find(" [") {
                 let command = &rest[..bracket_pos];
                 let worktree = &rest[bracket_pos..];
                 writeln!(
                     buf,
-                    "{dim}[{thread_num}]{dim:#} $ {bold}{command}{bold:#}{worktree}"
+                    "{}",
+                    cformat!("<dim>[{thread_num}]</> $ <bold>{command}</>{worktree}")
                 )
             } else {
-                writeln!(buf, "{dim}[{thread_num}]{dim:#} $ {bold}{rest}{bold:#}")
+                writeln!(
+                    buf,
+                    "{}",
+                    cformat!("<dim>[{thread_num}]</> $ <bold>{rest}</>")
+                )
             }
         } else if msg.starts_with("  ! ") {
             // Error output - show in red
-            use anstyle::{AnsiColor, Color};
-            let red = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
-            writeln!(buf, "{dim}[{thread_num}]{dim:#} {red}{msg}{red:#}")
+            writeln!(buf, "{}", cformat!("<dim>[{thread_num}]</> <red>{msg}</>"))
         } else {
             // Regular output with thread ID
-            writeln!(buf, "{dim}[{thread_num}]{dim:#} {msg}")
+            writeln!(buf, "{}", cformat!("<dim>[{thread_num}]</> {msg}"))
         }
     })
     .init();
@@ -246,7 +244,6 @@ fn main() {
                                 .count();
 
                             // Show configured shells grouped with their completions
-                            let bold = Style::new().bold();
                             for result in &scan_result.configured {
                                 let shell = result.shell;
                                 let path = format_path_for_display(&result.path);
@@ -256,8 +253,8 @@ fn main() {
                                 } else {
                                     "shell extension"
                                 };
-                                let message = format!(
-                                    "{} {what} for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
+                                let message = cformat!(
+                                    "{} {what} for <bold>{shell}</> @ <bold>{path}</>",
                                     result.action.description()
                                 );
 
@@ -282,8 +279,8 @@ fn main() {
                                 // as meaningful to show, but the asymmetry is confusing.
                                 if let Some(comp_result) = scan_result.completion_results.iter().find(|r| r.shell == shell) {
                                     let comp_path = format_path_for_display(&comp_result.path);
-                                    let comp_message = format!(
-                                        "{} completions for {bold}{shell}{bold:#} @ {bold}{comp_path}{bold:#}",
+                                    let comp_message = cformat!(
+                                        "{} completions for <bold>{shell}</> @ <bold>{comp_path}</>",
                                         comp_result.action.description()
                                     );
                                     match comp_result.action {
@@ -303,8 +300,8 @@ fn main() {
                             // Show skipped shells
                             for (shell, path) in &scan_result.skipped {
                                 let path = format_path_for_display(path);
-                                crate::output::hint(format!(
-                                    "{HINT}Skipped {bold}{shell}{bold:#}; {path} not found{HINT:#}"
+                                crate::output::hint(cformat!(
+                                    "<dim>Skipped <bold>{shell}</>; {path} not found</>"
                                 ))?;
                             }
 
@@ -353,11 +350,11 @@ fn main() {
                                     // Fish auto-sources from conf.d, so just say "Restart shell"
                                     // Bash/Zsh can source directly for immediate activation
                                     if matches!(result.shell, worktrunk::shell::Shell::Fish) {
-                                        crate::output::hint(format!("{HINT}Restart shell to activate{HINT:#}"))?;
+                                        crate::output::hint(cformat!("<dim>Restart shell to activate</>"))?;
                                     } else {
                                         let path = format_path_for_display(&result.path);
-                                        crate::output::hint(format!(
-                                            "{HINT}Restart shell or run: source {path}{HINT:#}"
+                                        crate::output::hint(cformat!(
+                                            "<dim>Restart shell or run: source {path}</>"
                                         ))?;
                                     }
                                 }
@@ -376,30 +373,32 @@ fn main() {
 
                                 // Show shell extension results
                                 for result in &scan_result.results {
-                                    let bold = Style::new().bold();
                                     let shell = result.shell;
                                     let path = format_path_for_display(&result.path);
                                     // For bash/zsh, completions are inline in the init script
-                                    let what = if matches!(shell, worktrunk::shell::Shell::Bash | worktrunk::shell::Shell::Zsh) {
+                                    let what = if matches!(
+                                        shell,
+                                        worktrunk::shell::Shell::Bash
+                                            | worktrunk::shell::Shell::Zsh
+                                    ) {
                                         "shell extension & completions"
                                     } else {
                                         "shell extension"
                                     };
 
-                                    crate::output::success(format!(
-                                        "{} {what} for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
+                                    crate::output::success(cformat!(
+                                        "{} {what} for <bold>{shell}</> @ <bold>{path}</>",
                                         result.action.description(),
                                     ))?;
                                 }
 
                                 // Show completion results
                                 for result in &scan_result.completion_results {
-                                    let bold = Style::new().bold();
                                     let shell = result.shell;
                                     let path = format_path_for_display(&result.path);
 
-                                    crate::output::success(format!(
-                                        "{} completions for {bold}{shell}{bold:#} @ {bold}{path}{bold:#}",
+                                    crate::output::success(cformat!(
+                                        "{} completions for <bold>{shell}</> @ <bold>{path}</>",
                                         result.action.description(),
                                     ))?;
                                 }
@@ -408,7 +407,11 @@ fn main() {
                                 for (shell, path) in &scan_result.not_found {
                                     let path = format_path_for_display(path);
                                     // Use consistent terminology matching install/uninstall messages
-                                    let what = if matches!(shell, worktrunk::shell::Shell::Bash | worktrunk::shell::Shell::Zsh) {
+                                    let what = if matches!(
+                                        shell,
+                                        worktrunk::shell::Shell::Bash
+                                            | worktrunk::shell::Shell::Zsh
+                                    ) {
                                         "shell extension & completions"
                                     } else {
                                         "shell extension"
@@ -418,8 +421,8 @@ fn main() {
                                             "No {what} found in {path}"
                                         ))?;
                                     } else {
-                                        crate::output::hint(format!(
-                                            "{HINT}No {shell} {what} in {path}{HINT:#}"
+                                        crate::output::hint(cformat!(
+                                            "<dim>No {shell} {what} in {path}</>"
                                         ))?;
                                     }
                                 }
@@ -428,7 +431,8 @@ fn main() {
                                 // Only show this if the shell extension was ALSO not found - if we removed
                                 // the shell extension, no need to warn about missing completions
                                 for (shell, path) in &scan_result.completion_not_found {
-                                    let shell_was_removed = scan_result.results.iter().any(|r| r.shell == *shell);
+                                    let shell_was_removed =
+                                        scan_result.results.iter().any(|r| r.shell == *shell);
                                     if shell_was_removed {
                                         continue; // Shell extension was removed, don't warn about completions
                                     }
@@ -438,19 +442,20 @@ fn main() {
                                             "No completions found in {path}"
                                         ))?;
                                     } else {
-                                        crate::output::hint(format!(
-                                            "{HINT}No {shell} completions in {path}{HINT:#}"
+                                        crate::output::hint(cformat!(
+                                            "<dim>No {shell} completions in {path}</>"
                                         ))?;
                                     }
                                 }
 
                                 // Exit with info if nothing was found
-                                let all_not_found = scan_result.not_found.len() + scan_result.completion_not_found.len();
+                                let all_not_found = scan_result.not_found.len()
+                                    + scan_result.completion_not_found.len();
                                 if total_changes == 0 {
                                     if all_not_found == 0 {
                                         crate::output::blank()?;
-                                        crate::output::hint(format!(
-                                            "{HINT}No shell integration found to remove{HINT:#}"
+                                        crate::output::hint(cformat!(
+                                            "<dim>No shell integration found to remove</>"
                                         ))?;
                                     }
                                     return Ok(());
@@ -468,14 +473,17 @@ fn main() {
                                     .ok()
                                     .and_then(|s| s.rsplit('/').next().map(String::from));
 
-                                let current_shell_affected = current_shell.as_ref().is_some_and(|shell_name| {
-                                    scan_result.results.iter().any(|r| {
-                                        r.shell.to_string().eq_ignore_ascii_case(shell_name)
-                                    })
-                                });
+                                let current_shell_affected =
+                                    current_shell.as_ref().is_some_and(|shell_name| {
+                                        scan_result.results.iter().any(|r| {
+                                            r.shell.to_string().eq_ignore_ascii_case(shell_name)
+                                        })
+                                    });
 
                                 if current_shell_affected {
-                                    crate::output::hint(format!("{HINT}Restart shell to complete uninstall{HINT:#}"))?;
+                                    crate::output::hint(cformat!(
+                                        "<dim>Restart shell to complete uninstall</>"
+                                    ))?;
                                 }
                                 Ok(())
                             })
@@ -791,7 +799,7 @@ fn main() {
     let _ = output::terminate_output();
 
     if let Err(e) = result {
-        use worktrunk::styling::{ERROR, ERROR_EMOJI};
+        use worktrunk::styling::ERROR_EMOJI;
 
         // GitError and WorktrunkError produce styled output via Display
         if let Some(err) = e.downcast_ref::<worktrunk::git::GitError>() {
@@ -802,7 +810,7 @@ fn main() {
             // Anyhow error - format with emoji, multi-line root cause gets gutter
             let msg = e.to_string();
             let root_cause = e.root_cause().to_string();
-            let _ = output::print(format!("{ERROR_EMOJI} {ERROR}{msg}{ERROR:#}"));
+            let _ = output::print(cformat!("{ERROR_EMOJI} <red>{msg}</>"));
             if msg != root_cause && root_cause.contains('\n') {
                 let _ = output::gutter(format_with_gutter(&root_cause, "", None));
             }

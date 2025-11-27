@@ -24,8 +24,8 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mCannot push: conflicting uncommitted changes in:[0m
+❌ [31mCannot push: conflicting uncommitted changes in:[39m
 
 [107m [0m  shared.txt
 
-💡 [2mCommit or stash these changes in [REPO].main-wt first[0m
+💡 [2mCommit or stash these changes in [REPO].main-wt first[22m

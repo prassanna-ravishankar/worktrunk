@@ -29,6 +29,6 @@ exit_code: 0
 test output
 
 ----- stderr -----
-✅ [32mCreated new worktree for [1m[32mexec-test[0m[32m from [1m[32mmain[0m[32m at [1m[32m[REPO].exec-test[0m[0m
-🔄 [36mExecuting (--execute):[0m
+✅ [32mCreated new worktree for [1mexec-test[22m from [1mmain[22m at [1m[REPO].exec-test[39m[22m
+🔄 [36mExecuting (--execute):[39m
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'test output'[0m[2m[0m

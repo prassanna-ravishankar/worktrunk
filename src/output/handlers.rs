@@ -1,14 +1,14 @@
 //! Output handlers for worktree operations using the global output context
 
+use color_print::cformat;
+
 use crate::commands::process::spawn_detached;
 use crate::commands::worktree::{RemoveResult, SwitchResult};
 use worktrunk::git::GitError;
 use worktrunk::git::Repository;
 use worktrunk::path::format_path_for_display;
 use worktrunk::shell::Shell;
-use worktrunk::styling::{
-    CYAN, CYAN_BOLD, GREEN, GREEN_BOLD, WARNING, WARNING_BOLD, format_with_gutter,
-};
+use worktrunk::styling::format_with_gutter;
 
 /// Check if a branch's content has been integrated into the target.
 ///
@@ -63,8 +63,8 @@ fn handle_branch_deletion_result(
         Ok(true) => Ok(true),
         Ok(false) => {
             // Branch not integrated - show warning
-            super::warning(format!(
-                "{WARNING}Could not delete branch {WARNING_BOLD}{branch_name}{WARNING_BOLD:#}{WARNING:#}"
+            super::warning(cformat!(
+                "<yellow>Could not delete branch <bold>{branch_name}</></>"
             ))?;
             super::gutter(format_with_gutter(
                 &format!("error: the branch '{}' is not fully merged", branch_name),
@@ -75,8 +75,8 @@ fn handle_branch_deletion_result(
         }
         Err(e) => {
             // Git command failed - show warning with error details
-            super::warning(format!(
-                "{WARNING}Could not delete branch {WARNING_BOLD}{branch_name}{WARNING_BOLD:#}{WARNING:#}"
+            super::warning(cformat!(
+                "<yellow>Could not delete branch <bold>{branch_name}</></>"
             ))?;
             super::gutter(format_with_gutter(&e.to_string(), "", None))?;
             Ok(false)
@@ -119,30 +119,26 @@ fn format_remove_worktree_message(
 
     let branch_display = branch.or(Some(branch_name));
 
+    let path_display = format_path_for_display(main_path);
+
     if changed_directory {
         if let Some(b) = branch_display {
-            // Re-establish GREEN after each green_bold reset to prevent color leak
-            format!(
-                "{GREEN}{action} for {GREEN_BOLD}{b}{GREEN_BOLD:#}{GREEN}, changed directory to {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN}{flag_note}{GREEN:#}",
-                format_path_for_display(main_path)
+            cformat!(
+                "<green>{action} for <bold>{b}</>, changed directory to <bold>{path_display}</>{flag_note}</>"
             )
         } else {
-            format!(
-                "{GREEN}{action}, changed directory to {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN}{flag_note}{GREEN:#}",
-                format_path_for_display(main_path)
-            )
+            cformat!("<green>{action}, changed directory to <bold>{path_display}</>{flag_note}</>")
         }
     } else if let Some(b) = branch_display {
-        format!("{GREEN}{action} for {GREEN_BOLD}{b}{GREEN_BOLD:#}{GREEN}{flag_note}{GREEN:#}")
+        cformat!("<green>{action} for <bold>{b}</>{flag_note}</>")
     } else {
-        format!("{GREEN}{action}{flag_note}{GREEN:#}")
+        cformat!("<green>{action}{flag_note}</>")
     }
 }
 
 /// Shell integration hint message (with HINT styling - emoji added by shell_integration_hint())
 fn shell_integration_hint() -> String {
-    use worktrunk::styling::HINT;
-    format!("{HINT}Run `wt config shell install` to enable automatic cd{HINT:#}")
+    cformat!("<dim>Run `wt config shell install` to enable automatic cd</>")
 }
 
 /// Handle output for a switch operation
@@ -162,9 +158,8 @@ pub fn handle_switch_output(
     match result {
         SwitchResult::AlreadyAt(path) => {
             // Already at target - show info, no hint needed
-            let bold = worktrunk::styling::AnstyleStyle::new().bold();
-            super::info(format!(
-                "Already on worktree for {bold}{branch}{bold:#} at {bold}{}{bold:#}",
+            super::info(cformat!(
+                "Already on worktree for <bold>{branch}</> at <bold>{}</>",
                 format_path_for_display(path)
             ))?;
         }
@@ -179,9 +174,9 @@ pub fn handle_switch_output(
                 ))?;
             } else {
                 // Shell integration not configured - show warning and setup hint
-                super::warning(format!(
-                    "{WARNING}Worktree for {WARNING_BOLD}{branch}{WARNING_BOLD:#}{WARNING} at {WARNING_BOLD}{}{WARNING_BOLD:#}{WARNING}; cannot cd (no shell integration){WARNING:#}",
-                    format_path_for_display(path)
+                let path_display = format_path_for_display(path);
+                super::warning(cformat!(
+                    "<yellow>Worktree for <bold>{branch}</> at <bold>{path_display}</>; cannot cd (no shell integration)</>"
                 ))?;
                 super::shell_integration_hint(shell_integration_hint())?;
             }
@@ -215,10 +210,10 @@ pub fn handle_switch_output(
 
 /// Execute the --execute command after hooks have run
 pub fn execute_user_command(command: &str) -> anyhow::Result<()> {
-    use worktrunk::styling::{CYAN, format_bash_with_gutter};
+    use worktrunk::styling::format_bash_with_gutter;
 
     // Show what command is being executed (section header + gutter content)
-    super::progress(format!("{CYAN}Executing (--execute):{CYAN:#}"))?;
+    super::progress(cformat!("<cyan>Executing (--execute):</>"))?;
     super::gutter(format_bash_with_gutter(command, ""))?;
 
     super::execute(command)?;
@@ -303,11 +298,9 @@ fn handle_branch_only_output(
     no_delete_branch: bool,
     force_delete: bool,
 ) -> anyhow::Result<()> {
-    use worktrunk::styling::GRAY;
-
     // Show info message that no worktree was found
-    super::info(format!(
-        "{GRAY}No worktree found for branch {branch_name}{GRAY:#}"
+    super::info(cformat!(
+        "<bright-black>No worktree found for branch {branch_name}</>"
     ))?;
 
     // Attempt branch deletion (unless --no-delete-branch was specified)
@@ -327,8 +320,8 @@ fn handle_branch_only_output(
         } else {
             ""
         };
-        super::success(format!(
-            "{GREEN}Removed branch {GREEN_BOLD}{branch_name}{GREEN_BOLD:#}{GREEN}{flag_note}{GREEN:#}"
+        super::success(cformat!(
+            "<green>Removed branch <bold>{branch_name}</>{flag_note}</>"
         ))?;
     }
 
@@ -375,22 +368,20 @@ fn handle_removed_worktree_output(
 
         // Show progress message based on what we'll do
         let action = if no_delete_branch {
-            format!(
-                "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} worktree in background; retaining branch (--no-delete-branch){CYAN:#}"
+            cformat!(
+                "<cyan>Removing <bold>{branch_name}</> worktree in background; retaining branch (--no-delete-branch)</>"
             )
         } else if should_delete_branch {
             if force_delete {
-                format!(
-                    "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} worktree & branch in background (--force-delete){CYAN:#}"
+                cformat!(
+                    "<cyan>Removing <bold>{branch_name}</> worktree & branch in background (--force-delete)</>"
                 )
             } else {
-                format!(
-                    "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} worktree & branch in background{CYAN:#}"
-                )
+                cformat!("<cyan>Removing <bold>{branch_name}</> worktree & branch in background</>")
             }
         } else {
-            format!(
-                "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} worktree in background; retaining unmerged branch{CYAN:#}"
+            cformat!(
+                "<cyan>Removing <bold>{branch_name}</> worktree in background; retaining unmerged branch</>"
             )
         };
         super::progress(action)?;

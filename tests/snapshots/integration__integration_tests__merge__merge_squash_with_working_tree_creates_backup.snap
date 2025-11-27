@@ -26,20 +26,20 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-🔄 [36mSquashing 2 commits & working tree changes into a single commit (2 files, [32m+2[0m)...[0m
-💡 [2mBackup created @ [2m330ccd6[0m[0m
-🔄 [36mGenerating squash commit message...[0m
-💡 [2mUsing fallback commit message. Run 'wt config --help' for LLM setup guide[0m
-[107m [0m  [1mSquash commits from main[0m
+🔄 [36mSquashing 2 commits & working tree changes into a single commit (2 files, [32m+2[0m)...[39m
+💡 [2mBackup created @ 330ccd6[22m
+🔄 [36mGenerating squash commit message...[39m
+💡 [2mUsing fallback commit message. Run 'wt config --help' for LLM setup guide[22m
+[107m [0m  [1mSquash commits from main[22m
 [107m [0m  
 [107m [0m  Combined commits:
 [107m [0m  - feat: add file 1
 [107m [0m  - feat: add file 2
-✅ [32mSquashed @ [2m[32md34e4c3[0m[0m
-🔄 [36mMerging 1 commit to [1m[36mmain[0m[36m @ [2m[36md34e4c3[0m[36m (no rebase needed)[0m
+✅ [32mSquashed @ [2md34e4c3[39m[22m
+🔄 [36mMerging 1 commit to [1mmain[22m @ [2md34e4c3[22m (no rebase needed)[39m
 [107m [0m  * [33md34e4c3[m Squash commits from main
 [107m [0m   file1.txt | 1 [32m+[m
 [107m [0m   file2.txt | 1 [32m+[m
 [107m [0m   2 files changed, 2 insertions(+)
-✅ [32mMerged to [1m[32mmain[0m[32m (1 commit, 2 files, [32m+2[0m)[0m
-🔄 [36mRemoving [1m[36mfeature[0m[36m worktree & branch in background[0m
+✅ [32mMerged to [1mmain[22m (1 commit, 2 files, [32m+2[0m)[39m
+🔄 [36mRemoving [1mfeature[22m worktree & branch in background[39m

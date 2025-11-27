@@ -628,11 +628,11 @@ impl MainDivergence {
 
     /// Returns styled symbol (dimmed), or None for None variant.
     pub fn styled(&self) -> Option<String> {
-        use worktrunk::styling::HINT;
+        use color_print::cformat;
         if *self == Self::None {
             None
         } else {
-            Some(format!("{HINT}{self}{HINT:#}"))
+            Some(cformat!("<dim>{self}</>"))
         }
     }
 }
@@ -688,11 +688,11 @@ impl UpstreamDivergence {
 
     /// Returns styled symbol (dimmed), or None for None variant.
     pub fn styled(&self) -> Option<String> {
-        use worktrunk::styling::HINT;
+        use color_print::cformat;
         if *self == Self::None {
             None
         } else {
-            Some(format!("{HINT}{self}{HINT:#}"))
+            Some(cformat!("<dim>{self}</>"))
         }
     }
 }
@@ -793,14 +793,14 @@ impl BranchOpState {
     /// - WARNING (yellow): Rebase, Merge, MergeTreeConflicts - active/stuck states
     /// - HINT (dimmed): MatchesMain, NoCommits - low urgency removability indicators
     pub fn styled(&self) -> Option<String> {
-        use worktrunk::styling::{ERROR, HINT, WARNING};
+        use color_print::cformat;
         match self {
             Self::None => None,
-            Self::Conflicts => Some(format!("{ERROR}{self}{ERROR:#}")),
+            Self::Conflicts => Some(cformat!("<red>{self}</>")),
             Self::Rebase | Self::Merge | Self::MergeTreeConflicts => {
-                Some(format!("{WARNING}{self}{WARNING:#}"))
+                Some(cformat!("<yellow>{self}</>"))
             }
-            Self::MatchesMain | Self::NoCommits => Some(format!("{HINT}{self}{HINT:#}")),
+            Self::MatchesMain | Self::NoCommits => Some(cformat!("<dim>{self}</>")),
         }
     }
 }
@@ -942,7 +942,8 @@ impl StatusSymbols {
     ///
     /// See [`StatusSymbols`] struct doc for symbol categories.
     pub fn render_with_mask(&self, mask: &PositionMask) -> String {
-        use worktrunk::styling::{CYAN, HINT, StyledLine, WARNING};
+        use color_print::cformat;
+        use worktrunk::styling::StyledLine;
 
         let mut result = String::with_capacity(64);
 
@@ -972,7 +973,7 @@ impl StatusSymbols {
         // Working tree symbols split into 3 fixed columns for vertical alignment
         let style_working = |sym: char| -> (String, bool) {
             if self.working_tree.contains(sym) {
-                (format!("{CYAN}{sym}{CYAN:#}"), true)
+                (cformat!("<cyan>{sym}</>"), true)
             } else {
                 (String::new(), false)
             }
@@ -983,9 +984,9 @@ impl StatusSymbols {
         let worktree_state_str = match self.worktree_state {
             WorktreeState::None => String::new(),
             // Branch indicator (⎇) is informational (dimmed)
-            WorktreeState::Branch => format!("{HINT}{}{HINT:#}", self.worktree_state),
+            WorktreeState::Branch => cformat!("<dim>{}</>", self.worktree_state),
             // Worktree attrs (⚐⌫⊠) are warnings (yellow)
-            _ => format!("{WARNING}{}{WARNING:#}", self.worktree_state),
+            _ => cformat!("<yellow>{}</>", self.worktree_state),
         };
         let user_status_str = self.user_status.as_deref().unwrap_or("").to_string();
 
@@ -1062,13 +1063,13 @@ impl StatusSymbols {
 
     /// Render status symbols in compact form for statusline (no grid alignment).
     pub fn format_compact(&self) -> String {
-        use worktrunk::styling::{CYAN, WARNING};
+        use color_print::cformat;
 
         let mut result = String::new();
 
         // Working tree symbols (compact, no padding) - cyan for activity
         if !self.working_tree.is_empty() {
-            result.push_str(&format!("{CYAN}{}{CYAN:#}", self.working_tree));
+            result.push_str(&cformat!("<cyan>{}</>", self.working_tree));
         }
 
         // Branch/op state
@@ -1082,7 +1083,7 @@ impl StatusSymbols {
             self.worktree_state,
             WorktreeState::PathMismatch | WorktreeState::Prunable | WorktreeState::Locked
         ) {
-            result.push_str(&format!("{WARNING}{}{WARNING:#}", self.worktree_state));
+            result.push_str(&cformat!("<yellow>{}</>", self.worktree_state));
         }
 
         // User status

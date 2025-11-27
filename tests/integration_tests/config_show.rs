@@ -51,21 +51,21 @@ server = "npm run dev"
         ----- stdout -----
 
         ----- stderr -----
-        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[0m
+        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[22m
         [107m [0m  worktree-path = [32m"../{{ main_worktree }}.{{ branch }}"[0m
         [107m [0m  
         [107m [0m  [1m[36m[projects."test-project"][0m
         [107m [0m  approved-commands = [[32m"npm install"[0m]
 
-        ⚪ Project Config: [1m[REPO]/.config/wt.toml[0m
+        ⚪ Project Config: [1m[REPO]/.config/wt.toml[22m
         [107m [0m  post-create = [32m"npm install"[0m
         [107m [0m  
         [107m [0m  [1m[36m[post-start][0m
         [107m [0m  server = [32m"npm run dev"[0m
 
-        [2m⚪ Skipped bash; ~/.bashrc not found[0m
-        [2m⚪ Skipped zsh; ~/.zshrc not found[0m
-        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
+        [2m⚪ Skipped bash; ~/.bashrc not found[22m
+        [2m⚪ Skipped zsh; ~/.zshrc not found[22m
+        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m
         "#);
     });
 }
@@ -99,15 +99,15 @@ fn test_config_show_no_project_config() {
         ----- stdout -----
 
         ----- stderr -----
-        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[0m
+        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[22m
         [107m [0m  worktree-path = [32m"../{{ main_worktree }}.{{ branch }}"[0m
 
-        ⚪ Project Config: [1m[REPO]/.config/wt.toml[0m
-        💡 [2mNot found[0m
+        ⚪ Project Config: [1m[REPO]/.config/wt.toml[22m
+        💡 [2mNot found[22m
 
-        [2m⚪ Skipped bash; ~/.bashrc not found[0m
-        [2m⚪ Skipped zsh; ~/.zshrc not found[0m
-        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
+        [2m⚪ Skipped bash; ~/.bashrc not found[22m
+        [2m⚪ Skipped zsh; ~/.zshrc not found[22m
+        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m
         "#);
     });
 }
@@ -140,14 +140,14 @@ fn test_config_show_outside_git_repo() {
         ----- stdout -----
 
         ----- stderr -----
-        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[0m
+        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[22m
         [107m [0m  worktree-path = [32m"../{{ main_worktree }}.{{ branch }}"[0m
 
-        ⚪ [2mProject Config: Not in a git repository[0m
+        ⚪ [2mProject Config: Not in a git repository[22m
 
-        [2m⚪ Skipped bash; ~/.bashrc not found[0m
-        [2m⚪ Skipped zsh; ~/.zshrc not found[0m
-        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
+        [2m⚪ Skipped bash; ~/.bashrc not found[22m
+        [2m⚪ Skipped zsh; ~/.zshrc not found[22m
+        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m
         "#);
     });
 }
@@ -296,17 +296,17 @@ fn test_config_show_warns_unknown_project_keys() {
         ----- stdout -----
 
         ----- stderr -----
-        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[0m
+        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[22m
         [107m [0m  worktree-path = [32m"../{{ main_worktree }}.{{ branch }}"[0m
 
-        ⚪ Project Config: [1m[REPO]/.config/wt.toml[0m
-        🟡 [33mUnknown key [1m[33mpost-merge-command[0m[33m will be ignored[0m
+        ⚪ Project Config: [1m[REPO]/.config/wt.toml[22m
+        🟡 [33mUnknown key [1mpost-merge-command[22m will be ignored[39m
         [107m [0m  [1m[36m[post-merge-command][0m
         [107m [0m  deploy = [32m"task deploy"[0m
 
-        [2m⚪ Skipped bash; ~/.bashrc not found[0m
-        [2m⚪ Skipped zsh; ~/.zshrc not found[0m
-        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
+        [2m⚪ Skipped bash; ~/.bashrc not found[22m
+        [2m⚪ Skipped zsh; ~/.zshrc not found[22m
+        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m
         "#);
     });
 }
@@ -339,19 +339,19 @@ fn test_config_show_warns_unknown_user_keys() {
         ----- stdout -----
 
         ----- stderr -----
-        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[0m
-        🟡 [33mUnknown key [1m[33mcommit-gen[0m[33m will be ignored[0m
+        ⚪ Global Config: [1m~/.config/worktrunk/config.toml[22m
+        🟡 [33mUnknown key [1mcommit-gen[22m will be ignored[39m
         [107m [0m  worktree-path = [32m"../{{ main_worktree }}.{{ branch }}"[0m
         [107m [0m  
         [107m [0m  [1m[36m[commit-gen][0m
         [107m [0m  command = [32m"llm"[0m
 
-        ⚪ Project Config: [1m[REPO]/.config/wt.toml[0m
-        💡 [2mNot found[0m
+        ⚪ Project Config: [1m[REPO]/.config/wt.toml[22m
+        💡 [2mNot found[22m
 
-        [2m⚪ Skipped bash; ~/.bashrc not found[0m
-        [2m⚪ Skipped zsh; ~/.zshrc not found[0m
-        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[0m
+        [2m⚪ Skipped bash; ~/.bashrc not found[22m
+        [2m⚪ Skipped zsh; ~/.zshrc not found[22m
+        [2m⚪ Skipped fish; ~/.config/fish/conf.d not found[22m
         "#);
     });
 }

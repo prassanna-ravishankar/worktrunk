@@ -111,7 +111,7 @@ exit_code: 0
       "worktree_state": "",
       "user_status": "🔧"
     },
-    "status_line": "with-status  /u001b[2m_/u001b[0m🔧",
+    "status_line": "with-status  /u001b[2m_/u001b[22m🔧",
     "type": "worktree",
     "path": "[REPO].with-status",
     "bare": false,
@@ -161,7 +161,7 @@ exit_code: 0
       "upstream_divergence": "",
       "worktree_state": ""
     },
-    "status_line": "without-status  /u001b[2m_/u001b[0m",
+    "status_line": "without-status  /u001b[2m_/u001b[22m",
     "type": "worktree",
     "path": "[REPO].without-status",
     "bare": false,

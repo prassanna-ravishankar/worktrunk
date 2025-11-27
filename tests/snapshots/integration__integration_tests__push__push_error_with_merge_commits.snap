@@ -25,6 +25,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mFound merge commits in push range[0m
+❌ [31mFound merge commits in push range[39m
 
-💡 [2mUse --allow-merge-commits to push non-linear history[0m
+💡 [2mUse --allow-merge-commits to push non-linear history[22m

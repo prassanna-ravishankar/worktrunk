@@ -4,11 +4,11 @@
 
 use crate::output;
 use anyhow::Context;
+use color_print::cformat;
 use worktrunk::config::{Command, WorktrunkConfig};
 use worktrunk::git::GitError;
 use worktrunk::styling::{
-    AnstyleStyle, HINT, HINT_EMOJI, INFO_EMOJI, WARNING, WARNING_BOLD, WARNING_EMOJI, eprint,
-    eprintln, format_bash_with_gutter, stderr,
+    HINT_EMOJI, INFO_EMOJI, WARNING_EMOJI, eprint, eprintln, format_bash_with_gutter, stderr,
 };
 
 /// Batch approval helper used when multiple commands are queued for execution.
@@ -66,8 +66,8 @@ pub fn approve_command_batch(
 
         if updated && let Err(e) = fresh_config.save() {
             let _ = output::warning(format!("Failed to save command approval: {e}"));
-            let _ = output::hint(format!(
-                "{HINT}Approval will be requested again next time.{HINT:#}"
+            let _ = output::hint(cformat!(
+                "<dim>Approval will be requested again next time.</>"
             ));
         }
     }
@@ -79,7 +79,6 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
     use std::io::{self, IsTerminal, Write};
 
     let project_name = project_id.split('/').next_back().unwrap_or(project_id);
-    let bold = AnstyleStyle::new().bold();
     let count = commands.len();
     let plural = if count == 1 { "" } else { "s" };
 
@@ -89,7 +88,10 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
     crate::output::flush_for_stderr_prompt()?;
 
     eprintln!(
-        "{WARNING_EMOJI} {WARNING}{WARNING_BOLD}{project_name}{WARNING_BOLD:#}{WARNING} needs approval to execute {WARNING_BOLD}{count}{WARNING_BOLD:#}{WARNING} command{plural}:{WARNING:#}"
+        "{}",
+        cformat!(
+            "{WARNING_EMOJI} <yellow><bold>{project_name}</> needs approval to execute <bold>{count}</> command{plural}:</>"
+        )
     );
     eprintln!();
 
@@ -99,7 +101,7 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
         // Uses INFO_EMOJI (⚪) since this is a preview, not active execution
         let phase = cmd.phase.to_string();
         let label = match &cmd.name {
-            Some(name) => format!("{INFO_EMOJI} {phase} {bold}{name}{bold:#}:"),
+            Some(name) => cformat!("{INFO_EMOJI} {phase} <bold>{name}</>:"),
             None => format!("{INFO_EMOJI} {phase}:"),
         };
         eprintln!("{label}");
@@ -117,7 +119,10 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
     // Flush stderr before showing prompt to ensure all output is visible
     stderr().flush()?;
 
-    eprint!("{HINT_EMOJI} Allow and remember? {bold}[y/N]{bold:#} ");
+    eprint!(
+        "{}",
+        cformat!("{HINT_EMOJI} Allow and remember? <bold>[y/N]</> ")
+    );
     stderr().flush()?;
 
     let mut response = String::new();

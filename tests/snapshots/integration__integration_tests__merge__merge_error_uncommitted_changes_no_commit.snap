@@ -26,6 +26,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mCannot merge with --no-commit: working tree has uncommitted changes[0m
+❌ [31mCannot merge with --no-commit: working tree has uncommitted changes[39m
 
-💡 [2mCommit or stash them first[0m
+💡 [2mCommit or stash them first[22m

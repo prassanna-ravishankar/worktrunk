@@ -11,11 +11,11 @@
 
 use std::path::PathBuf;
 
+use color_print::cwrite;
+
 use super::HookType;
 use crate::path::format_path_for_display;
-use crate::styling::{
-    ERROR, ERROR_BOLD, ERROR_EMOJI, HINT, HINT_BOLD, HINT_EMOJI, INFO_EMOJI, format_with_gutter,
-};
+use crate::styling::{ERROR_EMOJI, HINT_EMOJI, INFO_EMOJI, format_with_gutter};
 
 /// Domain errors for git and worktree operations.
 ///
@@ -119,9 +119,9 @@ impl std::fmt::Display for GitError {
                     Some(action) => format!("Cannot {action}: not on a branch (detached HEAD)"),
                     None => "Not on a branch (detached HEAD)".to_string(),
                 };
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}{message}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Switch to a branch first with 'git switch <branch>'{HINT:#}"
+                    "{ERROR_EMOJI} <red>{message}</>\n\n{HINT_EMOJI} <dim>Switch to a branch first with 'git switch <<branch>>'</>"
                 )
             }
 
@@ -132,30 +132,30 @@ impl std::fmt::Display for GitError {
                     }
                     None => "Working tree has uncommitted changes".to_string(),
                 };
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}{message}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Commit or stash them first{HINT:#}"
+                    "{ERROR_EMOJI} <red>{message}</>\n\n{HINT_EMOJI} <dim>Commit or stash them first</>"
                 )
             }
 
             GitError::BranchAlreadyExists { branch } => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Branch {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR} already exists{ERROR:#}\n\n{HINT_EMOJI} {HINT}Remove --create flag to switch to it{HINT:#}"
+                    "{ERROR_EMOJI} <red>Branch <bold>{branch}</> already exists</>\n\n{HINT_EMOJI} <dim>Remove --create flag to switch to it</>"
                 )
             }
 
             GitError::WorktreeMissing { branch } => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Worktree directory missing for {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Run 'git worktree prune' to clean up{HINT:#}"
+                    "{ERROR_EMOJI} <red>Worktree directory missing for <bold>{branch}</></>\n\n{HINT_EMOJI} <dim>Run 'git worktree prune' to clean up</>"
                 )
             }
 
             GitError::NoWorktreeFound { branch } => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}No worktree found for branch {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR:#}"
+                    "{ERROR_EMOJI} <red>No worktree found for branch <bold>{branch}</></>"
                 )
             }
 
@@ -164,23 +164,22 @@ impl std::fmt::Display for GitError {
                 path,
                 occupant,
             } => {
+                let path_display = format_path_for_display(path);
                 let occupant_note = occupant
                     .as_ref()
-                    .map(|b| format!(" (currently on {HINT_BOLD}{b}{HINT_BOLD:#}{HINT})"))
+                    .map(|b| format!(" (currently on <bold>{b}</>)"))
                     .unwrap_or_default();
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Cannot create worktree for {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR}: target path already exists{ERROR:#}\n\n{HINT_EMOJI} {HINT}Reuse the existing worktree at {}{} or remove it before retrying{HINT:#}",
-                    format_path_for_display(path),
-                    occupant_note
+                    "{ERROR_EMOJI} <red>Cannot create worktree for <bold>{branch}</>: target path already exists</>\n\n{HINT_EMOJI} <dim>Reuse the existing worktree at {path_display}{occupant_note} or remove it before retrying</>"
                 )
             }
 
             GitError::WorktreePathExists { path } => {
-                write!(
+                let path_display = format_path_for_display(path);
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Directory already exists: {ERROR_BOLD}{}{ERROR_BOLD:#}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Remove the directory or use a different branch name{HINT:#}",
-                    format_path_for_display(path)
+                    "{ERROR_EMOJI} <red>Directory already exists: <bold>{path_display}</></>\n\n{HINT_EMOJI} <dim>Remove the directory or use a different branch name</>"
                 )
             }
 
@@ -189,14 +188,13 @@ impl std::fmt::Display for GitError {
                 base_branch,
                 error,
             } => {
+                use color_print::cformat;
                 let base_suffix = base_branch
                     .as_ref()
-                    .map(|base| {
-                        format!("{ERROR} from base {ERROR_BOLD}{base}{ERROR_BOLD:#}{ERROR}")
-                    })
+                    .map(|base| format!(" from base <bold>{base}</>"))
                     .unwrap_or_default();
-                let header = format!(
-                    "{ERROR_EMOJI} {ERROR}Failed to create worktree for {ERROR_BOLD}{branch}{ERROR_BOLD:#}{base_suffix}{ERROR:#}"
+                let header = cformat!(
+                    "{ERROR_EMOJI} <red>Failed to create worktree for <bold>{branch}</>{base_suffix}</>"
                 );
                 write!(f, "{}", format_error_block(header, error))
             }
@@ -206,9 +204,10 @@ impl std::fmt::Display for GitError {
                 path,
                 error,
             } => {
-                let header = format!(
-                    "{ERROR_EMOJI} {ERROR}Failed to remove worktree for {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR} at {ERROR_BOLD}{}{ERROR_BOLD:#}{ERROR:#}",
-                    format_path_for_display(path)
+                use color_print::cformat;
+                let path_display = format_path_for_display(path);
+                let header = cformat!(
+                    "{ERROR_EMOJI} <red>Failed to remove worktree for <bold>{branch}</> at <bold>{path_display}</></>"
                 );
                 write!(f, "{}", format_error_block(header, error))
             }
@@ -217,18 +216,18 @@ impl std::fmt::Display for GitError {
                 files,
                 worktree_path,
             } => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Cannot push: conflicting uncommitted changes in:{ERROR:#}\n\n"
+                    "{ERROR_EMOJI} <red>Cannot push: conflicting uncommitted changes in:</>\n\n"
                 )?;
                 if !files.is_empty() {
                     let joined_files = files.join("\n");
                     write!(f, "{}", format_with_gutter(&joined_files, "", None))?;
                 }
-                write!(
+                let path_display = format_path_for_display(worktree_path);
+                cwrite!(
                     f,
-                    "\n{HINT_EMOJI} {HINT}Commit or stash these changes in {} first{HINT:#}",
-                    format_path_for_display(worktree_path)
+                    "\n{HINT_EMOJI} <dim>Commit or stash these changes in {path_display} first</>"
                 )
             }
 
@@ -237,9 +236,9 @@ impl std::fmt::Display for GitError {
                 commits_formatted,
                 in_merge_context,
             } => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Can't push to local {ERROR_BOLD}{target_branch}{ERROR_BOLD:#}{ERROR} branch: it has newer commits{ERROR:#}"
+                    "{ERROR_EMOJI} <red>Can't push to local <bold>{target_branch}</> branch: it has newer commits</>"
                 )?;
                 if !commits_formatted.is_empty() {
                     write!(f, "\n{}", format_with_gutter(commits_formatted, "", None))?;
@@ -250,13 +249,13 @@ impl std::fmt::Display for GitError {
                 } else {
                     format!("Use 'wt step rebase' or 'wt merge' to rebase onto {target_branch}")
                 };
-                write!(f, "\n{HINT_EMOJI} {HINT}{hint}{HINT:#}")
+                cwrite!(f, "\n{HINT_EMOJI} <dim>{hint}</>")
             }
 
             GitError::MergeCommitsFound => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Found merge commits in push range{ERROR:#}\n\n{HINT_EMOJI} {HINT}Use --allow-merge-commits to push non-linear history{HINT:#}"
+                    "{ERROR_EMOJI} <red>Found merge commits in push range</>\n\n{HINT_EMOJI} <dim>Use --allow-merge-commits to push non-linear history</>"
                 )
             }
 
@@ -264,35 +263,37 @@ impl std::fmt::Display for GitError {
                 target_branch,
                 git_output,
             } => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Rebase onto {ERROR_BOLD}{target_branch}{ERROR_BOLD:#}{ERROR} incomplete{ERROR:#}"
+                    "{ERROR_EMOJI} <red>Rebase onto <bold>{target_branch}</> incomplete</>"
                 )?;
                 if !git_output.is_empty() {
                     write!(f, "\n{}", format_with_gutter(git_output, "", None))
                 } else {
-                    write!(
+                    cwrite!(
                         f,
-                        "\n\n{HINT_EMOJI} {HINT}Resolve conflicts and run 'git rebase --continue'{HINT:#}\n{HINT_EMOJI} {HINT}Or abort with 'git rebase --abort'{HINT:#}"
+                        "\n\n{HINT_EMOJI} <dim>Resolve conflicts and run 'git rebase --continue'</>\n{HINT_EMOJI} <dim>Or abort with 'git rebase --abort'</>"
                     )
                 }
             }
 
             GitError::PushFailed { error } => {
-                let header = format!("{ERROR_EMOJI} {ERROR}Push failed{ERROR:#}");
+                use color_print::cformat;
+                let header = cformat!("{ERROR_EMOJI} <red>Push failed</>");
                 write!(f, "{}", format_error_block(header, error))
             }
 
             GitError::NotInteractive => {
-                write!(
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Cannot prompt for approval in non-interactive environment{ERROR:#}\n\n{HINT_EMOJI} {HINT}In CI/CD, use --force to skip prompts. To pre-approve commands, use 'wt config approvals add'{HINT:#}"
+                    "{ERROR_EMOJI} <red>Cannot prompt for approval in non-interactive environment</>\n\n{HINT_EMOJI} <dim>In CI/CD, use --force to skip prompts. To pre-approve commands, use 'wt config approvals add'</>"
                 )
             }
 
             GitError::LlmCommandFailed { command, error } => {
+                use color_print::cformat;
                 let error_header =
-                    format!("{ERROR_EMOJI} {ERROR}Commit generation command failed{ERROR:#}");
+                    cformat!("{ERROR_EMOJI} <red>Commit generation command failed</>");
                 let error_block = format_error_block(error_header, error);
                 let command_gutter = format_with_gutter(command, "", None);
                 write!(
@@ -304,15 +305,15 @@ impl std::fmt::Display for GitError {
             }
 
             GitError::ProjectConfigNotFound { config_path } => {
-                write!(
+                let path_display = format_path_for_display(config_path);
+                cwrite!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}No project configuration found{ERROR:#}\n\n{HINT_EMOJI} {HINT}Create a config file at: {HINT_BOLD}{}{HINT_BOLD:#}{HINT:#}",
-                    format_path_for_display(config_path)
+                    "{ERROR_EMOJI} <red>No project configuration found</>\n\n{HINT_EMOJI} <dim>Create a config file at: <bold>{path_display}</></>"
                 )
             }
 
             GitError::ParseError { message } | GitError::Other { message } => {
-                write!(f, "{ERROR_EMOJI} {ERROR}{message}{ERROR:#}")
+                cwrite!(f, "{ERROR_EMOJI} <red>{message}</>")
             }
         }
     }
@@ -341,7 +342,7 @@ impl std::fmt::Display for WorktrunkError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             WorktrunkError::ChildProcessExited { message, .. } => {
-                write!(f, "{ERROR_EMOJI} {ERROR}{message}{ERROR:#}")
+                cwrite!(f, "{ERROR_EMOJI} <red>{message}</>")
             }
             WorktrunkError::HookCommandFailed {
                 hook_type,
@@ -349,15 +350,17 @@ impl std::fmt::Display for WorktrunkError {
                 error,
                 ..
             } => {
-                let name_suffix = command_name
-                    .as_ref()
-                    .map(|n| format!(": {ERROR_BOLD}{n}{ERROR_BOLD:#}{ERROR}"))
-                    .unwrap_or_default();
-
-                write!(
-                    f,
-                    "{ERROR_EMOJI} {ERROR}{hook_type} command failed{name_suffix}: {error}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Use --no-verify to skip {hook_type} commands{HINT:#}"
-                )
+                if let Some(name) = command_name {
+                    cwrite!(
+                        f,
+                        "{ERROR_EMOJI} <red>{hook_type} command failed: <bold>{name}</>: {error}</>\n\n{HINT_EMOJI} <dim>Use --no-verify to skip {hook_type} commands</>"
+                    )
+                } else {
+                    cwrite!(
+                        f,
+                        "{ERROR_EMOJI} <red>{hook_type} command failed: {error}</>\n\n{HINT_EMOJI} <dim>Use --no-verify to skip {hook_type} commands</>"
+                    )
+                }
             }
             WorktrunkError::CommandNotApproved => {
                 Ok(()) // on_skip callback handles the printing

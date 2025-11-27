@@ -24,6 +24,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mCannot merge: not on a branch (detached HEAD)[0m
+❌ [31mCannot merge: not on a branch (detached HEAD)[39m
 
-💡 [2mSwitch to a branch first with 'git switch <branch>'[0m
+💡 [2mSwitch to a branch first with 'git switch <branch>'[22m

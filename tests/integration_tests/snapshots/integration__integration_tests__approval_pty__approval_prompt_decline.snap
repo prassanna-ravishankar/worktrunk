@@ -4,12 +4,12 @@ expression: normalized
 ---
 n
 
-🟡 [33m[1m[33mrepo[0m[33m needs approval to execute [1m[33m1[0m[33m command:[0m
+🟡 [33m[1mrepo[22m needs approval to execute [1m1[22m command:[39m
 
 ⚪ post-create:
 [107m [0m  [2m[0m[2m[34mecho[0m[2m [0m[2m[32m'test command'[0m[2m[0m
 
-💡 Allow and remember? [1m[y/N][0m 
+💡 Allow and remember? [1m[y/N][22m 
 ⚪ Commands declined, continuing worktree creation
-✅ [32mCreated new worktree for [1m[32mtest-decline[0m[32m from [1m[32mmain[0m[32m at [1m[32m[REPO]/repo.test-decline[0m[0m
-💡 [2mRun `wt config shell install` to enable automatic cd[0m
+✅ [32mCreated new worktree for [1mtest-decline[22m from [1mmain[22m at [1m[REPO]/repo.test-decline[39m[22m
+💡 [2mRun `wt config shell install` to enable automatic cd[22m

@@ -27,9 +27,9 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-🔄 [36mCommitting changes with default message...[0m
-💡 [2mUsing fallback commit message. Run 'wt config --help' for LLM setup guide[0m
-[107m [0m  [1mWIP: Changes[0m
-❌ [31mFailed to commit[0m
+🔄 [36mCommitting changes with default message...[39m
+💡 [2mUsing fallback commit message. Run 'wt config --help' for LLM setup guide[22m
+[107m [0m  [1mWIP: Changes[22m
+❌ [31mFailed to commit[39m
 [107m [0m  On branch main
 [107m [0m  nothing to commit, working tree clean

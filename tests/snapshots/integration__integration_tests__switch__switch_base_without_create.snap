@@ -27,5 +27,5 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-🟡 [33m--base flag is only used with --create, ignoring[0m
-⚪ Already on worktree for [1mmain[0m at [1m[REPO][0m
+🟡 [33m--base flag is only used with --create, ignoring[39m
+⚪ Already on worktree for [1mmain[22m at [1m[REPO][22m

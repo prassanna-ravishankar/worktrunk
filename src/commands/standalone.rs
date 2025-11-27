@@ -1,7 +1,8 @@
 use anyhow::Context;
+use color_print::cformat;
 use worktrunk::HookType;
 use worktrunk::git::Repository;
-use worktrunk::styling::{AnstyleStyle, CYAN, CYAN_BOLD, GREEN_BOLD, HINT, format_with_gutter};
+use worktrunk::styling::format_with_gutter;
 
 use super::commit::{CommitGenerator, CommitOptions};
 use super::context::CommandEnv;
@@ -141,9 +142,7 @@ pub fn handle_squash(
         .unwrap_or(false);
 
     if skip_pre_commit && has_pre_commit {
-        crate::output::hint(format!(
-            "{HINT}Skipping pre-commit hook (--no-verify){HINT:#}"
-        ))?;
+        crate::output::hint(cformat!("<dim>Skipping pre-commit hook (--no-verify)</>"))?;
     } else if let Some(ref config) = project_config {
         HookPipeline::new(ctx).run_pre_commit(config, Some(&target_branch), auto_trust)?;
     }
@@ -204,12 +203,12 @@ pub fn handle_squash(
     let parts = total_stats;
 
     let squash_progress = if parts.is_empty() {
-        format!(
-            "{CYAN}Squashing {commit_count} {commit_text}{with_changes} into a single commit...{CYAN:#}"
+        cformat!(
+            "<cyan>Squashing {commit_count} {commit_text}{with_changes} into a single commit...</>"
         )
     } else {
-        format!(
-            "{CYAN}Squashing {commit_count} {commit_text}{with_changes} into a single commit ({})...{CYAN:#}",
+        cformat!(
+            "<cyan>Squashing {commit_count} {commit_text}{with_changes} into a single commit ({})...</>",
             parts.join(", ")
         )
     };
@@ -219,16 +218,14 @@ pub fn handle_squash(
     if has_staged {
         let backup_message = format!("{} → {} (squash)", current_branch, target_branch);
         let (sha, _restore_cmd) = repo.create_safety_backup(&backup_message)?;
-        use worktrunk::styling::AnstyleStyle;
-        let dim = AnstyleStyle::new().dimmed();
-        crate::output::hint(format!("{HINT}Backup created @ {dim}{sha}{dim:#}{HINT:#}"))?;
+        crate::output::hint(cformat!("<dim>Backup created @ {sha}</>"))?;
     }
 
     // Get commit subjects for the squash message
     let subjects = repo.commit_subjects(&range)?;
 
     // Generate squash commit message
-    crate::output::progress(format!("{CYAN}Generating squash commit message...{CYAN:#}"))?;
+    crate::output::progress(cformat!("<cyan>Generating squash commit message...</>"))?;
 
     generator.emit_hint_if_needed()?;
 
@@ -257,9 +254,8 @@ pub fn handle_squash(
 
     // Check if there are actually any changes to commit
     if !repo.has_staged_changes()? {
-        let dim = AnstyleStyle::new().dimmed();
-        crate::output::info(format!(
-            "{dim}No changes after squashing {commit_count} {commit_text}{dim:#}"
+        crate::output::info(cformat!(
+            "<dim>No changes after squashing {commit_count} {commit_text}</>"
         ))?;
         return Ok(SquashResult::NoNetChanges);
     }
@@ -275,11 +271,7 @@ pub fn handle_squash(
         .to_string();
 
     // Show success immediately after completing the squash
-    use worktrunk::styling::GREEN;
-    let green_dim = GREEN.dimmed();
-    crate::output::success(format!(
-        "{GREEN}Squashed @ {green_dim}{commit_hash}{green_dim:#}{GREEN:#}"
-    ))?;
+    crate::output::success(cformat!("<green>Squashed @ <dim>{commit_hash}</></>"))?;
 
     Ok(SquashResult::Squashed)
 }
@@ -317,8 +309,8 @@ pub fn handle_rebase(target: Option<&str>) -> anyhow::Result<RebaseResult> {
 
     // Only show progress for true rebases (fast-forwards are instant)
     if !is_fast_forward {
-        crate::output::progress(format!(
-            "{CYAN}Rebasing onto {CYAN_BOLD}{target_branch}{CYAN_BOLD:#}{CYAN}...{CYAN:#}"
+        crate::output::progress(cformat!(
+            "<cyan>Rebasing onto <bold>{target_branch}</>...</>"
         ))?;
     }
 
@@ -355,15 +347,12 @@ pub fn handle_rebase(target: Option<&str>) -> anyhow::Result<RebaseResult> {
     }
 
     // Success
-    use worktrunk::styling::GREEN;
     if is_fast_forward {
-        crate::output::success(format!(
-            "{GREEN}Fast-forwarded to {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN:#}"
+        crate::output::success(cformat!(
+            "<green>Fast-forwarded to <bold>{target_branch}</></>"
         ))?;
     } else {
-        crate::output::success(format!(
-            "{GREEN}Rebased onto {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN:#}"
-        ))?;
+        crate::output::success(cformat!("<green>Rebased onto <bold>{target_branch}</></>"))?;
     }
 
     Ok(RebaseResult::Rebased)
@@ -421,18 +410,12 @@ pub fn handle_standalone_add_approvals(force: bool, show_all: bool) -> anyhow::R
 
     // Show result
     if approved {
-        use worktrunk::styling::GREEN;
-
         if force {
             // When using --force, commands aren't saved to config
-            crate::output::success(format!(
-                "{GREEN}Commands approved; not saved (--force){GREEN:#}"
-            ))?;
+            crate::output::success(cformat!("<green>Commands approved; not saved (--force)</>"))?;
         } else {
             // Interactive approval - commands were saved to config (unless save failed)
-            crate::output::success(format!(
-                "{GREEN}Commands approved & saved to config{GREEN:#}"
-            ))?;
+            crate::output::success(cformat!("<green>Commands approved & saved to config</>"))?;
         }
     } else {
         crate::output::info("Commands declined")?;
@@ -452,17 +435,15 @@ pub fn handle_standalone_clear_approvals(global: bool) -> anyhow::Result<()> {
         let project_count = config.projects.len();
 
         if project_count == 0 {
-            let dim = worktrunk::styling::AnstyleStyle::new().dimmed();
-            crate::output::info(format!("{dim}No approvals to clear{dim:#}"))?;
+            crate::output::info("No approvals to clear")?;
             return Ok(());
         }
 
         config.projects.clear();
         config.save().context("Failed to save config")?;
 
-        use worktrunk::styling::GREEN;
-        crate::output::success(format!(
-            "{GREEN}Cleared approvals for {project_count} project{}{GREEN:#}",
+        crate::output::success(cformat!(
+            "<green>Cleared approvals for {project_count} project{}</>",
             if project_count == 1 { "" } else { "s" }
         ))?;
     } else {
@@ -474,10 +455,7 @@ pub fn handle_standalone_clear_approvals(global: bool) -> anyhow::Result<()> {
         let had_approvals = config.projects.contains_key(&project_id);
 
         if !had_approvals {
-            let dim = worktrunk::styling::AnstyleStyle::new().dimmed();
-            crate::output::info(format!(
-                "{dim}No approvals to clear for this project{dim:#}"
-            ))?;
+            crate::output::info("No approvals to clear for this project")?;
             return Ok(());
         }
 
@@ -492,9 +470,8 @@ pub fn handle_standalone_clear_approvals(global: bool) -> anyhow::Result<()> {
             .revoke_project(&project_id)
             .context("Failed to clear project approvals")?;
 
-        use worktrunk::styling::GREEN;
-        crate::output::success(format!(
-            "{GREEN}Cleared {approval_count} approval{} for this project{GREEN:#}",
+        crate::output::success(cformat!(
+            "<green>Cleared {approval_count} approval{} for this project</>",
             if approval_count == 1 { "" } else { "s" }
         ))?;
     }

@@ -29,7 +29,7 @@ fn test_switch_internal_directive() {
         ----- stdout -----
 
         ----- stderr -----
-        ❌ [31mFailed to create worktree for [1m[31mmy-feature[0m[0m
+        ❌ [31mFailed to create worktree for [1mmy-feature[22m[39m
         [107m [0m  fatal: invalid reference: my-feature
         ");
     });
@@ -57,7 +57,7 @@ fn test_switch_without_internal() {
         ----- stdout -----
 
         ----- stderr -----
-        ❌ [31mFailed to create worktree for [1m[31mmy-feature[0m[0m
+        ❌ [31mFailed to create worktree for [1mmy-feature[22m[39m
         [107m [0m  fatal: invalid reference: my-feature
         ");
     });
@@ -89,7 +89,7 @@ fn test_remove_internal_directive() {
         cd '[PATH]'
 
         ----- stderr -----
-        🔄 [36mRemoving [1m[36mmain[0m[36m worktree & branch in background[0m
+        🔄 [36mRemoving [1mmain[22m worktree & branch in background[39m
         ");
     });
 }
@@ -114,7 +114,7 @@ fn test_remove_without_internal() {
         ----- stdout -----
 
         ----- stderr -----
-        🔄 [36mRemoving [1m[36mmain[0m[36m worktree & branch in background[0m
+        🔄 [36mRemoving [1mmain[22m worktree & branch in background[39m
         ");
     });
 }

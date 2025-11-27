@@ -4,10 +4,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::worktree::RemoveResult;
 use anyhow::Context;
+use color_print::cformat;
 use worktrunk::config::ProjectConfig;
 use worktrunk::git::{GitError, Repository};
 use worktrunk::path::format_path_for_display;
-use worktrunk::styling::{CYAN, CYAN_BOLD, WARNING, WARNING_BOLD, format_with_gutter};
+use worktrunk::styling::format_with_gutter;
 
 /// CLI-only helpers implemented on [`Repository`] via an extension trait so we can keep orphan
 /// implementations inside the binary crate.
@@ -166,8 +167,8 @@ impl RepositoryCliExt for Repository {
             nanos
         );
 
-        crate::output::progress(format!(
-            "{CYAN}Stashing changes in {CYAN_BOLD}{}{CYAN_BOLD:#}{CYAN}...{CYAN:#}",
+        crate::output::progress(cformat!(
+            "<cyan>Stashing changes in <bold>{}</><cyan>...</>",
             format_path_for_display(wt_path)
         ))?;
 
@@ -230,8 +231,8 @@ impl AutoStageWarning {
 
         let count = self.files.len();
         let file_word = if count == 1 { "file" } else { "files" };
-        crate::output::warning(format!(
-            "{WARNING}Auto-staging {count} untracked {file_word}:{WARNING:#}"
+        crate::output::warning(cformat!(
+            "<yellow>Auto-staging {count} untracked {file_word}:</>"
         ))?;
 
         let joined_files = self.files.join("\n");
@@ -257,8 +258,8 @@ impl TargetWorktreeStash {
     }
 
     pub(crate) fn restore(self) -> anyhow::Result<()> {
-        crate::output::progress(format!(
-            "{CYAN}Restoring stashed changes in {CYAN_BOLD}{}{CYAN_BOLD:#}{CYAN}...{CYAN:#}",
+        crate::output::progress(cformat!(
+            "<cyan>Restoring stashed changes in <bold>{}</><cyan>...</>",
             format_path_for_display(&self.path)
         ))?;
 
@@ -266,8 +267,8 @@ impl TargetWorktreeStash {
             .repo
             .run_command(&["stash", "pop", "--quiet", &self.stash_ref])
         {
-            crate::output::warning(format!(
-                "{WARNING}Failed to restore stash {WARNING_BOLD}{stash_ref}{WARNING_BOLD:#}{WARNING} - run 'git stash pop {stash_ref}' in {WARNING_BOLD}{path}{WARNING_BOLD:#}{WARNING:#}",
+            crate::output::warning(cformat!(
+                "<yellow>Failed to restore stash <bold>{stash_ref}</> - run 'git stash pop {stash_ref}' in <bold>{path}</></>",
                 stash_ref = self.stash_ref,
                 path = format_path_for_display(&self.path),
             ))?;

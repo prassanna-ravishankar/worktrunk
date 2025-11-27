@@ -15,7 +15,8 @@ info:
     GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
-    SOURCE_DATE_EPOCH: "1761609600"
+    SOURCE_DATE_EPOCH: "1735776000"
+    WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: "[TEST_CONFIG]"
 ---
 success: true
@@ -24,4 +25,4 @@ exit_code: 0
 cd '[REPO]'
 
 ----- stderr -----
-🔄 [36mRemoving [1m[36mfeature-internal[0m[36m worktree & branch in background[0m
+🔄 [36mRemoving [1mfeature-internal[22m worktree & branch in background[39m

@@ -109,7 +109,7 @@ exit_code: 0
       "upstream_divergence": "",
       "worktree_state": ""
     },
-    "status_line": "feature-detached  /u001b[2m_/u001b[0m",
+    "status_line": "feature-detached  /u001b[2m_/u001b[22m",
     "type": "worktree",
     "path": "[REPO].feature-detached",
     "bare": false,
@@ -159,7 +159,7 @@ exit_code: 0
       "upstream_divergence": "",
       "worktree_state": "⊠"
     },
-    "status_line": "locked-feature  /u001b[2m_/u001b[0m/u001b[33m⊠/u001b[0m",
+    "status_line": "locked-feature  /u001b[2m_/u001b[22m/u001b[33m⊠/u001b[39m",
     "type": "worktree",
     "path": "[REPO].locked-feature",
     "bare": false,

@@ -173,12 +173,15 @@ pub fn handle_configure_shell(
         // Only show advisory if we positively detect it's missing (Some(false)).
         // If detection fails (None), stay silent - we can't be sure.
         if shell::detect_zsh_compinit() == Some(false) {
-            use worktrunk::styling::{WARNING, WARNING_EMOJI, eprintln};
-            eprintln!(
-                "{WARNING_EMOJI} {WARNING}Completions won't work: zsh's compinit is not enabled.{WARNING:#}"
-            );
-            eprintln!("{WARNING}   Add this to ~/.zshrc before the wt line:{WARNING:#}");
-            eprintln!("{WARNING}   autoload -Uz compinit && compinit{WARNING:#}");
+            use color_print::cformat;
+            let _ = crate::output::warning(cformat!(
+                "<yellow>Completions won't work: zsh's compinit is not enabled.</>"
+            ));
+            let _ = crate::output::print(cformat!(
+                "<yellow>   Add this to ~/.zshrc before the wt line:</>"
+            ));
+            let _ =
+                crate::output::print(cformat!("<yellow>   autoload -Uz compinit && compinit</>"));
         }
     }
 

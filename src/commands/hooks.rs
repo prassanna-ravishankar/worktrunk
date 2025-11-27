@@ -1,7 +1,8 @@
+use color_print::cformat;
 use worktrunk::HookType;
 use worktrunk::config::{CommandConfig, CommandPhase, ProjectConfig};
 use worktrunk::git::WorktrunkError;
-use worktrunk::styling::{CYAN, WARNING, WARNING_BOLD, format_bash_with_gutter};
+use worktrunk::styling::format_bash_with_gutter;
 
 use super::command_executor::{CommandContext, PreparedCommand, prepare_project_commands};
 use crate::commands::process::spawn_detached;
@@ -59,7 +60,7 @@ impl<'a> HookPipeline<'a> {
         for prepared in commands {
             let label =
                 crate::commands::format_command_label(label_prefix, prepared.name.as_deref());
-            crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
+            crate::output::progress(cformat!("<cyan>{label}:</>"))?;
             crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
 
             if let Err(err) =
@@ -90,10 +91,10 @@ impl<'a> HookPipeline<'a> {
                     }
                     HookFailureStrategy::Warn => {
                         let message = match &prepared.name {
-                            Some(name) => format!(
-                                "{WARNING}Command {WARNING_BOLD}{name}{WARNING_BOLD:#}{WARNING} failed: {err_msg}{WARNING:#}"
-                            ),
-                            None => format!("{WARNING}Command failed: {err_msg}{WARNING:#}"),
+                            Some(name) => {
+                                cformat!("<yellow>Command <bold>{name}</> failed: {err_msg}</>")
+                            }
+                            None => cformat!("<yellow>Command failed: {err_msg}</>"),
                         };
                         crate::output::warning(message)?;
 
@@ -141,7 +142,7 @@ impl<'a> HookPipeline<'a> {
         for prepared in commands {
             let label =
                 crate::commands::format_command_label(label_prefix, prepared.name.as_deref());
-            crate::output::progress(format!("{CYAN}{label}:{CYAN:#}"))?;
+            crate::output::progress(cformat!("<cyan>{label}:</>"))?;
             crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
 
             let name = prepared.name.as_deref().unwrap_or("cmd");
@@ -156,9 +157,9 @@ impl<'a> HookPipeline<'a> {
                 let err_msg = err.to_string();
                 let message = match &prepared.name {
                     Some(name) => {
-                        format!("{WARNING}Failed to spawn '{name}': {err_msg}{WARNING:#}")
+                        cformat!("<yellow>Failed to spawn \"{name}\": {err_msg}</>")
                     }
-                    None => format!("{WARNING}Failed to spawn command: {err_msg}{WARNING:#}"),
+                    None => cformat!("<yellow>Failed to spawn command: {err_msg}</>"),
                 };
                 crate::output::warning(message)?;
             }

@@ -26,7 +26,7 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mFailed to load project config[0m
+❌ [31mFailed to load project config[39m
 [107m [0m  Failed to parse TOML: TOML parse error at line 1, column 31
 [107m [0m    |
 [107m [0m  1 | post-create = [invalid syntax

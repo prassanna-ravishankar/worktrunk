@@ -109,7 +109,7 @@ exit_code: 0
       "upstream_divergence": "",
       "worktree_state": ""
     },
-    "status_line": "feature  /u001b[31m✖/u001b[0m",
+    "status_line": "feature  /u001b[31m✖/u001b[39m",
     "type": "worktree",
     "path": "[REPO].feature",
     "bare": false,

@@ -42,13 +42,10 @@ pub use worktrunk::shell::Shell;
 /// - `format_command_label("post-create", Some("install"))` → `"Running post-create install"` (with bold)
 /// - `format_command_label("post-create", None)` → `"Running post-create"`
 pub fn format_command_label(command_type: &str, name: Option<&str>) -> String {
-    use worktrunk::styling::AnstyleStyle;
+    use color_print::cformat;
 
     match name {
-        Some(name) => {
-            let bold = AnstyleStyle::new().bold();
-            format!("Running {command_type} {bold}{name}{bold:#}")
-        }
+        Some(name) => cformat!("Running {command_type} <bold>{name}</>"),
         None => format!("Running {command_type}"),
     }
 }
