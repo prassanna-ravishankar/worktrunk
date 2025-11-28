@@ -10,7 +10,17 @@
 <!-- [![Downloads](https://img.shields.io/crates/d/worktrunk?style=for-the-badge&logo=rust)](https://crates.io/crates/worktrunk) -->
 <!-- [![Stars](https://img.shields.io/github/stars/max-sixty/worktrunk?style=for-the-badge&logo=github)](https://github.com/max-sixty/worktrunk/stargazers) -->
 
-Worktrunk is a CLI for Git worktree management, designed for parallel AI agent workflows. Worktrees give each agent an isolated branch and directory; Worktrunk adds branch-based navigation, lifecycle hooks, and unified status. The goal is to make spinning up a new AI "developer" for a task feel as routine as `git switch`.
+Worktrunk is a CLI for Git worktree management, designed for parallel AI agent
+workflows. Worktrees give each agent an isolated branch and directory; Worktrunk
+adds branch-based navigation, lifecycle hooks, and unified status. The goal is
+to make spinning up a new AI "developer" for a task feel as routine as `git
+switch`.
+
+Worktrunk can simplify standard workflows — a easier way to create / navigate /
+list / clean up worktrees. It also supports newer workflows, such as local
+merging of worktrees with CI-like checks. And there are some QoL improvements,
+such as listing which worktrees have a Claude Code instance working vs. waiting
+for input, and a Claude Code statusline.
 
 ## Demo
 
