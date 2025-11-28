@@ -92,9 +92,9 @@ fn maybe_handle_help_with_pager() -> bool {
         Err(err) => {
             match err.kind() {
                 ErrorKind::DisplayHelp | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
-                    // err.render() contains the correctly formatted help
-                    // (short for -h, long for --help) - no need to re-parse argv
-                    let mut help = err.render().to_string();
+                    // err.render() returns a StyledStr containing ANSI codes.
+                    // Use .ansi() to preserve them; .to_string() strips ANSI codes.
+                    let mut help = err.render().ansi().to_string();
 
                     // Render markdown sections to ANSI
                     help = md_help::render_markdown_in_help(&help);

@@ -17,21 +17,21 @@ exit_code: 0
 
 ----- stderr -----
 wt - Git worktree management
-Usage: wt [OPTIONS] <COMMAND>
+Usage: [1m[36mwt[0m [36m[OPTIONS][0m [36m<COMMAND>[0m
 
-Commands:
-  config  Manage configuration and shell integration
-  step    Workflow building blocks
-  list    List worktrees and optionally branches
-  switch  Switch to a worktree
-  remove  Remove worktree and branch
-  merge   Merge worktree into target branch
+[1m[32mCommands:[0m
+  [1m[36mconfig[0m  Manage configuration and shell integration
+  [1m[36mstep[0m    Workflow building blocks
+  [1m[36mlist[0m    List worktrees and optionally branches
+  [1m[36mswitch[0m  Switch to a worktree
+  [1m[36mremove[0m  Remove worktree and branch
+  [1m[36mmerge[0m   Merge worktree into target branch
 
-Options:
-  -h, --help     Print help (see more with '--help')
-  -V, --version  Print version
+[1m[32mOptions:[0m
+  [1m[36m-h[0m, [1m[36m--help[0m     Print help (see more with '--help')
+  [1m[36m-V[0m, [1m[36m--version[0m  Print version
 
-Global Options:
-  -C <path>            Working directory for this command
-      --config <path>  User config file path
-  -v, --verbose        Show commands and debug info
+[1m[32mGlobal Options:[0m
+  [1m[36m-C[0m[36m [0m[36m<path>[0m            Working directory for this command
+      [1m[36m--config[0m[36m [0m[36m<path>[0m  User config file path
+  [1m[36m-v[0m, [1m[36m--verbose[0m        Show commands and debug info

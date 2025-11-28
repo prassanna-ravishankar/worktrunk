@@ -10,6 +10,7 @@ info:
     CLICOLOR_FORCE: "1"
     COLUMNS: "150"
     GIT_EDITOR: ""
+    SOURCE_DATE_EPOCH: "1735776000"
     WORKTRUNK_BIN: ""
     WORKTRUNK_CONFIG_PATH: /nonexistent/test/config.toml
 ---
@@ -19,20 +20,20 @@ exit_code: 0
 
 ----- stderr -----
 wt config show - Show configuration files & locations
-Usage: wt config show [OPTIONS]
+Usage: [1m[36mwt config show[0m [36m[OPTIONS][0m
 
-Options:
-  -h, --help
+[1m[32mOptions:[0m
+  [1m[36m-h[0m, [1m[36m--help[0m
           Print help (see a summary with '-h')
 
-Global Options:
-  -C <path>
+[1m[32mGlobal Options:[0m
+  [1m[36m-C[0m[36m [0m[36m<path>[0m
           Working directory for this command
 
-      --config <path>
+      [1m[36m--config[0m[36m [0m[36m<path>[0m
           User config file path
 
-  -v, --verbose
+  [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
 Shows location and contents of global config ([2m~/.config/worktrunk/config.toml[0m)

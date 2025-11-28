@@ -19,39 +19,39 @@ exit_code: 0
 
 ----- stderr -----
 wt list - List worktrees and optionally branches
-Usage: wt list [OPTIONS]
+Usage: [1m[36mwt list[0m [36m[OPTIONS][0m
 
-Options:
-      --format <FORMAT>
+[1m[32mOptions:[0m
+      [1m[36m--format[0m[36m [0m[36m<FORMAT>[0m
           Output format (table, json)
           
           [default: table]
 
-      --branches
+      [1m[36m--branches[0m
           Include branches without worktrees
 
-      --remotes
+      [1m[36m--remotes[0m
           Include remote branches
 
-      --full
+      [1m[36m--full[0m
           Show CI, conflicts, diffs
 
-      --progressive
-          Show fast info immediately, update with slow info
-          
-          Displays local data (branches, paths, status) first, then updates with remote data (CI, upstream) as it arrives. Auto-enabled for TTY.
+      [1m[36m--progressive[0m
+          Show fast info immediately, update with slow info[0m
+          [0m
+          Displays local data (branches, paths, status) first, then updates with remote data (CI, upstream) as it arrives. Auto-enabled for TTY.[0m
 
-  -h, --help
+  [1m[36m-h[0m, [1m[36m--help[0m
           Print help (see a summary with '-h')
 
-Global Options:
-  -C <path>
+[1m[32mGlobal Options:[0m
+  [1m[36m-C[0m[36m [0m[36m<path>[0m
           Working directory for this command
 
-      --config <path>
+      [1m[36m--config[0m[36m [0m[36m<path>[0m
           User config file path
 
-  -v, --verbose
+  [1m[36m-v[0m, [1m[36m--verbose[0m
           Show commands and debug info
 
 [32mColumns[0m

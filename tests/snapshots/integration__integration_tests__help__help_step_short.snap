@@ -19,23 +19,23 @@ exit_code: 0
 
 ----- stderr -----
 wt step - Workflow building blocks
-Usage: wt step [OPTIONS] <COMMAND>
+Usage: [1m[36mwt step[0m [36m[OPTIONS][0m [36m<COMMAND>[0m
 
-Commands:
-  commit       Commit changes with LLM commit message
-  squash       Squash commits with LLM commit message
-  push         Push changes to local target branch
-  rebase       Rebase onto target
-  post-create  Run post-create hook
-  post-start   Run post-start hook
-  pre-commit   Run pre-commit hook
-  pre-merge    Run pre-merge hook
-  post-merge   Run post-merge hook
+[1m[32mCommands:[0m
+  [1m[36mcommit[0m       Commit changes with LLM commit message
+  [1m[36msquash[0m       Squash commits with LLM commit message
+  [1m[36mpush[0m         Push changes to local target branch
+  [1m[36mrebase[0m       Rebase onto target
+  [1m[36mpost-create[0m  Run post-create hook
+  [1m[36mpost-start[0m   Run post-start hook
+  [1m[36mpre-commit[0m   Run pre-commit hook
+  [1m[36mpre-merge[0m    Run pre-merge hook
+  [1m[36mpost-merge[0m   Run post-merge hook
 
-Options:
-  -h, --help  Print help
+[1m[32mOptions:[0m
+  [1m[36m-h[0m, [1m[36m--help[0m  Print help
 
-Global Options:
-  -C <path>            Working directory for this command
-      --config <path>  User config file path
-  -v, --verbose        Show commands and debug info
+[1m[32mGlobal Options:[0m
+  [1m[36m-C[0m[36m [0m[36m<path>[0m            Working directory for this command
+      [1m[36m--config[0m[36m [0m[36m<path>[0m  User config file path
+  [1m[36m-v[0m, [1m[36m--verbose[0m        Show commands and debug info
