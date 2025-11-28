@@ -389,19 +389,9 @@ All checks passed!
 
 See `wt switch --help` and `wt merge --help` for skipping hooks, template variables, security details.
 
-### Custom Worktree Status
+### Claude Code Status Tracking
 
-Add emoji status markers to branches that appear in `wt list`.
-
-```console
-# Set status for current branch
-wt config status set "🤖"
-
-# Or use git config directly
-git config worktrunk.status.feature-x "💬"
-```
-
-**Status appears in the Status column:**
+The Worktrunk plugin adds Claude Code session tracking to `wt list`:
 
 <!-- ⚠️ AUTO-GENERATED from tests/snapshots/integration__integration_tests__list__with_user_status.snap — edit source to update -->
 
@@ -418,25 +408,26 @@ $ wt list
 
 <!-- END AUTO-GENERATED -->
 
-The custom emoji appears directly after the git status symbols.
+- `🤖` — Claude is working (processing a prompt)
+- `💬` — Claude is idle or waiting for input
+
+**Install the plugin:**
+
+```console
+claude plugin marketplace add max-sixty/worktrunk
+claude plugin install worktrunk@worktrunk
+```
 
 <details>
-<summary>Automation with Claude Code Hooks</summary>
+<summary>Manual status markers</summary>
 
-Claude Code can automatically set/clear emoji status when coding sessions start and end.
+Set status markers manually for any workflow:
 
-When using Claude:
-
-- Sets status to `🤖` for the current branch when submitting a prompt (working)
-- Changes to `💬` when Claude needs input (waiting for permission or idle)
-- Clears the status completely when the session ends
-
-**How it works:**
-
-- Status is stored as `worktrunk.status.<branch>` in `.git/config`
-- Each branch can have its own status emoji
-- The hooks automatically detect the current branch and set/clear its status
-- Works with any git repository, no special configuration needed
+```console
+wt config status set "🚧"           # Current branch
+wt config status set "✅" --branch feature  # Specific branch
+git config worktrunk.status.feature "💬"    # Direct git config
+```
 
 </details>
 
