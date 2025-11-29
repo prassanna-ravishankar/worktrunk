@@ -407,7 +407,10 @@ impl WorktreeSkimItem {
         let tab1 = format_tab("1: HEAD±", mode == PreviewMode::WorkingTree);
         let tab2 = format_tab("2: history", mode == PreviewMode::History);
         let tab3 = format_tab("3: main…±", mode == PreviewMode::BranchDiff);
-        let controls = format_tab("ctrl-u/d: scroll | alt-p: toggle", false);
+        let controls = format_tab(
+            "Enter: switch | Esc: cancel | ctrl-u/d: scroll | alt-p: toggle",
+            false,
+        );
 
         format!("{} | {} | {}\n{}\n\n", tab1, tab2, tab3, controls)
     }
