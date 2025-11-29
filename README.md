@@ -13,10 +13,10 @@
 <!-- [![Stars](https://img.shields.io/github/stars/max-sixty/worktrunk?style=for-the-badge&logo=github)](https://github.com/max-sixty/worktrunk/stargazers) -->
 
 Worktrunk is a CLI for Git worktree management, designed for parallel AI agent
-workflows. Worktrees give each agent an isolated branch and directory; Worktrunk
-adds branch-based navigation, lifecycle hooks, and unified status. The goal is
-to make spinning up a new AI "developer" for a task feel as routine as `git
-switch`.
+workflows. Git worktrees give each agent an isolated branch and directory;
+Worktrunk adds branch-based navigation, unified status, and lifecycle hooks. The
+goal is to make spinning up a new AI "developer" for a task feel as routine as
+`git switch`.
 
 ## December 2025 Project Status
 
@@ -29,17 +29,16 @@ maintainer of [Xarray](https://github.com/pydata/xarray) (4k stars),
 
 Currently, Worktrunk:
 
-- simplifies standard worktree workflows — an easier, simple way to create /
-  navigate / list / clean up git worktrees.
+- simplifies standard worktree workflows — an easier way to create / navigate /
+  list / clean up git worktrees.
 - can be used for more advanced workflows, such as [LLM commit
   messages](#llm-commit-messages), or [local merging of worktrees gated on
-  CI-like checks](#local-merging-with-wt-merge)
-- also comes with optional QoL features, such as listing the CI status & the
-  Claude Code status for all branches, or a great [Claude Code
-  statusline](#wt-list-statusline).
+  CI-like checks](#local-merging-with-wt-merge). It also comes with optional QoL
+  features, such as listing the CI status & the Claude Code status for all
+  branches, or a great [Claude Code statusline](#statusline-integration).
 
-...there's no need to use the more advanced features to get the simpler
-benefits, and everything is fully compatible with standard git worktrees.
+I'd recommend starting with it as a simple & better `git worktree`, and then
+using the more advanced features if you find they resonate.
 
 ## Demo
 
@@ -111,13 +110,13 @@ $ wt remove
 
 <!-- END AUTO-GENERATED -->
 
-## Why worktrees?
+## Why git worktrees?
 
 Parallel agents need isolated working directories that share one Git history.
 
 We can get that a few ways:
 
-- multiple clones — slow to set up, waste disk, drift out of sync
+- multiple clones — slow to set up, drift out of sync
 - one working tree with many branches — constant stashing, rebasing, and conflict risk
 - git worktrees — multiple directories backed by a single `.git` directory
 
@@ -125,10 +124,10 @@ So we use git worktrees: multiple working directories backed by a single reposit
 
 ## Why Worktrunk?
 
-Git's built-in `worktree` commands offers primitives, but requires the user
-to remember worktree's location, and compose commands together. Worktrunk
-bundles creation, navigation, status, and cleanup into simple commands. A few
-examples:
+Git's built-in `worktree` commands offer primitives, but require the user to
+remember worktrees' locations, and compose git & `cd` commands together.
+Worktrunk bundles creation, navigation, status, and cleanup into simple
+commands. A few examples:
 
 <table>
 <tr>
@@ -476,8 +475,8 @@ See [`.config/wt.toml`](.config/wt.toml) for an example using copy-on-write.
 merge.
 
 **Track agent status** — Custom emoji markers show agent state in `wt list`.
-Claude Code hooks can set these automatically. See [Custom Worktree
-Status](#custom-worktree-status).
+Claude Code hooks can set these automatically. See [Claude Code Status
+Tracking](#claude-code-status-tracking).
 
 **Monitor CI across branches** — `wt list --full --branches` shows PR/CI status
 for all branches, including those without worktrees. CI column links to PR pages
@@ -1148,7 +1147,7 @@ Docs: <https://llm.datasette.io/> | <https://github.com/sigoden/aichat>
 - Location: `~/.config/worktrunk/config.toml` (or `WORKTRUNK_CONFIG_PATH`)
 - Run `wt config create --help` to view documented examples
 
-**Project config** (repository hooks):
+**Project config**:
 
 - Location: `.config/wt.toml` in repository root
 - Contains: post-create, post-start, pre-commit, pre-merge, post-merge hooks

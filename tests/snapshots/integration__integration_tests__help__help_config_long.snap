@@ -90,7 +90,7 @@ Docs: <https://llm.datasette.io/> | <https://github.com/sigoden/aichat>
 - Location: [2m~/.config/worktrunk/config.toml[0m (or [2mWORKTRUNK_CONFIG_PATH[0m)
 - Run [2mwt config create --help[0m to view documented examples
 
-[1mProject config[0m (repository hooks):
+[1mProject config[0m:
 
 - Location: [2m.config/wt.toml[0m in repository root
 - Contains: post-create, post-start, pre-commit, pre-merge, post-merge hooks
