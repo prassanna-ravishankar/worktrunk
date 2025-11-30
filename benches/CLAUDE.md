@@ -13,6 +13,10 @@ cargo bench --bench list
 cargo bench --bench list bench_list_by_worktree_count
 cargo bench --bench list bench_list_cold_cache
 cargo bench --bench list bench_list_real_repo
+
+# Run filtered benchmarks (expensive setup only runs for matching benchmarks)
+cargo bench --bench list many_branches   # Only many_branches, no rust repo clone
+cargo bench --bench list real_repo       # Only real_repo benchmarks
 ```
 
 ## Benchmark Types
@@ -27,7 +31,11 @@ cargo bench --bench list bench_list_real_repo
 - `bench_list_sequential_vs_parallel` - Sequential vs parallel comparison
 - `bench_list_cold_cache` - Cold cache performance (all git caches invalidated)
 
-### 2. Real Repository Benchmarks (Slow, ~30-60 minutes)
+### 2. Many Branches Benchmarks (Fast, ~3 minutes)
+- `bench_list_many_branches` - Tests 25/50/100 branches with unique commits
+- `bench_list_many_branches_cold` - Same with packed-refs invalidated
+
+### 3. Real Repository Benchmarks (Slow, ~30-60 minutes)
 - `bench_list_real_repo` - rust-lang/rust repo, warm caches
 - `bench_list_real_repo_cold_cache` - rust-lang/rust repo, cold caches
 

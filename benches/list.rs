@@ -17,6 +17,10 @@
 //    - bench_list_real_repo: Uses rust-lang/rust repo (cloned to target/bench-repos/), warm caches
 //    - bench_list_real_repo_cold_cache: Same as above but with all caches invalidated (1, 4, 8 worktrees)
 //
+// 3. Many branches benchmarks:
+//    - bench_list_many_branches: 25/50/100 branches with unique commits, no worktrees, warm caches
+//    - bench_list_many_branches_cold: Same as above but with packed-refs invalidated
+//
 // Run all benchmarks:
 //   cargo bench --bench list
 //
@@ -26,9 +30,12 @@
 //   cargo bench --bench list bench_list_cold_cache
 //   cargo bench --bench list bench_list_real_repo
 //   cargo bench --bench list bench_list_real_repo_cold_cache
+//   cargo bench --bench list bench_list_many_branches
+//   cargo bench --bench list bench_list_many_branches_cold
 //
-// Skip slow benchmarks:
-//   cargo bench --bench list -- --skip cold --skip real
+// Run only specific benchmarks (expensive setup is skipped via Criterion's filter):
+//   cargo bench --bench list many_branches
+//   cargo bench --bench list real_repo
 //
 // Compare warm vs cold on real repo:
 //   cargo bench --bench list -- real_repo
@@ -54,7 +61,12 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
 use tempfile::TempDir;
+
+/// Lazy-initialized rust repo path. Only clones when a benchmark actually needs it,
+/// allowing filtering to skip the expensive clone for unrelated benchmarks.
+static RUST_REPO: OnceLock<PathBuf> = OnceLock::new();
 
 /// Benchmark configuration profiles representing different repo sizes
 struct BenchmarkProfile {
@@ -745,62 +757,69 @@ fn bench_sequential_vs_parallel(c: &mut Criterion) {
 
 /// Get or clone the rust-lang/rust repository to a cached location.
 /// This persists across benchmark runs but is cleaned by `cargo clean`.
+///
+/// Uses lazy initialization via OnceLock to avoid cloning when benchmarks
+/// are filtered to only run non-real-repo tests.
 fn get_or_clone_rust_repo() -> PathBuf {
-    let cache_dir = std::env::current_dir().unwrap().join("target/bench-repos");
-    let rust_repo = cache_dir.join("rust");
+    RUST_REPO
+        .get_or_init(|| {
+            let cache_dir = std::env::current_dir().unwrap().join("target/bench-repos");
+            let rust_repo = cache_dir.join("rust");
 
-    if rust_repo.exists() {
-        // Verify it's a valid git repo
-        let output = Command::new("git")
-            .args(["rev-parse", "HEAD"])
-            .current_dir(&rust_repo)
-            .output();
+            if rust_repo.exists() {
+                // Verify it's a valid git repo
+                let output = Command::new("git")
+                    .args(["rev-parse", "HEAD"])
+                    .current_dir(&rust_repo)
+                    .output();
 
-        match output {
-            Ok(out) if out.status.success() => {
-                println!("Using cached rust repo at {}", rust_repo.display());
-                return rust_repo;
+                match output {
+                    Ok(out) if out.status.success() => {
+                        println!("Using cached rust repo at {}", rust_repo.display());
+                        return rust_repo;
+                    }
+                    Ok(_) | Err(_) => {
+                        // Corrupted or incomplete clone - remove and re-clone
+                        println!(
+                            "Cached rust repo at {} is corrupted, removing and re-cloning...",
+                            rust_repo.display()
+                        );
+                        std::fs::remove_dir_all(&rust_repo).unwrap_or_else(|e| {
+                            panic!("Failed to remove corrupted rust repo: {}", e);
+                        });
+                        // Fall through to clone
+                    }
+                }
             }
-            Ok(_) | Err(_) => {
-                // Corrupted or incomplete clone - remove and re-clone
-                println!(
-                    "Cached rust repo at {} is corrupted, removing and re-cloning...",
-                    rust_repo.display()
-                );
-                std::fs::remove_dir_all(&rust_repo).unwrap_or_else(|e| {
-                    panic!("Failed to remove corrupted rust repo: {}", e);
-                });
-                // Fall through to clone
-            }
-        }
-    }
 
-    // Clone the repo
-    std::fs::create_dir_all(&cache_dir).unwrap();
-    println!(
-        "Cloning rust-lang/rust to {} (this will take several minutes)...",
-        rust_repo.display()
-    );
+            // Clone the repo
+            std::fs::create_dir_all(&cache_dir).unwrap();
+            println!(
+                "Cloning rust-lang/rust to {} (this will take several minutes)...",
+                rust_repo.display()
+            );
 
-    // Do a full clone to ensure we have all history. This takes longer on first run
-    // (~5-10 minutes) but is cached in target/bench-repos/ for subsequent runs.
-    let clone_output = Command::new("git")
-        .args([
-            "clone",
-            "https://github.com/rust-lang/rust.git",
-            rust_repo.to_str().unwrap(),
-        ])
-        .output()
-        .unwrap();
+            // Do a full clone to ensure we have all history. This takes longer on first run
+            // (~5-10 minutes) but is cached in target/bench-repos/ for subsequent runs.
+            let clone_output = Command::new("git")
+                .args([
+                    "clone",
+                    "https://github.com/rust-lang/rust.git",
+                    rust_repo.to_str().unwrap(),
+                ])
+                .output()
+                .unwrap();
 
-    assert!(
-        clone_output.status.success(),
-        "Failed to clone rust repo: {}",
-        String::from_utf8_lossy(&clone_output.stderr)
-    );
+            assert!(
+                clone_output.status.success(),
+                "Failed to clone rust repo: {}",
+                String::from_utf8_lossy(&clone_output.stderr)
+            );
 
-    println!("Rust repo cloned successfully");
-    rust_repo
+            println!("Rust repo cloned successfully");
+            rust_repo
+        })
+        .clone()
 }
 
 fn bench_list_real_repo(c: &mut Criterion) {
@@ -808,54 +827,56 @@ fn bench_list_real_repo(c: &mut Criterion) {
 
     let binary = get_release_binary();
 
-    // Get or clone the rust repo (cached across runs)
-    let rust_repo = get_or_clone_rust_repo();
-
     // Test with different worktree counts
     for num_worktrees in [1, 2, 4, 6, 8] {
-        // Create a temporary workspace for this benchmark run
-        let temp = tempfile::tempdir().unwrap();
-        let workspace_main = temp.path().join("main");
-
-        // Copy the rust repo to the temp location (git worktree needs the original)
-        // Use git clone --local for fast copy with shared objects
-        let clone_output = Command::new("git")
-            .args([
-                "clone",
-                "--local",
-                rust_repo.to_str().unwrap(),
-                workspace_main.to_str().unwrap(),
-            ])
-            .output()
-            .unwrap();
-        assert!(
-            clone_output.status.success(),
-            "Failed to clone rust repo to workspace: {}",
-            String::from_utf8_lossy(&clone_output.stderr)
-        );
-
-        run_git(&workspace_main, &["config", "user.name", "Benchmark"]);
-        run_git(&workspace_main, &["config", "user.email", "bench@test.com"]);
-
-        // Add worktrees with realistic changes
-        for i in 1..num_worktrees {
-            add_worktree_with_divergence(
-                &temp,
-                &workspace_main,
-                i,
-                10, // commits ahead
-                0,  // commits behind (skip for now)
-                3,  // uncommitted files
-            );
-        }
-
-        // Warm up git's internal caches
-        run_git(&workspace_main, &["status"]);
-
         group.bench_with_input(
             BenchmarkId::new("rust_repo", num_worktrees),
             &num_worktrees,
-            |b, _| {
+            |b, &num_worktrees| {
+                // All expensive setup is inside the closure, so it only runs
+                // when this benchmark ID matches the filter. Combined with
+                // OnceLock, the rust repo is cloned at most once per process.
+                let rust_repo = get_or_clone_rust_repo();
+
+                // Create a temporary workspace for this benchmark run
+                let temp = tempfile::tempdir().unwrap();
+                let workspace_main = temp.path().join("main");
+
+                // Copy the rust repo to the temp location (git worktree needs the original)
+                // Use git clone --local for fast copy with shared objects
+                let clone_output = Command::new("git")
+                    .args([
+                        "clone",
+                        "--local",
+                        rust_repo.to_str().unwrap(),
+                        workspace_main.to_str().unwrap(),
+                    ])
+                    .output()
+                    .unwrap();
+                assert!(
+                    clone_output.status.success(),
+                    "Failed to clone rust repo to workspace: {}",
+                    String::from_utf8_lossy(&clone_output.stderr)
+                );
+
+                run_git(&workspace_main, &["config", "user.name", "Benchmark"]);
+                run_git(&workspace_main, &["config", "user.email", "bench@test.com"]);
+
+                // Add worktrees with realistic changes
+                for i in 1..num_worktrees {
+                    add_worktree_with_divergence(
+                        &temp,
+                        &workspace_main,
+                        i,
+                        10, // commits ahead
+                        0,  // commits behind (skip for now)
+                        3,  // uncommitted files
+                    );
+                }
+
+                // Warm up git's internal caches
+                run_git(&workspace_main, &["status"]);
+
                 b.iter(|| {
                     Command::new(&binary)
                         .arg("list")
@@ -875,68 +896,70 @@ fn bench_list_real_repo_cold_cache(c: &mut Criterion) {
 
     let binary = get_release_binary();
 
-    // Get or clone the rust repo (cached across runs)
-    let rust_repo = get_or_clone_rust_repo();
-
     // Test with fewer data points since cold cache + large repo is slower
     for num_worktrees in [1, 4, 8] {
-        // Create a temporary workspace for this benchmark run
-        let temp = tempfile::tempdir().unwrap();
-        let workspace_main = temp.path().join("main");
-
-        // Copy the rust repo to the temp location (git worktree needs the original)
-        // Use git clone --local for fast copy with shared objects
-        let clone_output = Command::new("git")
-            .args([
-                "clone",
-                "--local",
-                rust_repo.to_str().unwrap(),
-                workspace_main.to_str().unwrap(),
-            ])
-            .output()
-            .unwrap();
-        assert!(
-            clone_output.status.success(),
-            "Failed to clone rust repo to workspace: {}",
-            String::from_utf8_lossy(&clone_output.stderr)
-        );
-
-        run_git(&workspace_main, &["config", "user.name", "Benchmark"]);
-        run_git(&workspace_main, &["config", "user.email", "bench@test.com"]);
-
-        // Add worktrees with realistic changes
-        for i in 1..num_worktrees {
-            add_worktree_with_divergence(
-                &temp,
-                &workspace_main,
-                i,
-                10, // commits ahead
-                0,  // commits behind (skip for now)
-                3,  // uncommitted files
-            );
-        }
-
-        let git_dir = workspace_main.join(".git");
-
-        // Collect paths to all git caches
-        let mut index_paths = vec![git_dir.join("index")];
-        for i in 1..num_worktrees {
-            let wt_index = git_dir
-                .join("worktrees")
-                .join(format!("wt-{}", i))
-                .join("index");
-            index_paths.push(wt_index);
-        }
-
-        let commit_graph_dir = git_dir.join("objects").join("info");
-        let commit_graph = commit_graph_dir.join("commit-graph");
-        let commit_graphs_dir = commit_graph_dir.join("commit-graphs");
-        let packed_refs = git_dir.join("packed-refs");
-
         group.bench_with_input(
             BenchmarkId::new("rust_repo_cold", num_worktrees),
             &num_worktrees,
-            |b, _| {
+            |b, &num_worktrees| {
+                // All expensive setup is inside the closure, so it only runs
+                // when this benchmark ID matches the filter. Combined with
+                // OnceLock, the rust repo is cloned at most once per process.
+                let rust_repo = get_or_clone_rust_repo();
+
+                // Create a temporary workspace for this benchmark run
+                let temp = tempfile::tempdir().unwrap();
+                let workspace_main = temp.path().join("main");
+
+                // Copy the rust repo to the temp location (git worktree needs the original)
+                // Use git clone --local for fast copy with shared objects
+                let clone_output = Command::new("git")
+                    .args([
+                        "clone",
+                        "--local",
+                        rust_repo.to_str().unwrap(),
+                        workspace_main.to_str().unwrap(),
+                    ])
+                    .output()
+                    .unwrap();
+                assert!(
+                    clone_output.status.success(),
+                    "Failed to clone rust repo to workspace: {}",
+                    String::from_utf8_lossy(&clone_output.stderr)
+                );
+
+                run_git(&workspace_main, &["config", "user.name", "Benchmark"]);
+                run_git(&workspace_main, &["config", "user.email", "bench@test.com"]);
+
+                // Add worktrees with realistic changes
+                for i in 1..num_worktrees {
+                    add_worktree_with_divergence(
+                        &temp,
+                        &workspace_main,
+                        i,
+                        10, // commits ahead
+                        0,  // commits behind (skip for now)
+                        3,  // uncommitted files
+                    );
+                }
+
+                let git_dir = workspace_main.join(".git");
+
+                // Collect paths to all git caches
+                let mut index_paths = vec![git_dir.join("index")];
+                for i in 1..num_worktrees {
+                    let wt_index = git_dir
+                        .join("worktrees")
+                        .join(format!("wt-{}", i))
+                        .join("index");
+                    index_paths.push(wt_index);
+                }
+
+                let commit_graph_dir = git_dir.join("objects").join("info");
+                let commit_graph = commit_graph_dir.join("commit-graph");
+                let commit_graphs_dir = commit_graph_dir.join("commit-graphs");
+                let packed_refs = git_dir.join("packed-refs");
+
                 b.iter_batched(
                     || {
                         // Setup phase - remove all git caches (not measured)
@@ -985,12 +1008,145 @@ fn bench_list_real_repo_cold_cache(c: &mut Criterion) {
     group.finish();
 }
 
+/// Create a repository with many branches, each with unique commits.
+/// No worktrees are created - this tests `wt list --branches` performance.
+fn create_repo_with_many_branches(num_branches: usize) -> TempDir {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let repo_path = temp_dir.path().join("main");
+    std::fs::create_dir(&repo_path).unwrap();
+
+    // Initialize repository
+    run_git(&repo_path, &["init", "-b", "main"]);
+    run_git(&repo_path, &["config", "user.name", "Benchmark"]);
+    run_git(&repo_path, &["config", "user.email", "bench@test.com"]);
+
+    // Create initial commit on main
+    let file_path = repo_path.join("README.md");
+    std::fs::write(&file_path, "# Benchmark Repository\n").unwrap();
+    run_git(&repo_path, &["add", "."]);
+    run_git(&repo_path, &["commit", "-m", "Initial commit"]);
+
+    // Create branches with unique commits
+    for i in 0..num_branches {
+        let branch_name = format!("feature-{:03}", i);
+
+        // Create branch from main
+        run_git(&repo_path, &["checkout", "-b", &branch_name, "main"]);
+
+        // Add 1-3 unique commits per branch (varies by branch index)
+        let num_commits = 1 + (i % 3);
+        for j in 0..num_commits {
+            let feature_file = repo_path.join(format!("feature_{:03}_{}.rs", i, j));
+            let content = format!(
+                "// Feature {} file {}\n\
+                 pub fn feature_{}_func_{}() -> i32 {{\n\
+                     {}\n\
+                 }}\n",
+                i,
+                j,
+                i,
+                j,
+                i * 100 + j
+            );
+            std::fs::write(&feature_file, content).unwrap();
+            run_git(&repo_path, &["add", "."]);
+            run_git(
+                &repo_path,
+                &[
+                    "commit",
+                    "-m",
+                    &format!("Feature {} commit {}", branch_name, j),
+                ],
+            );
+        }
+    }
+
+    // Return to main
+    run_git(&repo_path, &["checkout", "main"]);
+
+    temp_dir
+}
+
+/// Benchmark `wt list --branches` with many branches.
+/// Tests performance scaling with 25, 50, and 100 branches (no worktrees).
+fn bench_list_many_branches(c: &mut Criterion) {
+    let mut group = c.benchmark_group("list_many_branches");
+
+    let binary = get_release_binary();
+
+    // Test with different branch counts to measure scaling
+    for num_branches in [25, 50, 100] {
+        let temp = create_repo_with_many_branches(num_branches);
+        let repo_path = temp.path().join("main");
+
+        // Warm up git's internal caches
+        run_git(&repo_path, &["status"]);
+
+        group.bench_with_input(
+            BenchmarkId::from_parameter(num_branches),
+            &num_branches,
+            |b, _| {
+                b.iter(|| {
+                    Command::new(&binary)
+                        .args(["list", "--branches"])
+                        .current_dir(&repo_path)
+                        .output()
+                        .unwrap();
+                });
+            },
+        );
+    }
+
+    group.finish();
+}
+
+/// Cold cache variant of many branches benchmark.
+/// Invalidates packed-refs before each measurement to simulate first-run performance.
+fn bench_list_many_branches_cold(c: &mut Criterion) {
+    let mut group = c.benchmark_group("list_many_branches_cold");
+
+    let binary = get_release_binary();
+
+    // Test with different branch counts to measure scaling under cold cache
+    for num_branches in [25, 50, 100] {
+        let temp = create_repo_with_many_branches(num_branches);
+        let repo_path = temp.path().join("main");
+
+        let packed_refs = repo_path.join(".git/packed-refs");
+
+        group.bench_with_input(
+            BenchmarkId::from_parameter(num_branches),
+            &num_branches,
+            |b, _| {
+                b.iter_batched(
+                    || {
+                        // Invalidate packed-refs before each iteration
+                        if packed_refs.exists() {
+                            std::fs::remove_file(&packed_refs).unwrap();
+                        }
+                    },
+                    |_| {
+                        Command::new(&binary)
+                            .args(["list", "--branches"])
+                            .current_dir(&repo_path)
+                            .output()
+                            .unwrap();
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
+    }
+
+    group.finish();
+}
+
 criterion_group! {
     name = benches;
     config = Criterion::default()
         .sample_size(30)
         .measurement_time(std::time::Duration::from_secs(15))
         .warm_up_time(std::time::Duration::from_secs(3));
-    targets = bench_time_to_skeleton, bench_time_to_skeleton_cold, bench_time_to_complete, bench_time_to_complete_cold, bench_list_by_worktree_count, bench_list_by_repo_profile, bench_sequential_vs_parallel, bench_list_cold_cache, bench_list_real_repo, bench_list_real_repo_cold_cache
+    targets = bench_time_to_skeleton, bench_time_to_skeleton_cold, bench_time_to_complete, bench_time_to_complete_cold, bench_list_by_worktree_count, bench_list_by_repo_profile, bench_sequential_vs_parallel, bench_list_cold_cache, bench_list_real_repo, bench_list_real_repo_cold_cache, bench_list_many_branches, bench_list_many_branches_cold
 }
 criterion_main!(benches);
