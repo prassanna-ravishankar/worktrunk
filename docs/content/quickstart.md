@@ -3,8 +3,6 @@ title = "Quick Start"
 weight = 1
 +++
 
-Get up and running with Worktrunk in under a minute.
-
 ## Install
 
 ```bash
@@ -27,8 +25,6 @@ This creates `../repo.fix-auth` on branch `fix-auth`.
 $ wt switch feature-api
 ✅ Switched to worktree for feature-api at ../repo.feature-api
 ```
-
-Use branch names, not paths. Worktrunk handles the navigation.
 
 ## List worktrees
 

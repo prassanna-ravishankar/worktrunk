@@ -86,19 +86,12 @@ wsc new-feature  # Creates worktree, runs hooks, launches Claude
 
 ### Eliminate cold starts
 
-Use `post-create` hooks to install dependencies and copy caches:
-
-```toml
-[post-create]
-"cache" = "cp -r ../.cache .cache"  # Copy shared cache
-"install" = "npm ci"
-```
-
-For copy-on-write on macOS:
+`post-create` hooks install deps and copy caches. Use copy-on-write on macOS:
 
 ```toml
 [post-create]
 "cache" = "cp -c -r ../.cache .cache"  # Uses APFS clones
+"install" = "npm ci"
 ```
 
 ### Local CI gate
@@ -109,7 +102,6 @@ For copy-on-write on macOS:
 [pre-merge]
 "test" = "cargo test"
 "lint" = "cargo clippy -- -D warnings"
-"format" = "cargo fmt --check"
 ```
 
 ### Monitor CI across branches
@@ -118,19 +110,17 @@ For copy-on-write on macOS:
 $ wt list --full --branches
 ```
 
-Shows PR/CI status for all branches, including those without worktrees. CI column links to PR pages in terminals with hyperlink support.
+Shows PR/CI status for all branches, including those without worktrees.
 
-### JSON API for scripting
+### JSON API
 
 ```bash
 $ wt list --format=json
 ```
 
-Useful for dashboards, statuslines, and custom scripts.
+For dashboards, statuslines, and scripts.
 
 ### Task runners in hooks
-
-Reference your existing task runner:
 
 ```toml
 [post-create]
@@ -140,12 +130,10 @@ Reference your existing task runner:
 "validate" = "just test lint"
 ```
 
-### Working with stacked branches
-
-Create a branch from the current one:
+### Stacked branches
 
 ```bash
 $ wt switch --create feature-part2 --base=@
 ```
 
-This branches from your current HEAD, not from main.
+Branches from current HEAD, not main.

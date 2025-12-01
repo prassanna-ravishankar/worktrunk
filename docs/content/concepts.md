@@ -46,34 +46,3 @@ Worktrunk uses **path-first lookup** when resolving arguments:
 3. Otherwise, treat the argument as a branch name
 
 This means `wt switch foo` will switch to `repo.foo/` even if that worktree is on a different branch.
-
-## Branch lifecycle
-
-Typical workflow:
-
-```
-                    ┌─────────────────┐
-                    │  wt switch -c   │
-                    │  (create)       │
-                    └────────┬────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │  Work on branch │
-                    │  (commits)      │
-                    └────────┬────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │   wt merge      │
-                    │  (or CI merge)  │
-                    └────────┬────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │   wt remove     │
-                    │  (cleanup)      │
-                    └─────────────────┘
-```
-
-With `wt merge`, the entire workflow from working tree → main branch is automated: stage, commit, squash, rebase, run tests, merge, cleanup.
