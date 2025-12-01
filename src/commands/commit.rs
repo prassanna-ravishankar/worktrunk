@@ -68,7 +68,7 @@ impl<'a> CommitGenerator<'a> {
     pub fn emit_hint_if_needed(&self) -> anyhow::Result<()> {
         if !self.config.is_configured() {
             crate::output::hint(cformat!(
-                "Using fallback commit message. Run <bright-black>wt config --help</><dim> for LLM setup guide"
+                "Using fallback commit message. Run <bright-black>wt config --help</> for LLM setup guide"
             ))?;
         }
         Ok(())

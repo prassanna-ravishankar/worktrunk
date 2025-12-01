@@ -336,7 +336,7 @@ fn main() {
                             for (shell, path) in &scan_result.skipped {
                                 let path = format_path_for_display(path);
                                 crate::output::hint(cformat!(
-                                    "Skipped <bright-black>{shell}</><dim>; {path} not found"
+                                    "Skipped <bright-black>{shell}</>; {path} not found"
                                 ))?;
                             }
 
@@ -457,7 +457,7 @@ fn main() {
                                         ))?;
                                     } else {
                                         crate::output::hint(cformat!(
-                                            "No <bright-black>{shell}</><dim> {what} in {path}"
+                                            "No <bright-black>{shell}</> {what} in {path}"
                                         ))?;
                                     }
                                 }
@@ -478,7 +478,7 @@ fn main() {
                                         ))?;
                                     } else {
                                         crate::output::hint(cformat!(
-                                            "No <bright-black>{shell}</><dim> completions in {path}"
+                                            "No <bright-black>{shell}</> completions in {path}"
                                         ))?;
                                     }
                                 }

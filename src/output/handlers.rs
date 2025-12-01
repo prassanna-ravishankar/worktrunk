@@ -242,9 +242,9 @@ fn format_remove_worktree_message(
     }
 }
 
-/// Shell integration hint message (hint() adds dim styling)
+/// Shell integration hint message
 fn shell_integration_hint() -> String {
-    "Run `wt config shell install` to enable automatic cd".to_string()
+    cformat!("Run <bright-black>wt config shell install</> to enable automatic cd")
 }
 
 /// Handle output for a switch operation

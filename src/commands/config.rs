@@ -52,10 +52,10 @@ pub fn handle_config_create() -> anyhow::Result<()> {
         ))?;
         output::blank()?;
         output::hint(cformat!(
-            "Use <bright-black>wt config show</><dim> to view existing configuration"
+            "Use <bright-black>wt config show</> to view existing configuration"
         ))?;
         output::hint(cformat!(
-            "Use <bright-black>wt config create --help</><dim> for config format reference"
+            "Use <bright-black>wt config create --help</> for config format reference"
         ))?;
         return Ok(());
     }
@@ -129,7 +129,7 @@ fn render_user_config(out: &mut String) -> anyhow::Result<()> {
             out,
             "{}",
             cformat!(
-                "{HINT_EMOJI} <dim>Run <bright-black>wt config create</><dim> to create a config file</>"
+                "{HINT_EMOJI} <dim>Run <bright-black>wt config create</> to create a config file</>"
             )
         )?;
         writeln!(out)?;
@@ -329,7 +329,7 @@ fn render_shell_status(out: &mut String) -> anyhow::Result<()> {
             out,
             "{}",
             cformat!(
-                "{HINT_EMOJI} <dim>Run <bright-black>wt config shell install</><dim> to enable shell integration</>"
+                "{HINT_EMOJI} <dim>Run <bright-black>wt config shell install</> to enable shell integration</>"
             )
         )?;
     }

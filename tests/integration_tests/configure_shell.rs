@@ -36,8 +36,8 @@ fn test_configure_shell_with_yes() {
         🟡 [33mCompletions won't work; add to ~/.zshrc before the wt line:[39m
         [107m [0m  [2m[0m[2m[34mautoload[0m[2m [0m[2m[36m-Uz[0m[2m compinit [0m[2m[36m&&[0m[2m [0m[2m[34mcompinit[0m[2m[0m
         ✅ [32mAdded shell extension & completions for [1mzsh[22m @ [1m~/.zshrc[22m[39m
-        💡 [2mSkipped [90mbash[39m[2m; ~/.bashrc not found[22m[22m
-        💡 [2mSkipped [90mfish[39m[2m; ~/.config/fish/conf.d not found[22m[22m
+        💡 [2mSkipped [90mbash[39m; ~/.bashrc not found[22m
+        💡 [2mSkipped [90mfish[39m; ~/.config/fish/conf.d not found[22m
 
         ✅ [32mConfigured 1 shell[39m
         💡 [2mRestart shell or run: source ~/.zshrc[22m
@@ -265,9 +265,9 @@ fn test_configure_shell_no_files() {
         ----- stdout -----
 
         ----- stderr -----
-        💡 [2mSkipped [90mbash[39m[2m; ~/.bashrc not found[22m[22m
-        💡 [2mSkipped [90mzsh[39m[2m; ~/.zshrc not found[22m[22m
-        💡 [2mSkipped [90mfish[39m[2m; ~/.config/fish/conf.d not found[22m[22m
+        💡 [2mSkipped [90mbash[39m; ~/.bashrc not found[22m
+        💡 [2mSkipped [90mzsh[39m; ~/.zshrc not found[22m
+        💡 [2mSkipped [90mfish[39m; ~/.config/fish/conf.d not found[22m
         ❌ [31mNo shell config files found[39m
         ");
     });
@@ -309,7 +309,7 @@ fn test_configure_shell_multiple_configs() {
         [107m [0m  [2m[0m[2m[34mautoload[0m[2m [0m[2m[36m-Uz[0m[2m compinit [0m[2m[36m&&[0m[2m [0m[2m[34mcompinit[0m[2m[0m
         ✅ [32mAdded shell extension & completions for [1mbash[22m @ [1m~/.bashrc[22m[39m
         ✅ [32mAdded shell extension & completions for [1mzsh[22m @ [1m~/.zshrc[22m[39m
-        💡 [2mSkipped [90mfish[39m[2m; ~/.config/fish/conf.d not found[22m[22m
+        💡 [2mSkipped [90mfish[39m; ~/.config/fish/conf.d not found[22m
 
         ✅ [32mConfigured 2 shells[39m
         💡 [2mRestart shell or run: source ~/.zshrc[22m
@@ -372,7 +372,7 @@ fn test_configure_shell_mixed_states() {
         [107m [0m  [2m[0m[2m[34mautoload[0m[2m [0m[2m[36m-Uz[0m[2m compinit [0m[2m[36m&&[0m[2m [0m[2m[34mcompinit[0m[2m[0m
         ⚪ Already configured shell extension & completions for [1mbash[22m @ [1m~/.bashrc[22m
         ✅ [32mAdded shell extension & completions for [1mzsh[22m @ [1m~/.zshrc[22m[39m
-        💡 [2mSkipped [90mfish[39m[2m; ~/.config/fish/conf.d not found[22m[22m
+        💡 [2mSkipped [90mfish[39m; ~/.config/fish/conf.d not found[22m
 
         ✅ [32mConfigured 1 shell[39m
         💡 [2mRestart shell or run: source ~/.zshrc[22m
@@ -428,9 +428,9 @@ fn test_uninstall_shell() {
 
         ----- stderr -----
         ✅ [32mRemoved shell extension & completions for [1mzsh[22m @ [1m~/.zshrc[22m[39m
-        💡 [2mNo [90mbash[39m[2m shell extension & completions in ~/.bashrc[22m[22m
-        💡 [2mNo [90mfish[39m[2m shell extension in ~/.config/fish/conf.d/wt.fish[22m[22m
-        💡 [2mNo [90mfish[39m[2m completions in ~/.config/fish/completions/wt.fish[22m[22m
+        💡 [2mNo [90mbash[39m shell extension & completions in ~/.bashrc[22m
+        💡 [2mNo [90mfish[39m shell extension in ~/.config/fish/conf.d/wt.fish[22m
+        💡 [2mNo [90mfish[39m completions in ~/.config/fish/completions/wt.fish[22m
 
         ✅ [32mRemoved integration from 1 shell[39m
         💡 [2mRestart shell to complete uninstall[22m
@@ -489,8 +489,8 @@ fn test_uninstall_shell_multiple() {
         ----- stderr -----
         ✅ [32mRemoved shell extension & completions for [1mbash[22m @ [1m~/.bashrc[22m[39m
         ✅ [32mRemoved shell extension & completions for [1mzsh[22m @ [1m~/.zshrc[22m[39m
-        💡 [2mNo [90mfish[39m[2m shell extension in ~/.config/fish/conf.d/wt.fish[22m[22m
-        💡 [2mNo [90mfish[39m[2m completions in ~/.config/fish/completions/wt.fish[22m[22m
+        💡 [2mNo [90mfish[39m shell extension in ~/.config/fish/conf.d/wt.fish[22m
+        💡 [2mNo [90mfish[39m completions in ~/.config/fish/completions/wt.fish[22m
 
         ✅ [32mRemoved integration from 2 shells[39m
         💡 [2mRestart shell to complete uninstall[22m
@@ -736,7 +736,7 @@ fn test_configure_shell_no_warning_for_bash_user() {
         ----- stderr -----
         ✅ [32mAdded shell extension & completions for [1mbash[22m @ [1m~/.bashrc[22m[39m
         ✅ [32mAdded shell extension & completions for [1mzsh[22m @ [1m~/.zshrc[22m[39m
-        💡 [2mSkipped [90mfish[39m[2m; ~/.config/fish/conf.d not found[22m[22m
+        💡 [2mSkipped [90mfish[39m; ~/.config/fish/conf.d not found[22m
 
         ✅ [32mConfigured 2 shells[39m
         💡 [2mRestart shell or run: source ~/.bashrc[22m
@@ -856,7 +856,7 @@ fn test_configure_shell_no_warning_when_shell_unset() {
         ----- stderr -----
         ✅ [32mAdded shell extension & completions for [1mbash[22m @ [1m~/.bashrc[22m[39m
         ✅ [32mAdded shell extension & completions for [1mzsh[22m @ [1m~/.zshrc[22m[39m
-        💡 [2mSkipped [90mfish[39m[2m; ~/.config/fish/conf.d not found[22m[22m
+        💡 [2mSkipped [90mfish[39m; ~/.config/fish/conf.d not found[22m
 
         ✅ [32mConfigured 2 shells[39m
         ");

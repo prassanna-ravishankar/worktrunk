@@ -328,7 +328,7 @@ pub fn handle_switch(
                 "Branch <bold>{resolved_branch}</> exists on remote ({remote_ref}); creating new branch from base instead"
             ))?;
             crate::output::hint(cformat!(
-                "Use <bright-black>wt switch {resolved_branch}</><dim> (without <bright-black>--create</><dim>) to switch to the remote branch"
+                "Use <bright-black>wt switch {resolved_branch}</> (without <bright-black>--create</>) to switch to the remote branch"
             ))?;
         }
     }

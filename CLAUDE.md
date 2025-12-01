@@ -307,7 +307,7 @@ Use `output::` functions with `cformat!` for styled content. The output function
 // ✅ GOOD - output:: handles emoji + outer color, cformat! handles inner styling
 output::success(cformat!("Created <bold>{branch}</> from <bold>{base}</>"))?;
 output::warning(cformat!("Branch <bold>{name}</> has <dim>uncommitted changes</>"))?;
-output::hint(cformat!("Run <bright-black>wt merge</><dim> to continue"))?;
+output::hint(cformat!("Run <bright-black>wt merge</> to continue"))?;
 
 // ✅ GOOD - plain strings work too (no inner styling needed)
 output::progress("Rebasing onto main...")?;
@@ -329,14 +329,14 @@ Branch names in messages should be bolded. Tables (`wt list`) use `StyledLine` w
 Never quote commands or branch names. Use styling to make them stand out:
 
 - **In normal font context**: Use `<bold>` for commands and branches
-- **In hints**: Use `<bright-black>` for commands, then `<dim>` to continue dimmed text
+- **In hints**: Use `<bright-black>` for commands (hint() already applies dimming—no explicit `<dim>` needed)
 
 ```rust
 // ✅ GOOD - bold in normal context
 output::info(cformat!("Use <bold>wt merge</> to continue"))?;
 
-// ✅ GOOD - bright-black for commands in hints (re-apply dim after)
-output::hint(cformat!("Run <bright-black>wt list</><dim> to see worktrees"))?;
+// ✅ GOOD - bright-black for commands in hints
+output::hint(cformat!("Run <bright-black>wt list</> to see worktrees"))?;
 
 // ✅ GOOD - plain hint without commands
 output::hint("No changes to commit")?;
