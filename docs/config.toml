@@ -17,7 +17,6 @@ juice_logo_path = "logo.svg"
 rust_crate = "worktrunk"
 github_repo = "max-sixty/worktrunk"
 site_description = "CLI for Git worktree management, designed for parallel AI agent workflows."
-juice_exclude_menu = ["Quick Start", "Concepts", "Configuration", "Commands Reference", "Advanced Features", "FAQ"]
 juice_extra_menu = [
     { title = "Get Started", link = "/quickstart" },
     { title = "Tips", link = "/tips-patterns" },
