@@ -730,3 +730,24 @@ input:focus-visible {
         transition-duration: 0.01ms !important;
     }
 }
+
+// ============================================================================
+// Dark Mode Adjustments
+// ============================================================================
+// Syntax highlighting is handled by Zola's CSS-based themes (syntax-light.css,
+// syntax-dark.css) loaded conditionally in base.html via prefers-color-scheme.
+
+@media (prefers-color-scheme: dark) {
+    // Tell browser we're in dark mode (affects form controls, scrollbars)
+    :root {
+        color-scheme: dark;
+    }
+
+    // Search results highlight
+    #suggestions {
+        .search-title b,
+        .search-excerpt b {
+            color: var(--wt-color-accent);
+        }
+    }
+}

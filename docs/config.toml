@@ -9,7 +9,11 @@ title = "Worktrunk"
 
 [markdown]
 highlight_code = true
-highlight_theme = "inspired-github"
+highlight_theme = "css"
+highlight_themes_css = [
+    { theme = "inspired-github", filename = "syntax-light.css" },
+    { theme = "base16-ocean-dark", filename = "syntax-dark.css" },
+]
 error_on_missing_highlight = true
 
 [extra]
