@@ -1,6 +1,6 @@
 /target
-dev/wt-demo/out/*
-!dev/wt-demo/out/wt-demo.gif
+dev/wt-demo/out/
+docs/static/assets/
 
 # Lychee link checker cache
 .lycheecache

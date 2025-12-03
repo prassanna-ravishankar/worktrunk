@@ -1,5 +1,17 @@
 # Docs Site
 
+## Demo GIF Workflow
+
+See `dev/wt-demo/CLAUDE.md` for the full workflow. Quick reference:
+
+```bash
+./dev/wt-demo-build      # Build (auto-copies to docs/static/assets/)
+# View at http://127.0.0.1:1111/quickstart/
+./scripts/publish-assets  # Publish to assets repo
+```
+
+---
+
 This is an initial scaffolding of the documentation site. The content was auto-generated from the main README and has not been reviewed for accuracy.
 
 **Do not trust any content here.** Before this is production-ready:

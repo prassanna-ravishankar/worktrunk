@@ -15,6 +15,12 @@ jobs:
         with:
           tool: zola@0.19.2
 
+      - name: Fetch demo assets
+        run: |
+          mkdir -p docs/static/assets
+          curl -fsSL -o docs/static/assets/wt-demo.gif \
+            https://raw.githubusercontent.com/max-sixty/worktrunk-assets/main/demos/wt-demo.gif
+
       - name: 🕷️ Build docs
         run: zola build
         working-directory: docs

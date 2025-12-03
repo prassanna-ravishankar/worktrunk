@@ -1,0 +1,58 @@
+#!/bin/bash
+# Publish demo assets to the worktrunk-assets repo
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+DEMO_OUT="$REPO_ROOT/dev/wt-demo/out"
+ASSETS_REPO="$REPO_ROOT/../worktrunk-assets"
+
+# Clone assets repo if needed
+if [[ ! -d "$ASSETS_REPO/.git" ]]; then
+    if ! command -v gh &>/dev/null; then
+        echo "Error: gh CLI required. Install from https://cli.github.com/"
+        exit 1
+    fi
+    echo "Cloning assets repo..."
+    if ! gh repo clone max-sixty/worktrunk-assets "$ASSETS_REPO"; then
+        echo "Failed to clone assets repo"
+        exit 1
+    fi
+fi
+
+# Check for demo output
+if [[ ! -f "$DEMO_OUT/wt-demo.gif" ]]; then
+    echo "Demo GIF not found at $DEMO_OUT/wt-demo.gif"
+    echo "Build it first: ./dev/wt-demo-build"
+    exit 1
+fi
+
+# Update assets repo
+cd "$ASSETS_REPO"
+if ! git pull --ff-only; then
+    echo "Failed to update assets repo. Check for uncommitted changes."
+    exit 1
+fi
+
+# Copy new assets
+echo "Copying assets..."
+cp "$DEMO_OUT/wt-demo.gif" "$ASSETS_REPO/demos/"
+
+# Check for changes
+if git diff --quiet demos/; then
+    echo "No changes to publish"
+    exit 0
+fi
+
+# Show what changed
+echo "Changes:"
+git diff --stat demos/
+
+# Commit and push
+git add demos/
+git commit -m "Update demo assets"
+git push
+
+echo ""
+echo "Published: https://raw.githubusercontent.com/max-sixty/worktrunk-assets/main/demos/wt-demo.gif"
+echo "CDN (~1 min to update): https://cdn.jsdelivr.net/gh/max-sixty/worktrunk-assets@main/demos/wt-demo.gif"

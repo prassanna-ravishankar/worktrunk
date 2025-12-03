@@ -42,7 +42,7 @@ I'd recommend:
 
 ## Demo
 
-![Worktrunk Demo](dev/wt-demo/out/wt-demo.gif)
+![Worktrunk Demo](https://cdn.jsdelivr.net/gh/max-sixty/worktrunk-assets@main/demos/wt-demo.gif)
 
 ## Quick Start
 

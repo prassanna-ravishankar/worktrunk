@@ -349,9 +349,14 @@ def main():
     # Cleanup
     TAPE_RENDERED.unlink(missing_ok=True)
 
+    # Copy to docs for local preview
+    docs_assets = REPO_ROOT / "docs" / "static" / "assets"
+    docs_assets.mkdir(parents=True, exist_ok=True)
+    shutil.copy(OUTPUT_GIF, docs_assets / "wt-demo.gif")
+
     print(f"GIF saved to {OUTPUT_GIF}")
+    print(f"Copied to {docs_assets / 'wt-demo.gif'}")
     print(f"Text log saved to {OUT_DIR / 'run.txt'}")
-    print(f"Log: {LOG}")
 
 
 if __name__ == "__main__":
