@@ -13,7 +13,8 @@
 {% endblock fonts %}
 
 {% block head %}
-{% include "_variables.html" %}
+{# _variables.html is already included by the theme at line 12 of juice/templates/index.html #}
+{# Zola resolves it to our custom templates/_variables.html, so no need to include it again #}
 <meta name="view-transition" content="same-origin">
 <meta name="description" content="{{ config.extra.site_description }}">
 
