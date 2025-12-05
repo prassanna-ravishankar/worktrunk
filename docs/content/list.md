@@ -113,7 +113,7 @@ Symbols appear in the Status column in this order:
 | | `⋈` | Merge in progress |
 | Branch state | `⊘` | Would conflict if merged to main (`--full` only) |
 | | `≡` | Matches main (identical contents) |
-| | `_` | No commits (empty branch) |
+| | `_` | No commits ahead, clean working tree |
 | Divergence | `↑` | Ahead of main |
 | | `↓` | Behind main |
 | | `↕` | Diverged from main |
@@ -124,7 +124,7 @@ Symbols appear in the Status column in this order:
 | | `⌫` | Prunable (directory missing) |
 | | `⊠` | Locked worktree |
 
-Rows are dimmed when the branch has no marginal contribution (`≡` matches main or `_` no commits).
+Rows are dimmed when the branch [content is already in main](@/remove.md#branch-cleanup) (`≡` matches main or `_` no commits ahead).
 
 ## JSON output
 

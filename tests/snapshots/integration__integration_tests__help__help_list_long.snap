@@ -122,7 +122,7 @@ Symbols appear in the Status column in this order:
 | | [2m⋈[0m | Merge in progress |
 | Branch state | [2m⊘[0m | Would conflict if merged to main ([2m--full[0m only) |
 | | [2m≡[0m | Matches main (identical contents) |
-| | [2m_[0m | No commits (empty branch) |
+| | [2m_[0m | No commits ahead, clean working tree |
 | Divergence | [2m↑[0m | Ahead of main |
 | | [2m↓[0m | Behind main |
 | | [2m↕[0m | Diverged from main |
@@ -133,7 +133,7 @@ Symbols appear in the Status column in this order:
 | | [2m⌫[0m | Prunable (directory missing) |
 | | [2m⊠[0m | Locked worktree |
 
-Rows are dimmed when the branch has no marginal contribution ([2m≡[0m matches main or [2m_[0m no commits).
+Rows are dimmed when the branch content is already in main ([2m≡[0m matches main or [2m_[0m no commits ahead).
 
 [32mJSON output[0m
 

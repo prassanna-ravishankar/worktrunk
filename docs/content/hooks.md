@@ -23,7 +23,7 @@ Hooks automate setup and validation at worktree lifecycle events. They're define
 
 ## Configuration formats
 
-All hooks support two formats in `.config/wt.toml`:
+Hooks can be a single command or multiple named commands. All hooks support both formats in `.config/wt.toml`:
 
 ### Single command (string)
 
@@ -162,7 +162,7 @@ build = "cargo build --release"
 
 ### post-merge
 
-Runs after successful merge, **best-effort**. The merge has already completed, so failures are logged but don't abort.
+Runs after successful merge and cleanup, **best-effort**. The merge has already completed and the feature worktree has been removed, so failures are logged but don't abort.
 
 **Use cases**: Deployment, notifications, installing updated binaries — post-merge automation.
 
@@ -171,9 +171,9 @@ post-merge = "cargo install --path ."
 ```
 
 **Behavior**:
-- Commands run sequentially in the **main worktree** (not feature branch)
-- Runs after push succeeds, before cleanup
-- Failures show errors but cleanup proceeds
+- Commands run sequentially in the **main worktree**
+- Runs after cleanup completes
+- Failures show errors but don't affect the completed merge
 
 ## When hooks run during merge
 
@@ -371,10 +371,10 @@ fi
 
 ### Symlinks and caches
 
-Set up shared resources that shouldn't be duplicated:
+Set up shared resources that shouldn't be duplicated. The `{{ repo_root }}` variable points to the main worktree:
 
 ```toml
 [post-create]
-cache = "ln -sf ../main-worktree/node_modules node_modules"
-env = "cp ../.env.local .env"
+cache = "ln -sf {{ repo_root }}/node_modules node_modules"
+env = "cp {{ repo_root }}/.env.local .env"
 ```

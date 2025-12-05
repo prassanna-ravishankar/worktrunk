@@ -63,9 +63,11 @@ When worktrunk needs a commit message, it builds a prompt from a template and pi
 
 ## Usage
 
+These examples assume a feature worktree with changes to commit.
+
 ### wt merge
 
-Merges branch into target with LLM-generated commit message. Generates a commit message if there are uncommitted changes, and a squash message for the branch commits.
+Squashes all changes (uncommitted + existing commits) into one commit with an LLM-generated message, then merges to main:
 
 ```bash
 $ wt merge

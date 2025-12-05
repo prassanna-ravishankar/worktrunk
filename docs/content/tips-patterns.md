@@ -93,19 +93,10 @@ Reference Taskfile/Justfile/Makefile in hooks:
 
 ## Shortcuts
 
-Special arguments work across all commands:
-
-| Shortcut | Meaning |
-|----------|---------|
-| `^` | Default branch (main/master) |
-| `@` | Current branch/worktree |
-| `-` | Previous worktree (like `cd -`) |
-
-Examples:
+Special arguments work across all commands—see [wt switch](@/switch.md#shortcuts) for the full list.
 
 ```bash
 wt switch --create hotfix --base=@       # Branch from current HEAD
-wt switch --create feature --base=^      # Branch from main (default)
 wt switch -                              # Switch to previous worktree
 wt remove @                              # Remove current worktree
 ```

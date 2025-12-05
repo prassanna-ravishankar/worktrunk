@@ -49,7 +49,7 @@ $ git config worktrunk.marker.feature "💬"        # Direct git config
 
 ## Statusline
 
-`wt list statusline --claude-code` outputs a single-line status for the Claude Code statusline (currently this grabs CI status, so is too slow to use in synchronous contexts—if a faster version would be helpful, please [open an issue](https://github.com/max-sixty/worktrunk/issues)):
+`wt list statusline --claude-code` outputs a single-line status for the Claude Code statusline. This fetches CI status from the network (1-2 seconds), making it suitable for async statuslines but too slow for synchronous shell prompts. If a faster version would be helpful, please [open an issue](https://github.com/max-sixty/worktrunk/issues).
 
 <code>~/w/myproject.feature-auth  !🤖  @<span style='color:#0a0'>+42</span> <span style='color:#a00'>-8</span>  <span style='color:#0a0'>↑3</span>  <span style='color:#0a0'>⇡1</span>  <span style='color:#0a0'>●</span>  | Opus</code>
 
