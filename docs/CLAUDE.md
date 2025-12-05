@@ -1,51 +1,20 @@
 # Docs Site
 
-## Demo GIF workflow
-
-**For local development**, fetch existing assets from the CDN:
-
-```bash
-./scripts/fetch-assets    # Download assets for local dev
-```
-
-**To update demos**, see `dev/wt-demo/CLAUDE.md` for the full workflow:
-
-```bash
-./dev/wt-demo-build       # Build new demo (auto-copies to docs/static/assets/)
-./scripts/publish-assets  # Publish to assets repo
-```
-
-View at http://127.0.0.1:1111/why-worktrunk/
-
----
-
-This is an initial scaffolding of the documentation site. The content was auto-generated from the main README and has not been reviewed for accuracy.
-
-**Do not trust any content here.** Before this is production-ready:
-
-- Survey all pages for accuracy
-- Verify code examples work
-- Check command output matches current behavior
-- Review configuration options against actual implementation
-
-This is being merged to enable iteration, not as finished documentation.
+This is the Zola-based documentation site for Worktrunk, published at worktrunk.dev.
 
 ## Development workflow
 
-When making changes to the docs, **ensure the dev server is running before returning to the user** so they can review changes in their browser.
+Start the dev server from the docs directory:
 
 ```bash
-# Start the dev server from the docs directory (runs on http://127.0.0.1:1111)
-cd docs && zola serve
+cd docs && zola serve  # Runs on http://127.0.0.1:1111
 ```
-
-If the server isn't already running, start it as a background process or in a separate terminal session before completing work. The user should be able to immediately see rendered changes without needing to manually start the server.
 
 ### Verifying changes
 
-**Text-only changes** (prose edits, content rewrites, documentation fixes): Run pre-commit and provide the dev server link. Playwright verification is not required — the user can review rendered content directly.
+**Text-only changes** (prose edits, content rewrites): Run pre-commit and provide the dev server link. Playwright verification is not required.
 
-**Visual changes** (CSS, layout, templates, responsive breakpoints): Use Playwright MCP to verify before returning. Visual bugs often hide in CSS specificity, template inheritance, and responsive behavior that aren't apparent from reading code.
+**Visual changes** (CSS, layout, templates, responsive breakpoints): Use Playwright MCP to verify before returning. Visual bugs often hide in CSS specificity, template inheritance, and responsive behavior.
 
 Playwright workflow for visual changes:
 1. Navigate to affected page(s)
@@ -72,7 +41,7 @@ The docs use a "warm workbench" theme built on top of the Juice Zola theme. Key 
 |------|---------|
 | `templates/_variables.html` | CSS custom properties (colors, layout, typography) |
 | `sass/custom.scss` | All styling, organized by section |
-| `templates/base.html` | Head overrides, IntersectionObserver disable |
+| `templates/base.html` | Head overrides, iOS viewport polyfill |
 | `templates/index.html` | Homepage hero and animations |
 | `templates/page.html` | Doc page TOC rendering |
 
@@ -97,6 +66,7 @@ When either variable changes (including via media queries), all dependent values
 3. **IntersectionObserver intercept** - Disables Juice's scroll-spy which conflicts with our TOC styling
 4. **Logo preload** - Prevents flash when navigating between pages
 5. **WCAG AA colors** - `--wt-color-text-soft` is #78716a for 4.5:1 contrast
+6. **iOS viewport polyfill** - Sets stable `--vh-full` variable for Firefox iOS and Chrome iOS
 
 ### Responsive breakpoints
 
@@ -215,3 +185,21 @@ The generated files contain this warning comment in the Command Reference sectio
 ```html
 <!-- ⚠️ AUTO-GENERATED from `wt <command> --help-page` — edit cli.rs to update -->
 ```
+
+## Demo GIF workflow
+
+Demo GIFs (~2MB each) are stored in a separate `worktrunk-assets` repo to avoid bloating git history.
+
+**For local development:**
+```bash
+./scripts/fetch-assets      # Download to docs/static/assets/ (gitignored)
+```
+
+**To update demos:**
+```bash
+./demos/wt-demo/build       # Build from VHS tape file
+./demos/wt-select/build     # Build select demo
+./scripts/publish-assets    # Push to assets repo
+```
+
+Deploy runs `fetch-assets` before building.
