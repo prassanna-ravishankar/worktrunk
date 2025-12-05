@@ -1251,25 +1251,6 @@ header nav .nav-item {
     }
 }
 
-// Heading anchor reveal on hover
-.content h2,
-.content h3 {
-    position: relative;
-
-    &::before {
-        content: "#";
-        position: absolute;
-        left: -1.5em;
-        color: var(--wt-color-text-soft);
-        opacity: 0;
-        transition: opacity 150ms ease;
-        font-weight: 400;
-    }
-
-    &:hover::before {
-        opacity: 0.6;
-    }
-}
 
 // Logo hover effect - subtle glow
 header .logo:hover img {
