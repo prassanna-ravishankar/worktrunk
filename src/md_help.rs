@@ -1,6 +1,7 @@
 //! Minimal markdown rendering for CLI help text.
 
 use anstyle::{AnsiColor, Color, Style};
+use unicode_width::UnicodeWidthStr;
 
 /// Render markdown in help text to ANSI with minimal styling (green headers only)
 pub fn render_markdown_in_help(help: &str) -> String {
@@ -9,32 +10,55 @@ pub fn render_markdown_in_help(help: &str) -> String {
 
     let mut result = String::new();
     let mut in_code_block = false;
+    let mut table_lines: Vec<&str> = Vec::new();
 
-    for line in help.lines() {
+    let lines: Vec<&str> = help.lines().collect();
+    let mut i = 0;
+
+    while i < lines.len() {
+        let line = lines[i];
         let trimmed = line.trim_start();
 
         // Skip HTML comments (expansion markers for web docs, see readme_sync.rs)
-        // Only matches single-line comments; multi-line would span multiple iterations
         if trimmed.starts_with("<!--") && trimmed.ends_with("-->") {
+            i += 1;
             continue;
         }
 
         // Track code block state
         if trimmed.starts_with("```") {
             in_code_block = !in_code_block;
-            // Skip the fence markers themselves
+            i += 1;
             continue;
         }
 
         // Inside code blocks, render dimmed with indent
         if in_code_block {
             result.push_str(&format!("  {dimmed}{line}{dimmed:#}\n"));
+            i += 1;
+            continue;
+        }
+
+        // Detect markdown table rows
+        if trimmed.starts_with('|') && trimmed.ends_with('|') {
+            // Collect all consecutive table lines
+            table_lines.clear();
+            while i < lines.len() {
+                let tl = lines[i].trim_start();
+                if tl.starts_with('|') && tl.ends_with('|') {
+                    table_lines.push(lines[i]);
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+            // Render the table
+            result.push_str(&render_table(&table_lines));
             continue;
         }
 
         // Outside code blocks, render markdown headers
         if let Some(header_text) = trimmed.strip_prefix("### ") {
-            // Subheadings: bold (differentiated from green ## section headers)
             let bold = Style::new().bold();
             result.push_str(&format!("{bold}{header_text}{bold:#}\n"));
         } else if let Some(header_text) = trimmed.strip_prefix("## ") {
@@ -42,15 +66,121 @@ pub fn render_markdown_in_help(help: &str) -> String {
         } else if let Some(header_text) = trimmed.strip_prefix("# ") {
             result.push_str(&format!("{green}{header_text}{green:#}\n"));
         } else {
-            // Render inline formatting (bold, inline code)
             let formatted = render_inline_formatting(line);
             result.push_str(&formatted);
             result.push('\n');
         }
+        i += 1;
     }
 
     // Color status symbols to match their descriptions
     colorize_status_symbols(&result)
+}
+
+/// Render a markdown table with proper column alignment
+fn render_table(lines: &[&str]) -> String {
+    // Parse table cells
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    let mut separator_idx: Option<usize> = None;
+
+    for (idx, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        // Remove leading/trailing pipes and split
+        let inner = trimmed.trim_start_matches('|').trim_end_matches('|');
+        let cells: Vec<String> = inner.split('|').map(|s| s.trim().to_string()).collect();
+
+        // Check if this is the separator row (contains only dashes and colons)
+        if cells
+            .iter()
+            .all(|c| c.chars().all(|ch| ch == '-' || ch == ':'))
+        {
+            separator_idx = Some(idx);
+        } else {
+            rows.push(cells);
+        }
+    }
+
+    if rows.is_empty() {
+        return String::new();
+    }
+
+    // Calculate column widths (using display width for Unicode)
+    let num_cols = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    let mut col_widths: Vec<usize> = vec![0; num_cols];
+
+    for row in &rows {
+        for (i, cell) in row.iter().enumerate() {
+            if i < num_cols {
+                // Apply inline formatting to measure rendered width
+                let formatted = render_inline_formatting(cell);
+                let display_width = strip_ansi(&formatted).width();
+                col_widths[i] = col_widths[i].max(display_width);
+            }
+        }
+    }
+
+    // Render rows
+    let mut result = String::new();
+    let has_header = separator_idx.is_some();
+
+    for (row_idx, row) in rows.iter().enumerate() {
+        result.push_str("  "); // Indent
+
+        for (col_idx, cell) in row.iter().enumerate() {
+            if col_idx > 0 {
+                result.push_str("  "); // Column separator
+            }
+
+            let formatted = render_inline_formatting(cell);
+            let display_width = strip_ansi(&formatted).width();
+            let padding = col_widths
+                .get(col_idx)
+                .unwrap_or(&0)
+                .saturating_sub(display_width);
+
+            result.push_str(&formatted);
+            for _ in 0..padding {
+                result.push(' ');
+            }
+        }
+        result.push('\n');
+
+        // Add visual separator after header row
+        if has_header && row_idx == 0 {
+            result.push_str("  ");
+            for (col_idx, width) in col_widths.iter().enumerate() {
+                if col_idx > 0 {
+                    result.push_str("  ");
+                }
+                for _ in 0..*width {
+                    result.push('─');
+                }
+            }
+            result.push('\n');
+        }
+    }
+
+    result
+}
+
+/// Strip ANSI escape codes for width calculation
+fn strip_ansi(s: &str) -> String {
+    let mut result = String::new();
+    let mut in_escape = false;
+
+    for ch in s.chars() {
+        if ch == '\x1b' {
+            in_escape = true;
+        } else if in_escape {
+            if ch == 'm' {
+                in_escape = false;
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
 }
 
 /// Render inline markdown formatting (bold, inline code, links)
@@ -144,8 +274,35 @@ fn colorize_status_symbols(text: &str) -> String {
     let disabled = Style::new().fg_color(Some(AnsiStyleColor::Ansi(AnsiColor::BrightBlack)));
     let working_tree = Style::new().fg_color(Some(AnsiStyleColor::Ansi(AnsiColor::Cyan)));
 
+    // Pattern for dimmed text (from inline `code` rendering)
+    // render_inline_formatting wraps backticked text in dimmed style
+    let code_style = Style::new().dimmed();
+    let dimmed_bullet = format!("{code_style}●{code_style:#}");
+
     text
-        // CI status circles
+        // CI status circles in table format: `●` green → colored ● green
+        // The backticks are converted to dimmed styling by render_inline_formatting first
+        .replace(
+            &format!("{dimmed_bullet} green"),
+            &format!("{success}●{success:#} green"),
+        )
+        .replace(
+            &format!("{dimmed_bullet} blue"),
+            &format!("{progress}●{progress:#} blue"),
+        )
+        .replace(
+            &format!("{dimmed_bullet} red"),
+            &format!("{error}●{error:#} red"),
+        )
+        .replace(
+            &format!("{dimmed_bullet} yellow"),
+            &format!("{warning}●{warning:#} yellow"),
+        )
+        .replace(
+            &format!("{dimmed_bullet} gray"),
+            &format!("{disabled}●{disabled:#} gray"),
+        )
+        // Legacy CI status circles (for statusline format)
         .replace("● passed", &format!("{success}●{success:#} passed"))
         .replace("● running", &format!("{progress}●{progress:#} running"))
         .replace("● failed", &format!("{error}●{error:#} failed"))

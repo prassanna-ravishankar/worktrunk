@@ -1028,7 +1028,7 @@ The CI column shows GitHub/GitLab pipeline status:
 | `●` red | Checks failed |
 | `●` yellow | Merge conflicts with base |
 | `●` gray | No checks configured |
-| blank | No PR/MR found |
+| (blank) | No PR/MR found |
 
 Any CI dot appears dimmed when there are unpushed local changes (stale status). CI indicators are clickable links to the PR page.
 

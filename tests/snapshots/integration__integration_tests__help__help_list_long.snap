@@ -81,30 +81,30 @@ Output as JSON for scripting:
 
 [32mColumns[0m
 
-| Column | Shows |
-|--------|-------|
-| Branch | Branch name |
-| Status | Compact symbols (see below) |
-| HEAD± | Uncommitted changes: +added -deleted lines |
-| main↕ | Commits ahead/behind main |
-| main…± | Line diffs in commits ahead of main ([2m--full[0m) |
-| Path | Worktree directory |
-| Remote⇅ | Commits ahead/behind tracking branch |
-| CI | Pipeline status ([2m--full[0m) |
-| Commit | Short hash (8 chars) |
-| Age | Time since last commit |
-| Message | Last commit message (truncated) |
+  Column   Shows                                       
+  ───────  ────────────────────────────────────────────
+  Branch   Branch name                                 
+  Status   Compact symbols (see below)                 
+  HEAD±    Uncommitted changes: +added -deleted lines  
+  main↕    Commits ahead/behind main                   
+  main…±   Line diffs in commits ahead of main ([2m--full[0m)
+  Path     Worktree directory                          
+  Remote⇅  Commits ahead/behind tracking branch        
+  CI       Pipeline status ([2m--full[0m)                    
+  Commit   Short hash (8 chars)                        
+  Age      Time since last commit                      
+  Message  Last commit message (truncated)             
 
 The CI column shows GitHub/GitLab pipeline status:
 
-| Indicator | Meaning |
-|-----------|---------|
-| [2m●[0m green | All checks passed |
-| [2m●[0m blue | Checks running |
-| [2m●[0m red | Checks failed |
-| [2m●[0m yellow | Merge conflicts with base |
-| [2m●[0m gray | No checks configured |
-| blank | No PR/MR found |
+  Indicator  Meaning                  
+  ─────────  ─────────────────────────
+  [32m●[0m green    All checks passed        
+  [34m●[0m blue     Checks running           
+  [31m●[0m red      Checks failed            
+  [33m●[0m yellow   Merge conflicts with base
+  [90m●[0m gray     No checks configured     
+  (blank)    No PR/MR found           
 
 Any CI dot appears dimmed when there are unpushed local changes (stale status). CI indicators are clickable links to the PR page.
 
@@ -112,29 +112,29 @@ Any CI dot appears dimmed when there are unpushed local changes (stale status). 
 
 Symbols appear in the Status column in this order:
 
-| Category | Symbol | Meaning |
-|----------|--------|---------|
-| Working tree | [2m+[0m | Staged files |
-| | [2m![0m | Modified files (unstaged) |
-| | [2m?[0m | Untracked files |
-| | [2m✖[0m | Merge conflicts |
-| | [2m↻[0m | Rebase in progress |
-| | [2m⋈[0m | Merge in progress |
-| Branch state | [2m⊘[0m | Would conflict if merged to main ([2m--full[0m only) |
-| | [2m≡[0m | Matches main (identical contents) |
-| | [2m_[0m | No commits ahead, clean working tree |
-| Main divergence | [2m^[0m | Is the main branch |
-| | [2m↑[0m | Ahead of main |
-| | [2m↓[0m | Behind main |
-| | [2m↕[0m | Diverged from main |
-| Remote divergence | [2m\|[0m | In sync with remote |
-| | [2m⇡[0m | Ahead of remote |
-| | [2m⇣[0m | Behind remote |
-| | [2m⇅[0m | Diverged from remote |
-| Worktree state | [2m/[0m | Branch without worktree |
-| | [2m⚑[0m | Path doesn't match template |
-| | [2m⌫[0m | Prunable (directory missing) |
-| | [2m⊠[0m | Locked worktree |
+  Category           Symbol  Meaning                                       
+  ─────────────────  ──────  ──────────────────────────────────────────────  ───────────────────
+  Working tree       [2m+[0m       Staged files                                  
+                     [2m![0m       Modified files (unstaged)                     
+                     [2m?[0m       Untracked files                               
+                     [2m✖[0m       Merge conflicts                               
+                     [2m↻[0m       Rebase in progress                            
+                     [2m⋈[0m       Merge in progress                             
+  Branch state       [2m⊘[0m       Would conflict if merged to main ([2m--full[0m only)
+                     [2m≡[0m       Matches main (identical contents)             
+                     [2m_[0m       No commits ahead, clean working tree          
+  Main divergence    [2m^[0m       Is the main branch                            
+                     [2m↑[0m       Ahead of main                                 
+                     [2m↓[0m       Behind main                                   
+                     [2m↕[0m       Diverged from main                            
+  Remote divergence  [2m\[0m       [2m[0m                                                In sync with remote
+                     [2m⇡[0m       Ahead of remote                               
+                     [2m⇣[0m       Behind remote                                 
+                     [2m⇅[0m       Diverged from remote                          
+  Worktree state     [2m/[0m       Branch without worktree                       
+                     [2m⚑[0m       Path doesn't match template                   
+                     [2m⌫[0m       Prunable (directory missing)                  
+                     [2m⊠[0m       Locked worktree                               
 
 Rows are dimmed when the branch content is already in main ([2m≡[0m matches main or [2m_[0m no commits ahead).
 
