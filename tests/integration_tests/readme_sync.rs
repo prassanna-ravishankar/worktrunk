@@ -10,7 +10,7 @@
 //!
 //! The sync system uses a unified pipeline:
 //!
-//! 1. **Parsing**: `parse_snapshot_raw()` extracts stdout/stderr from snapshot files
+//! 1. **Parsing**: `parse_snapshot_raw()` extracts content from snapshot files
 //! 2. **Placeholders**: `replace_placeholders()` normalizes test paths to display paths
 //! 3. **Formatting**: `OutputFormat` enum controls the final output (plain text vs HTML)
 //! 4. **Updating**: `update_section()` finds markers and replaces content
@@ -22,19 +22,15 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::LazyLock;
 
-/// Regex to find README snapshot markers
-/// Format: <!-- ⚠️ AUTO-GENERATED from path.snap — edit source to update -->
-static SNAPSHOT_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+/// Unified pattern for all AUTO-GENERATED markers (README and docs)
+/// Format: <!-- ⚠️ AUTO-GENERATED from <id> — edit <source> to update -->
+/// ID types: path.snap (snapshot), `cmd` (help), path#anchor (section)
+/// Content may be wrapped in ```console``` (snapshots) or unwrapped (help/sections)
+static MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?s)<!-- ⚠️ AUTO-GENERATED from ([^\s]+\.snap) — edit source to update -->\n+```\w*\n(.*?)```\n+<!-- END AUTO-GENERATED -->",
+        r"(?s)<!-- ⚠️ AUTO-GENERATED from ([^\n]+?) — edit [^\n]+ to update -->\n+([\s\S]*?)\n*<!-- END AUTO-GENERATED -->",
     )
     .unwrap()
-});
-
-/// Regex to find README help markers (no wrapper - content is rendered markdown)
-/// Format: <!-- ⚠️ AUTO-GENERATED from `wt command --help-md` — edit source to update -->
-static HELP_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?s)<!-- ⚠️ AUTO-GENERATED from `([^`]+)` — edit source to update -->\n+(.*?)\n+<!-- END AUTO-GENERATED -->").unwrap()
 });
 
 /// Regex to strip ANSI escape codes (actual escape sequences)
@@ -88,17 +84,6 @@ static RUST_RAW_STRING_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
-/// Regex to find README section markers (synced from docs)
-/// Format: <!-- ⚠️ AUTO-GENERATED-SECTION from path#start..end — edit source to update -->
-/// The anchor can be a single section (e.g., #install) or a range (e.g., #install..further-reading)
-/// Captures the full "path#anchor" as a single ID for use with update_section()
-static SECTION_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"(?s)<!-- ⚠️ AUTO-GENERATED-SECTION from ([^\s]+#[^\s]+) — edit source to update -->\n+(.*?)\n*<!-- END AUTO-GENERATED-SECTION -->",
-    )
-    .unwrap()
-});
-
 /// Regex to convert Zola internal links to full URLs
 /// Matches: [text](@/page.md) or [text](@/page.md#anchor)
 static ZOLA_LINK_PATTERN: LazyLock<Regex> =
@@ -108,31 +93,76 @@ static ZOLA_LINK_PATTERN: LazyLock<Regex> =
 // Unified Template Infrastructure
 // =============================================================================
 
-/// Raw snapshot content with stdout/stderr separated
-struct SnapshotContent {
-    stdout: String,
-    stderr: String,
-}
-
 /// Output format for section updates
 enum OutputFormat {
     /// README: plain text in ```console``` code block
     Readme,
     /// Docs: HTML with ANSI colors in {% terminal() %} shortcode
     DocsHtml,
-    /// Help: rendered markdown (no wrapper)
+    /// Unwrapped: raw markdown content (help commands, doc sections)
+    Unwrapped,
+}
+
+/// Marker ID type, detected from the ID string
+#[derive(Clone, Copy)]
+enum MarkerType {
+    /// Snapshot (.snap extension) - content wrapped in ```console```
+    Snapshot,
+    /// Help command (backticks) - unwrapped content
     Help,
-    /// Section: markdown content synced from docs (no wrapper)
+    /// Doc section (#anchor) - unwrapped content
     Section,
 }
 
-/// Parse a snapshot file into raw stdout/stderr components
+impl MarkerType {
+    /// Detect marker type from ID string
+    fn from_id(id: &str) -> Self {
+        if id.starts_with('`') && id.ends_with('`') {
+            Self::Help
+        } else if id.contains('#') {
+            Self::Section
+        } else {
+            Self::Snapshot
+        }
+    }
+
+    /// Get the OutputFormat for this marker type
+    fn output_format(&self) -> OutputFormat {
+        match self {
+            Self::Snapshot => OutputFormat::Readme,
+            Self::Help | Self::Section => OutputFormat::Unwrapped,
+        }
+    }
+
+    /// Strip wrapper from content based on marker type
+    /// Snapshots are wrapped in ```console```, help/sections are unwrapped
+    fn extract_inner(&self, content: &str) -> String {
+        match self {
+            Self::Snapshot => strip_code_block(content),
+            Self::Help | Self::Section => content.to_string(),
+        }
+    }
+}
+
+/// Regex to strip code block wrapper from content
+static CODE_BLOCK_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)^```\w*\n(.*)\n```$").unwrap());
+
+/// Strip code block wrapper if present, returning inner content
+fn strip_code_block(content: &str) -> String {
+    CODE_BLOCK_REGEX
+        .captures(content.trim())
+        .map(|cap| cap.get(1).unwrap().as_str().to_string())
+        .unwrap_or_else(|| content.to_string())
+}
+
+/// Parse a snapshot file, returning the user-facing output content
 ///
 /// Handles:
 /// - YAML front matter removal
-/// - insta_cmd stdout/stderr section extraction
-/// - Malformed snapshots (returns empty sections rather than erroring)
-fn parse_snapshot_raw(content: &str) -> SnapshotContent {
+/// - insta_cmd stdout/stderr section extraction (prefers stderr where user messages go)
+/// - Malformed snapshots (returns raw content rather than erroring)
+fn parse_snapshot_raw(content: &str) -> String {
     // Remove YAML front matter
     let content = if content.starts_with("---") {
         let parts: Vec<&str> = content.splitn(3, "---").collect();
@@ -147,16 +177,16 @@ fn parse_snapshot_raw(content: &str) -> SnapshotContent {
 
     // Handle insta_cmd format with stdout/stderr sections
     if content.contains("----- stdout -----") {
-        let stdout = extract_section(&content, "----- stdout -----\n", "----- stderr -----");
         let stderr = extract_section(&content, "----- stderr -----\n", "----- ");
-        SnapshotContent { stdout, stderr }
-    } else {
-        // Plain content goes to stdout
-        SnapshotContent {
-            stdout: content,
-            stderr: String::new(),
+        if !stderr.is_empty() {
+            return stderr;
         }
+        let stdout = extract_section(&content, "----- stdout -----\n", "----- stderr -----");
+        return stdout; // May be empty if both sections are empty
     }
+
+    // Plain content (PTY-based tests without section markers)
+    content
 }
 
 /// Extract a section between start marker and end marker
@@ -205,15 +235,9 @@ fn format_replacement(id: &str, content: &str, format: &OutputFormat) -> String 
                 id, content
             )
         }
-        OutputFormat::Help => {
+        OutputFormat::Unwrapped => {
             format!(
-                "<!-- ⚠️ AUTO-GENERATED from `{}` — edit source to update -->\n\n{}\n\n<!-- END AUTO-GENERATED -->",
-                id, content
-            )
-        }
-        OutputFormat::Section => {
-            format!(
-                "<!-- ⚠️ AUTO-GENERATED-SECTION from {} — edit source to update -->\n\n{}\n\n<!-- END AUTO-GENERATED-SECTION -->",
+                "<!-- ⚠️ AUTO-GENERATED from {} — edit source to update -->\n\n{}\n\n<!-- END AUTO-GENERATED -->",
                 id, content
             )
         }
@@ -331,7 +355,7 @@ fn expand_command_placeholders(content: &str, snapshots_dir: &Path) -> Result<St
             .map_err(|e| format!("Failed to read {}: {}", snapshot_path.display(), e))?;
 
         let html = parse_snapshot_content_for_docs(&snapshot_content)?;
-        let normalized = normalize_for_docs(&html);
+        let normalized = trim_lines(&html);
 
         // Build the terminal shortcode with standard template markers
         let replacement = format!(
@@ -370,92 +394,6 @@ fn literal_to_escape(text: &str) -> String {
         .to_string()
 }
 
-/// Check if a line is gutter-formatted content (has the white background ANSI code)
-fn is_gutter_line(line: &str) -> bool {
-    line.starts_with("[107m") || line.starts_with("\x1b[107m")
-}
-
-/// Check if a line is a command gutter (gutter line with blue command name)
-fn is_command_gutter(line: &str) -> bool {
-    is_gutter_line(line) && line.contains("[34m")
-}
-
-/// Split stderr into logical chunks for interleaving with stdout
-///
-/// Chunks are split at command gutter boundaries and at transitions between
-/// command output and regular gutter content.
-fn split_stderr_chunks(stderr: &str) -> Vec<String> {
-    let mut chunks = Vec::new();
-    let mut current_chunk = Vec::new();
-    let mut in_command_section = false;
-
-    for line in stderr.lines() {
-        if is_command_gutter(line) {
-            // New command section - save previous chunk if any
-            if !current_chunk.is_empty() {
-                chunks.push(current_chunk.join("\n"));
-                current_chunk = Vec::new();
-            }
-            current_chunk.push(line.to_string());
-            in_command_section = true;
-        } else if is_gutter_line(line) && in_command_section {
-            // Non-command gutter after command section - new content section
-            if !current_chunk.is_empty() {
-                chunks.push(current_chunk.join("\n"));
-                current_chunk = Vec::new();
-            }
-            current_chunk.push(line.to_string());
-            in_command_section = false;
-        } else {
-            // Continue current chunk
-            current_chunk.push(line.to_string());
-        }
-    }
-
-    if !current_chunk.is_empty() {
-        chunks.push(current_chunk.join("\n"));
-    }
-
-    chunks
-}
-
-/// Combine stdout and stderr by inserting stderr content after trigger lines
-///
-/// The pattern is:
-/// - Certain stdout lines trigger stderr content (commit messages, commands, etc.)
-/// - stderr is split into chunks that correspond to these triggers
-/// - All stderr content is included (gutter + child process output)
-fn combine_stdout_stderr(stdout: &str, stderr: &str) -> String {
-    if stderr.is_empty() {
-        return stdout.to_string();
-    }
-
-    let stdout_lines: Vec<&str> = stdout.lines().collect();
-    let mut stderr_chunks: std::collections::VecDeque<String> = split_stderr_chunks(stderr).into();
-    let mut result = Vec::new();
-
-    for stdout_line in stdout_lines {
-        result.push(stdout_line.to_string());
-
-        // Check if this line triggers stderr content
-        let triggers_stderr = stdout_line.contains("Generating")
-            || stdout_line.contains("Running pre-")
-            || stdout_line.contains("Running post-")
-            || (stdout_line.contains("Merging") && stdout_line.contains("commit"));
-
-        if triggers_stderr && let Some(chunk) = stderr_chunks.pop_front() {
-            result.push(chunk);
-        }
-    }
-
-    // Append any remaining stderr chunks (shouldn't normally happen)
-    for chunk in stderr_chunks {
-        result.push(chunk);
-    }
-
-    result.join("\n")
-}
-
 /// Parse content from an insta snapshot file, optionally including command line.
 /// Command line comes from the README (preserved during update), not the snapshot.
 fn parse_snapshot_with_command(
@@ -465,19 +403,12 @@ fn parse_snapshot_with_command(
     let raw = fs::read_to_string(path)
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
 
-    let content = parse_snapshot_content(&raw)?;
+    let content = strip_ansi(&parse_snapshot_raw(&raw));
 
     Ok(match readme_command {
         Some(cmd) => format!("{}\n{}", cmd, content),
         None => content,
     })
-}
-
-/// Parse snapshot content for README (plain text, combined stdout/stderr)
-fn parse_snapshot_content(content: &str) -> Result<String, String> {
-    let snap = parse_snapshot_raw(content);
-    let combined = combine_stdout_stderr(&snap.stdout, &snap.stderr);
-    Ok(strip_ansi(&combined))
 }
 
 /// Trim trailing whitespace from each line and overall.
@@ -492,34 +423,12 @@ fn trim_lines(content: &str) -> String {
         .to_string()
 }
 
-/// Normalize snapshot output for README display (replace placeholders, trim whitespace)
-fn normalize_for_readme(content: &str) -> String {
-    trim_lines(&replace_placeholders(content))
-}
-
 /// Parse snapshot content for docs (with ANSI to HTML conversion)
-///
-/// Uses only stderr since that's where user-facing messages go.
 fn parse_snapshot_content_for_docs(content: &str) -> Result<String, String> {
-    let snap = parse_snapshot_raw(content);
-
-    // For docs, we only use stderr (that's where user messages go)
-    let content = if snap.stderr.is_empty() {
-        snap.stdout
-    } else {
-        snap.stderr
-    };
-
-    // Replace placeholders before ANSI conversion
+    let content = parse_snapshot_raw(content);
     let content = replace_placeholders(&content);
-
-    // Convert literal bracket notation [32m to escape sequences for the library
     let content = literal_to_escape(&content);
-
-    // Convert ANSI to HTML
     let html = ansi_to_html(&content).map_err(|e| format!("ANSI conversion failed: {e}"))?;
-
-    // Clean up the HTML output
     Ok(clean_ansi_html(&html))
 }
 
@@ -543,16 +452,12 @@ fn clean_ansi_html(html: &str) -> String {
         .replace("<span style='color:var(--cyan,#0aa)'>", "<span class=c>")
 }
 
-/// Normalize snapshot output for docs display (just trim - placeholders already replaced)
-fn normalize_for_docs(content: &str) -> String {
-    // Placeholders are replaced in parse_snapshot_content_for_docs before ANSI conversion
-    trim_lines(content)
-}
-
 /// Get help output for a command
 ///
-/// Expected format: `wt <subcommand> --help-md`
-fn get_help_output(command: &str, project_root: &Path) -> Result<String, String> {
+/// Expected format: `wt <subcommand> --help-md` (ID includes backticks from marker)
+fn get_help_output(id: &str, project_root: &Path) -> Result<String, String> {
+    // Strip backticks from ID (captured by MARKER_PATTERN)
+    let command = id.trim_matches('`');
     let args: Vec<&str> = command.split_whitespace().collect();
     if args.is_empty() {
         return Err("Empty command".to_string());
@@ -783,21 +688,88 @@ fn get_docs_section_for_readme(id: &str, project_root: &Path) -> Result<String, 
     Ok(transform_zola_to_github(&section))
 }
 
-/// Sync section markers in README from docs source files
+/// Get content for a README marker based on its type
 ///
-/// Uses update_section() infrastructure with SECTION_MARKER_PATTERN.
-fn sync_readme_sections(
+/// Handles all marker types: snapshots (.snap), help (`cmd`), sections (#anchor)
+fn get_readme_content(
+    id: &str,
+    current_content: &str,
+    project_root: &Path,
+) -> Result<String, String> {
+    match MarkerType::from_id(id) {
+        MarkerType::Snapshot => {
+            // Extract existing command line from README if present
+            let inner = strip_code_block(current_content);
+            let existing_command = inner.lines().next().filter(|line| line.starts_with("$ "));
+            let full_path = project_root.join(id);
+            parse_snapshot_with_command(&full_path, existing_command)
+                .map(|content| trim_lines(&replace_placeholders(&content)))
+        }
+        MarkerType::Help => get_help_output(id, project_root),
+        MarkerType::Section => {
+            get_docs_section_for_readme(id, project_root).map(|c| trim_lines(&c))
+        }
+    }
+}
+
+/// Sync all README markers in a single pass
+///
+/// Processes all AUTO-GENERATED markers in one regex traversal:
+/// - Snapshots (.snap) - terminal output in ```console``` blocks
+/// - Help commands (`cmd`) - rendered markdown from --help-md
+/// - Doc sections (#anchor) - extracted content from docs
+///
+/// Replaces the previous 3-pass approach with a single pass, detecting
+/// marker type from ID characteristics (extension, backticks, # anchor).
+fn sync_readme_markers(
     readme_content: &str,
     project_root: &Path,
-) -> Result<(String, usize), Vec<String>> {
-    let project_root = project_root.to_path_buf();
-    update_section(
-        readme_content,
-        &SECTION_MARKER_PATTERN,
-        OutputFormat::Section,
-        |id, _current| get_docs_section_for_readme(id, &project_root).map(|c| trim_lines(&c)),
-    )
-    .map(|(content, updated, _total)| (content, updated))
+) -> Result<(String, usize, usize), Vec<String>> {
+    let mut result = readme_content.to_string();
+    let mut errors = Vec::new();
+    let mut updated = 0;
+
+    // Collect all matches first
+    let matches: Vec<_> = MARKER_PATTERN
+        .captures_iter(readme_content)
+        .map(|cap| {
+            let full_match = cap.get(0).unwrap();
+            let id = cap.get(1).unwrap().as_str().trim().to_string();
+            let current = cap.get(2).unwrap().as_str().to_string();
+            (full_match.start(), full_match.end(), id, current)
+        })
+        .collect();
+
+    let total = matches.len();
+
+    // Process in reverse order to preserve positions
+    for (start, end, id, current_with_wrapper) in matches.into_iter().rev() {
+        let marker_type = MarkerType::from_id(&id);
+
+        // Strip wrapper from current content (snapshots have ```console```, others are raw)
+        let current_inner = marker_type.extract_inner(&current_with_wrapper);
+
+        let expected = match get_readme_content(&id, &current_with_wrapper, project_root) {
+            Ok(content) => content,
+            Err(e) => {
+                errors.push(format!("❌ {}: {}", id, e));
+                continue;
+            }
+        };
+
+        // Compare with trim_lines normalization applied once to each side
+        if trim_lines(&current_inner) != trim_lines(&expected) {
+            let replacement = format_replacement(&id, &expected, &marker_type.output_format());
+            result.replace_range(start..end, &replacement);
+            updated += 1;
+        }
+    }
+
+    if errors.is_empty() {
+        Ok((result, updated, total))
+    } else {
+        Err(errors)
+    }
 }
 
 #[test]
@@ -866,26 +838,62 @@ fn test_config_example_templates_are_in_sync() {
     }
 }
 
-/// Update help markers in a file (for both README.md and docs pages)
+/// Update help markers in a docs file
+/// Uses unified MARKER_PATTERN, processes only help commands (backtick IDs)
 fn sync_help_markers(file_path: &Path, project_root: &Path) -> Result<usize, Vec<String>> {
     let content = fs::read_to_string(file_path)
         .map_err(|e| vec![format!("Failed to read {}: {}", file_path.display(), e)])?;
 
-    let project_root_clone = project_root.to_path_buf();
-    match update_section(
-        &content,
-        &HELP_MARKER_PATTERN,
-        OutputFormat::Help,
-        |cmd, _current| get_help_output(cmd, &project_root_clone),
-    ) {
-        Ok((new_content, updated_count, _total_count)) => {
-            if updated_count > 0 {
-                fs::write(file_path, &new_content).unwrap();
+    let mut result = content.clone();
+    let mut errors = Vec::new();
+    let mut updated = 0;
+
+    // Collect all matches and filter to help commands only
+    let matches: Vec<_> = MARKER_PATTERN
+        .captures_iter(&content)
+        .filter_map(|cap| {
+            let id = cap.get(1).unwrap().as_str().trim();
+            // Only process help commands (backtick IDs)
+            if matches!(MarkerType::from_id(id), MarkerType::Help) {
+                let full_match = cap.get(0).unwrap();
+                let current = cap.get(2).unwrap().as_str();
+                Some((
+                    full_match.start(),
+                    full_match.end(),
+                    id.to_string(),
+                    current.to_string(),
+                ))
+            } else {
+                None
             }
-            Ok(updated_count)
+        })
+        .collect();
+
+    // Process in reverse order
+    for (start, end, id, current) in matches.into_iter().rev() {
+        let expected = match get_help_output(&id, project_root) {
+            Ok(content) => content,
+            Err(e) => {
+                errors.push(format!("❌ {}: {}", id, e));
+                continue;
+            }
+        };
+
+        if trim_lines(&current) != trim_lines(&expected) {
+            let replacement = format_replacement(&id, &expected, &OutputFormat::Unwrapped);
+            result.replace_range(start..end, &replacement);
+            updated += 1;
         }
-        Err(errs) => Err(errs),
     }
+
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+
+    if updated > 0 {
+        fs::write(file_path, &result).unwrap();
+    }
+    Ok(updated)
 }
 
 #[test]
@@ -895,87 +903,28 @@ fn test_readme_examples_are_in_sync() {
 
     let readme_content = fs::read_to_string(&readme_path).unwrap();
 
-    let mut errors = Vec::new();
-    let mut checked = 0;
-    let mut updated_content = readme_content.clone();
-    let mut total_updated = 0;
+    // Single pass handles all marker types (snapshots, help, sections)
+    match sync_readme_markers(&readme_content, project_root) {
+        Ok((updated_content, updated_count, total_count)) => {
+            if total_count == 0 {
+                panic!("No README markers found in README.md");
+            }
 
-    // Update snapshot markers (with command line from YAML, or preserved from README)
-    let project_root_for_snapshots = project_root.to_path_buf();
-    match update_section(
-        &updated_content,
-        &SNAPSHOT_MARKER_PATTERN,
-        OutputFormat::Readme,
-        |snap_path, current_content| {
-            // Extract existing command line from README if present (e.g., "$ wt switch --create fix-auth")
-            let existing_command = current_content
-                .lines()
-                .next()
-                .filter(|line| line.starts_with("$ "));
-            let full_path = project_root_for_snapshots.join(snap_path);
-            parse_snapshot_with_command(&full_path, existing_command)
-                .map(|content| normalize_for_readme(&content))
-        },
-    ) {
-        Ok((new_content, updated_count, total_count)) => {
-            updated_content = new_content;
-            total_updated += updated_count;
-            checked += total_count;
+            if updated_count > 0 {
+                fs::write(&readme_path, &updated_content).unwrap();
+                panic!(
+                    "README out of sync: updated {} of {} section(s). \
+                     Run tests locally and commit the changes.",
+                    updated_count, total_count
+                );
+            }
         }
-        Err(errs) => errors.extend(errs),
-    }
-
-    // Update help markers (no wrapper - content is rendered markdown)
-    let project_root_clone = project_root.to_path_buf();
-    match update_section(
-        &updated_content,
-        &HELP_MARKER_PATTERN,
-        OutputFormat::Help,
-        |cmd, _current| get_help_output(cmd, &project_root_clone),
-    ) {
-        Ok((new_content, updated_count, total_count)) => {
-            updated_content = new_content;
-            total_updated += updated_count;
-            checked += total_count;
+        Err(errors) => {
+            panic!(
+                "README examples are out of sync:\n\n{}\n",
+                errors.join("\n")
+            );
         }
-        Err(errs) => errors.extend(errs),
-    }
-
-    // Update section markers (synced from docs)
-    match sync_readme_sections(&updated_content, project_root) {
-        Ok((new_content, updated_count)) => {
-            updated_content = new_content;
-            total_updated += updated_count;
-            checked += updated_count.max(1); // Count at least 1 if we have section markers
-        }
-        Err(errs) => errors.extend(errs),
-    }
-
-    if checked == 0 {
-        panic!("No README markers found in README.md");
-    }
-
-    // Write updates
-    if total_updated > 0 {
-        fs::write(&readme_path, &updated_content).unwrap();
-    }
-
-    if !errors.is_empty() {
-        panic!(
-            "README examples are out of sync:\n\n{}\n\n\
-            Checked {} markers, {} errors.",
-            errors.join("\n"),
-            checked,
-            errors.len()
-        );
-    }
-
-    if total_updated > 0 {
-        panic!(
-            "README out of sync: updated {} section(s). \
-             Run tests locally and commit the changes.",
-            total_updated
-        );
     }
 }
 
@@ -1036,7 +985,7 @@ fn sync_docs_snapshots(doc_path: &Path, project_root: &Path) -> Result<usize, Ve
             let raw = fs::read_to_string(&full_path)
                 .map_err(|e| format!("Failed to read {}: {}", full_path.display(), e))?;
             let html_content = parse_snapshot_content_for_docs(&raw)?;
-            let normalized = normalize_for_docs(&html_content);
+            let normalized = trim_lines(&html_content);
 
             // Prepend command line with prompt styling if present
             Ok(match existing_command {

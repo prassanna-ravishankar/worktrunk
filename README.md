@@ -19,7 +19,7 @@ Worktrunk is a CLI for git worktree management, designed for parallel AI agent w
 
 > ## 📚 Full documentation at [worktrunk.dev](https://worktrunk.dev) 📚
 
-<!-- ⚠️ AUTO-GENERATED-SECTION from docs/content/why-worktrunk.md#context-git-worktrees..what-worktrunk-adds — edit source to update -->
+<!-- ⚠️ AUTO-GENERATED from docs/content/why-worktrunk.md#context-git-worktrees..what-worktrunk-adds — edit source to update -->
 
 ## Context: git worktrees
 
@@ -49,7 +49,7 @@ Worktrunk makes worktrees easy to use — branch-based navigation, unified statu
 - **[Merge workflow](https://worktrunk.dev/merge/)** — squash, rebase, merge, clean up in one command
 - ...and lots more.
 
-<!-- END AUTO-GENERATED-SECTION -->
+<!-- END AUTO-GENERATED -->
 
 ## Core commands in practice
 
@@ -102,7 +102,7 @@ $ wt remove
 
 <!-- END AUTO-GENERATED -->
 
-<!-- ⚠️ AUTO-GENERATED-SECTION from docs/content/why-worktrunk.md#install..further-reading — edit source to update -->
+<!-- ⚠️ AUTO-GENERATED from docs/content/why-worktrunk.md#install..further-reading — edit source to update -->
 
 ## Install
 
@@ -134,6 +134,6 @@ $ wt config shell install
 - [Git worktree pattern discussion](https://github.com/anthropics/claude-code/issues/1052) — Community discussion in the Claude Code repo
 - [git-worktree documentation](https://git-scm.com/docs/git-worktree) — Official git reference
 
-<!-- END AUTO-GENERATED-SECTION -->
+<!-- END AUTO-GENERATED -->
 
 > ## 📚 Full documentation at [worktrunk.dev](https://worktrunk.dev) 📚
