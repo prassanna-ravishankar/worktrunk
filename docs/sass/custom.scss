@@ -293,9 +293,10 @@ main {
     display: block;
     max-width: 100%; // Scale down to fit, but don't upscale
     box-sizing: border-box; // Include border in width calculation
-    border-radius: 0.5rem;
-    border: 1px solid var(--wt-color-border-subtle);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--wt-color-code-border);
+    border-left: 3px solid var(--wt-color-accent);
+    border-radius: 0 0.5rem 0.5rem 0; // Square left (accent), rounded right
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 // Tighten spacing between paragraphs and code blocks
@@ -819,12 +820,7 @@ ul > li::marker {
 
 figure {
     margin: 1.5rem 0;
-
-    // Match Juice theme's p > img sizing behavior
-    img {
-        width: 100%;
-        height: auto;
-    }
+    // Image styling inherited from .content img
 }
 
 figcaption {
