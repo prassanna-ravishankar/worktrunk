@@ -17,20 +17,20 @@ But the built-in commands are path-oriented: `git worktree add ../repo.feature`,
 
 ## What Worktrunk adds
 
-Worktrunk makes worktrees easy to use. Both for branch-based navigation & status....
+Worktrunk makes worktrees easy to use. Both for basic branch-based navigation & status....
 
-| Task | Worktrunk | Plain git |
-|------|-----------|-----------|
-| Switch worktrees | `wt switch feature` | `cd ../repo.feature` |
+| Task                  | Worktrunk                        | Plain git                                                                     |
+| --------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
+| Switch worktrees      | `wt switch feature`              | `cd ../repo.feature`                                                          |
 | Create + start Claude | `wt switch -c -x claude feature` | `git worktree add -b feature ../repo.feature && cd ../repo.feature && claude` |
-| Clean up | `wt remove` | `cd ../repo && git worktree remove ../repo.feature && git branch -d feature` |
-| List with status | `wt list` | `git worktree list` (paths only) |
+| Clean up              | `wt remove`                      | `cd ../repo && git worktree remove ../repo.feature && git branch -d feature`  |
+| List with status      | `wt list`                        | `git worktree list` (paths only)                                              |
 
-...and automating a bunch of workflows:
+...and automating a bunch of workflows, including:
 
-- **[Lifecycle hooks](@/hooks.md)** — run commands on create, switch, merge (deps install, dev servers, test suites)
-- **[LLM commit messages](@/llm-commits.md)** — generate commits from diffs via [llm](https://llm.datasette.io/)
-- **[Merge workflow](@/merge.md)** — squash, rebase, push, clean up in one command
+- **[Lifecycle hooks](@/hooks.md)** — run commands on create, pre-merge, post-merge
+- **[LLM commit messages](@/llm-commits.md)** — generate commit messages from diffs via [llm](https://llm.datasette.io/)
+- **[Merge workflow](@/merge.md)** — squash, rebase, merge, clean up in one command
 
 ## In practice
 
@@ -62,10 +62,11 @@ See all worktrees at a glance:
 
 {% terminal() %}
 <span class="prompt">$</span> wt list
-  <b>Branch</b>       <b>Status</b>         <b>HEAD±</b>    <b>main↕</b>  <b>Path</b>                <b>Remote⇅</b>  <b>Commit</b>    <b>Age</b>   <b>Message</b>
-@ <b>feature-api</b>  <span class=c>+</span>   <span class=d>↕</span><span class=d>⇡</span>      <span class=g>+54</span>   <span class=r>-5</span>   <span class=g>↑4</span>  <span class=d><span class=r>↓1</span></span>  <b>./repo.feature-api</b>   <span class=g>⇡3</span>      <span class=d>28d38c20</span>  <span class=d>30m</span>   <span class=d>Add API tests</span>
-^ main             <span class=d>^</span><span class=d>⇅</span>                         ./repo               <span class=g>⇡1</span>  <span class=d><span class=r>⇣1</span></span>  <span class=d>2e6b7a8f</span>  <span class=d>4d</span>    <span class=d>Merge fix-auth:…</span>
-+ fix-auth         <span class=d>↕</span><span class=d>|</span>                 <span class=g>↑2</span>  <span class=d><span class=r>↓1</span></span>  ./repo.fix-auth        <span class=d>|</span>     <span class=d>1d697d5b</span>  <span class=d>5h</span>    <span class=d>Add secure token…</span>
+<b>Branch</b> <b>Status</b> <b>HEAD±</b> <b>main↕</b> <b>Path</b> <b>Remote⇅</b> <b>Commit</b> <b>Age</b> <b>Message</b>
+@ <b>feature-api</b> <span class=c>+</span> <span class=d>↕</span><span class=d>⇡</span> <span class=g>+54</span> <span class=r>-5</span> <span class=g>↑4</span> <span class=d><span class=r>↓1</span></span> <b>./repo.feature-api</b> <span class=g>⇡3</span> <span class=d>28d38c20</span> <span class=d>30m</span> <span class=d>Add API tests</span>
+^ main <span class=d>^</span><span class=d>⇅</span> ./repo <span class=g>⇡1</span> <span class=d><span class=r>⇣1</span></span> <span class=d>2e6b7a8f</span> <span class=d>4d</span> <span class=d>Merge fix-auth:…</span>
+
+- fix-auth <span class=d>↕</span><span class=d>|</span> <span class=g>↑2</span> <span class=d><span class=r>↓1</span></span> ./repo.fix-auth <span class=d>|</span> <span class=d>1d697d5b</span> <span class=d>5h</span> <span class=d>Add secure token…</span>
 
 ⚪ <span class=d>Showing 3 worktrees, 1 with changes, 2 ahead</span>
 {% end %}
