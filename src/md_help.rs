@@ -273,10 +273,9 @@ fn render_inline_formatting(line: &str) -> String {
 fn colorize_status_symbols(text: &str) -> String {
     use anstyle::{AnsiColor, Color as AnsiStyleColor, Style};
 
-    // Define semantic styles matching src/commands/list/model.rs StatusSymbols::render_with_mask
+    // Define semantic styles matching src/commands/list/model.rs StatusSymbols::styled_symbols
     let error = Style::new().fg_color(Some(AnsiStyleColor::Ansi(AnsiColor::Red)));
     let warning = Style::new().fg_color(Some(AnsiStyleColor::Ansi(AnsiColor::Yellow)));
-    let hint = Style::new().dimmed();
     let success = Style::new().fg_color(Some(AnsiStyleColor::Ansi(AnsiColor::Green)));
     let progress = Style::new().fg_color(Some(AnsiStyleColor::Ansi(AnsiColor::Blue)));
     let disabled = Style::new().fg_color(Some(AnsiStyleColor::Ansi(AnsiColor::BrightBlack)));
@@ -284,12 +283,38 @@ fn colorize_status_symbols(text: &str) -> String {
 
     // Pattern for dimmed text (from inline `code` rendering)
     // render_inline_formatting wraps backticked text in dimmed style
-    let code_style = Style::new().dimmed();
-    let dimmed_bullet = format!("{code_style}●{code_style:#}");
+    let dim = Style::new().dimmed();
 
-    text
-        // CI status circles in table format: `●` green → colored ● green
-        // The backticks are converted to dimmed styling by render_inline_formatting first
+    // Helper to create dimmed symbol pattern and its colored replacement
+    let replace_dim = |text: String, sym: &str, style: Style| -> String {
+        let dimmed = format!("{dim}{sym}{dim:#}");
+        let colored = format!("{style}{sym}{style:#}");
+        text.replace(&dimmed, &colored)
+    };
+
+    let mut result = text.to_string();
+
+    // Working tree symbols: CYAN
+    result = replace_dim(result, "+", working_tree);
+    result = replace_dim(result, "!", working_tree);
+    result = replace_dim(result, "?", working_tree);
+
+    // Conflicts: ERROR (red)
+    result = replace_dim(result, "✖", error);
+
+    // Git operations, MergeTreeConflicts: WARNING (yellow)
+    result = replace_dim(result, "↻", warning);
+    result = replace_dim(result, "⋈", warning);
+    result = replace_dim(result, "⊘", warning);
+
+    // Worktree state: PathMismatch (red), Prunable/Locked (yellow)
+    result = replace_dim(result, "⚑", error);
+    result = replace_dim(result, "⌫", warning);
+    result = replace_dim(result, "⊠", warning);
+
+    // CI status circles: replace dimmed ● followed by color name
+    let dimmed_bullet = format!("{dim}●{dim:#}");
+    result = result
         .replace(
             &format!("{dimmed_bullet} green"),
             &format!("{success}●{success:#} green"),
@@ -309,61 +334,23 @@ fn colorize_status_symbols(text: &str) -> String {
         .replace(
             &format!("{dimmed_bullet} gray"),
             &format!("{disabled}●{disabled:#} gray"),
-        )
-        // Legacy CI status circles (for statusline format)
+        );
+
+    // Legacy CI status circles (for statusline format)
+    result = result
         .replace("● passed", &format!("{success}●{success:#} passed"))
         .replace("● running", &format!("{progress}●{progress:#} running"))
         .replace("● failed", &format!("{error}●{error:#} failed"))
         .replace("● conflicts", &format!("{warning}●{warning:#} conflicts"))
-        .replace("● no-ci", &format!("{disabled}●{disabled:#} no-ci"))
-        // Conflicts: ✖ is ERROR (red), ⊘ is WARNING (yellow)
-        .replace(
-            "✖ Merge conflicts",
-            &format!("{error}✖{error:#} Merge conflicts"),
-        )
-        .replace(
-            "⊘ Would conflict",
-            &format!("{warning}⊘{warning:#} Would conflict"),
-        )
-        // Git operations: WARNING (yellow)
-        .replace("↻ Rebase", &format!("{warning}↻{warning:#} Rebase"))
-        .replace("⋈ Merge", &format!("{warning}⋈{warning:#} Merge"))
-        // Worktree attributes: WARNING (yellow)
-        .replace("⊠ Locked", &format!("{warning}⊠{warning:#} Locked"))
-        .replace("⚠ Prunable", &format!("{warning}⚠{warning:#} Prunable"))
-        // Branch state: HINT (dimmed)
-        .replace(
-            "≡ Working tree matches",
-            &format!("{hint}≡{hint:#} Working tree matches"),
-        )
-        .replace("_ No commits", &format!("{hint}_{hint:#} No commits"))
-        .replace(
-            "· Branch without",
-            &format!("{hint}·{hint:#} Branch without"),
-        )
-        // Main/upstream divergence: NO COLOR (plain text in actual output)
-        // ↑, ↓, ↕, ⇡, ⇣, ⇅ remain uncolored
-        // Working tree changes: CYAN
-        .replace(
-            "? Untracked",
-            &format!("{working_tree}?{working_tree:#} Untracked"),
-        )
-        .replace(
-            "! Modified",
-            &format!("{working_tree}!{working_tree:#} Modified"),
-        )
-        .replace(
-            "+ Staged",
-            &format!("{working_tree}+{working_tree:#} Staged"),
-        )
-        .replace(
-            "» Renamed",
-            &format!("{working_tree}»{working_tree:#} Renamed"),
-        )
-        .replace(
-            "✘ Deleted",
-            &format!("{working_tree}✘{working_tree:#} Deleted"),
-        )
+        .replace("● no-ci", &format!("{disabled}●{disabled:#} no-ci"));
+
+    // Symbols that should remain dimmed are already dimmed from backtick rendering:
+    // - Branch state: ≡ (matches main), _ (no commits)
+    // - Main divergence: ^, ↑, ↓, ↕
+    // - Upstream divergence: |, ⇡, ⇣, ⇅
+    // - Worktree state: / (branch without worktree)
+
+    result
 }
 
 #[cfg(test)]
