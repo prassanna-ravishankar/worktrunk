@@ -111,7 +111,7 @@ Symbols appear in the Status column in this order:
 | | `✖` | Merge conflicts |
 | | `↻` | Rebase in progress |
 | | `⋈` | Merge in progress |
-| Branch state | `⊘` | Would conflict if merged to main (`--full` only) |
+| Branch state | `⚔` | Would conflict if merged to main (`--full` only) |
 | | `≡` | Matches main (identical contents) |
 | | `_` | No commits ahead, clean working tree |
 | Main divergence | `^` | Is the main branch |
