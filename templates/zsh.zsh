@@ -75,5 +75,8 @@ if command -v {{ cmd_prefix }} >/dev/null 2>&1 || [[ -n "${WORKTRUNK_BIN:-}" ]];
         # Single-column display keeps descriptions visually associated with each branch.
         # Users can override: zstyle ':completion:*:{{ cmd_prefix }}:*' list-max ''
         zstyle ':completion:*:{{ cmd_prefix }}:*' list-max 1
+        # Prevent grouping branches with identical descriptions (same timestamp) on one line.
+        # Without this, "release  main  -- + 12m" instead of separate lines per branch.
+        zstyle ':completion:*:*:{{ cmd_prefix }}:*' list-grouped false
     fi
 fi
