@@ -56,8 +56,8 @@ Include branches that don't have worktrees:
 @ <b>feature-api</b>  <span class=c>+</span>   <span class=d>↕</span><span class=d>⇡</span>      <span class=g>+54</span>   <span class=r>-5</span>   <span class=g>↑4</span>  <span class=d><span class=r>↓1</span></span>  <span class=g>+234</span>  <span class=r>-24</span>  <b>./repo.feature-api</b>   <span class=g>⇡3</span>      <span class=d><span style='color:var(--blue,#00a)'>●</span></span>   <span class=d>28d38c20</span>  <span class=d>30m</span>
 ^ main             <span class=d>^</span><span class=d>⇅</span>                                    ./repo               <span class=g>⇡1</span>  <span class=d><span class=r>⇣1</span></span>  <span class=g>●</span>   <span class=d>2e6b7a8f</span>  <span class=d>4d</span>
 + fix-auth         <span class=d>↕</span><span class=d>|</span>                 <span class=g>↑2</span>  <span class=d><span class=r>↓1</span></span>   <span class=g>+25</span>  <span class=r>-11</span>  ./repo.fix-auth        <span class=d>|</span>     <span class=g>●</span>   <span class=d>1d697d5b</span>  <span class=d>5h</span>
-  exp              <span class=d>↕</span> <span class=d>/</span>                <span class=g>↑2</span>  <span class=d><span class=r>↓1</span></span>  <span class=g>+137</span>                                        <span class=d>32936618</span>  <span class=d>2d</span>
-  wip              <span class=d>↕</span> <span class=d>/</span>                <span class=g>↑1</span>  <span class=d><span class=r>↓1</span></span>   <span class=g>+33</span>                                        <span class=d>6844b101</span>  <span class=d>3d</span>
+  <span class=d>exp</span>             <span class=d>⊂</span><span class=d>↕</span> <span class=d>/</span>                <span class=g>↑2</span>  <span class=d><span class=r>↓1</span></span>  <span class=g>+137</span>                                        <span class=d>32936618</span>  <span class=d>2d</span>
+  <span class=d>wip</span>             <span class=d>⊂</span><span class=d>↕</span> <span class=d>/</span>                <span class=g>↑1</span>  <span class=d><span class=r>↓1</span></span>   <span class=g>+33</span>                                        <span class=d>6844b101</span>  <span class=d>3d</span>
 
 ⚪ <span class=d>Showing 3 worktrees, 2 branches, 1 with changes, 4 ahead, 1 column hidden</span>
 {% end %}
@@ -112,8 +112,8 @@ The Status column has multiple subcolumns. Within each, only the first matching 
 | | `↻` | Rebase in progress |
 | | `⋈` | Merge in progress |
 | | `⚔` | Would conflict if merged to main |
-| | `≡` | Matches main (identical contents) |
-| | `_` | No commits ahead, clean working tree |
+| | `·` | Same commit |
+| | `⊂` | Content integrated (`--full` detects additional cases) |
 | Main divergence | `^` | Is the main branch |
 | | `↑` | Ahead of main |
 | | `↓` | Behind main |
@@ -127,7 +127,7 @@ The Status column has multiple subcolumns. Within each, only the first matching 
 | | `⌫` | Prunable (directory missing) |
 | | `⊠` | Locked worktree |
 
-Rows are dimmed when the branch [content is already in main](@/remove.md#branch-cleanup) (`≡` matches main or `_` no commits ahead).
+Rows are dimmed when the branch [content is already in main](@/remove.md#branch-cleanup) (`·` same commit or `⊂` content integrated).
 
 ## JSON output
 
@@ -149,7 +149,7 @@ wt list --format=json | jq '.[] | select(.status.main_divergence == "Ahead")'
 
 **Status fields:**
 - `working_tree`: `{untracked, modified, staged, renamed, deleted}`
-- `branch_state`: `""` | `"Conflicts"` | `"MergeTreeConflicts"` | `"MatchesMain"` | `"NoCommits"`
+- `branch_state`: `""` | `"Conflicts"` | `"MergeTreeConflicts"` | `"TreesMatch"` | `"NoAddedChanges"` | `"MergeAddsNothing"`
 - `git_operation`: `""` | `"Rebase"` | `"Merge"`
 - `main_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
 - `upstream_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`

@@ -88,19 +88,19 @@ exit_code: 0
         "renamed": false,
         "deleted": false
       },
-      "branch_op_state": "NoCommits",
+      "branch_op_state": "SameCommit",
       "main_divergence": "",
       "upstream_divergence": "",
       "worktree_state": ""
     },
     "status_symbols": {
       "working_tree": "",
-      "branch_op_state": "_",
+      "branch_op_state": "·",
       "main_divergence": "",
       "upstream_divergence": "",
       "worktree_state": ""
     },
-    "status_line": "feature-detached  /u001b[2m_/u001b[22m",
+    "status_line": "feature-detached  /u001b[2m·/u001b[22m",
     "type": "worktree",
     "path": "[REPO].feature-detached",
     "bare": false,
@@ -134,19 +134,19 @@ exit_code: 0
         "renamed": false,
         "deleted": false
       },
-      "branch_op_state": "NoCommits",
+      "branch_op_state": "SameCommit",
       "main_divergence": "",
       "upstream_divergence": "",
       "worktree_state": "Locked"
     },
     "status_symbols": {
       "working_tree": "",
-      "branch_op_state": "_",
+      "branch_op_state": "·",
       "main_divergence": "",
       "upstream_divergence": "",
       "worktree_state": "⊠"
     },
-    "status_line": "locked-feature  /u001b[2m_/u001b[22m/u001b[33m⊠/u001b[39m",
+    "status_line": "locked-feature  /u001b[2m·/u001b[22m/u001b[33m⊠/u001b[39m",
     "type": "worktree",
     "path": "[REPO].locked-feature",
     "bare": false,

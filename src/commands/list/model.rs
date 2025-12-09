@@ -218,9 +218,24 @@ pub struct ListItem {
     pub branch_diff: Option<BranchDiffTotals>,
     /// Whether HEAD's tree SHA matches main's tree SHA.
     /// True when committed content is identical regardless of commit history.
-    /// Internal field used to compute BranchOpState::MatchesMain.
+    /// Internal field used to compute BranchOpState::TreesMatch.
     #[serde(skip)]
     pub committed_trees_match: Option<bool>,
+    /// Whether branch has file changes beyond the merge-base with main.
+    /// False when three-dot diff (`main...branch`) is empty.
+    /// Internal field used for integration detection (no unique content).
+    #[serde(skip)]
+    pub has_file_changes: Option<bool>,
+    /// Whether merging branch into main would add changes (merge simulation).
+    /// False when `git merge-tree --write-tree main branch` produces same tree as main.
+    /// Only computed with `--full` flag. Catches squash-merged branches where main advanced.
+    #[serde(skip)]
+    pub would_merge_add: Option<bool>,
+    /// Whether branch HEAD is an ancestor of main (or same commit).
+    /// True means branch is already part of main's history.
+    /// This is the cheapest integration check (~1ms).
+    #[serde(skip)]
+    pub is_ancestor: Option<bool>,
 
     // TODO: Same concern as counts/branch_diff above - should upstream fields always be present?
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
@@ -255,6 +270,9 @@ impl ListItem {
             counts: None,
             branch_diff: None,
             committed_trees_match: None,
+            has_file_changes: None,
+            would_merge_add: None,
+            is_ancestor: None,
             upstream: None,
             pr_status: None,
             status_symbols: None,
@@ -307,13 +325,64 @@ impl ListItem {
     }
 
     /// Determine if the item contains no unique work and can likely be removed.
+    ///
+    /// Returns true when any of these conditions indicate the branch content
+    /// is already integrated into main:
+    ///
+    /// 1. **Same commit** - branch HEAD is ancestor of main or same commit.
+    ///    The branch is already part of main's history.
+    /// 2. **No file changes** - three-dot diff (`main...branch`) is empty.
+    ///    Catches squash-merged branches where commits exist but add no files.
+    /// 3. **Tree matches main** - tree SHA equals main's tree SHA.
+    ///    Catches rebased/squash-merged branches with identical content.
+    /// 4. **Merge simulation** (`--full` only) - merging branch into main wouldn't
+    ///    change main's tree. Catches squash-merged branches where main has advanced.
+    /// 5. **Working tree matches main** (worktrees only) - uncommitted changes
+    ///    don't diverge from main.
     pub(crate) fn is_potentially_removable(&self) -> bool {
         if self.is_main() {
             return false;
         }
 
+        // Helper: check if working tree is clean
+        let is_working_tree_clean = || {
+            self.worktree_data()
+                .map(|data| {
+                    data.working_tree_diff
+                        .as_ref()
+                        .map(|d| d.is_empty())
+                        .unwrap_or(true)
+                })
+                .unwrap_or(true) // Branches without worktrees are "clean"
+        };
+
+        // Check 1: Branch is ancestor of main (same commit or already merged)
+        if self.is_ancestor == Some(true) && is_working_tree_clean() {
+            return true;
+        }
+
+        // Check 2: No file changes beyond merge-base (three-dot diff empty)
+        // This is the primary integration check - catches most cases including
+        // squash-merged branches where commits exist but don't add file changes.
+        if self.has_file_changes == Some(false) && is_working_tree_clean() {
+            return true;
+        }
+
+        // Check 3: Tree SHA matches main (handles squash merge/rebase)
+        if self.committed_trees_match == Some(true) && is_working_tree_clean() {
+            return true;
+        }
+
+        // Check 4: Merge simulation (--full only)
+        // Merging branch into main wouldn't add changes - content already integrated.
+        // This catches cases where main has advanced past the squash-merge point.
+        if self.would_merge_add == Some(false) && is_working_tree_clean() {
+            return true;
+        }
+
         let counts = self.counts();
 
+        // Check 5 (worktrees): Working tree matches main
         if let Some(data) = self.worktree_data() {
             let no_commits_and_clean = counts.ahead == 0
                 && data
@@ -328,6 +397,7 @@ impl ListItem {
                 .unwrap_or(false);
             no_commits_and_clean || matches_main
         } else {
+            // Branch without worktree: fallback to ahead == 0
             counts.ahead == 0
         }
     }
@@ -457,8 +527,10 @@ impl ListItem {
                 let base_state = determine_worktree_base_state(
                     data.is_main,
                     default_branch,
-                    counts.ahead,
+                    self.is_ancestor,
                     self.committed_trees_match.unwrap_or(false),
+                    self.has_file_changes,
+                    self.would_merge_add,
                     data.working_tree_diff.as_ref(),
                     &data.working_tree_diff_with_main,
                 );
@@ -496,13 +568,24 @@ impl ListItem {
                 // Simplified status computation for branches
                 // Only compute symbols that apply to branches (no working tree, git operation, or worktree attrs)
 
-                // Branch op state - branches can only show MergeTreeConflicts or NoCommits
-                // (MatchesMain only applies to worktrees since branches don't have working trees)
+                // Branch op state - branches can show MergeTreeConflicts or integration states
                 let branch_op_state = if has_merge_tree_conflicts {
                     BranchOpState::MergeTreeConflicts
+                } else if self.is_ancestor == Some(true) {
+                    // Branch HEAD is ancestor of main - same commit or already merged
+                    BranchOpState::SameCommit
+                } else if self.has_file_changes == Some(false) {
+                    // No file changes beyond merge-base - content is integrated
+                    BranchOpState::NoAddedChanges
+                } else if self.committed_trees_match == Some(true) {
+                    // Tree SHA matches main - content is identical
+                    BranchOpState::TreesMatch
+                } else if self.would_merge_add == Some(false) {
+                    // Merge simulation shows no changes would be added (--full only)
+                    BranchOpState::MergeAddsNothing
                 } else if let Some(ref c) = self.counts {
                     if c.ahead == 0 {
-                        BranchOpState::NoCommits
+                        BranchOpState::SameCommit
                     } else {
                         BranchOpState::None
                     }
@@ -525,31 +608,38 @@ impl ListItem {
 
 /// Determine branch state for a worktree.
 ///
-/// # States (mutually exclusive)
+/// Returns a [`BranchOpState`] that corresponds to an [`worktrunk::git::IntegrationReason`] when
+/// the branch content is considered integrated into main.
 ///
-/// **`NoCommits`** (`ahead == 0`): Branch HEAD is an ancestor of main - no unique
-/// commits exist. This is the "nothing to merge" state. Note: `ahead` compares
-/// commit SHAs via `git rev-list`, not content. Cherry-picked commits create new
-/// SHAs, so a branch with cherry-picked-to-main commits still has `ahead > 0`.
+/// # States (priority order)
 ///
-/// **`MatchesMain`** (`ahead > 0`): Branch has unique commits but working tree
-/// content is identical to main. Examples: merge commits that pull in main,
-/// reverts that undo changes, or independent development arriving at same result.
+/// 1. **`SameCommit`**: Branch HEAD is ancestor of main (same commit or already merged).
 ///
-/// These states are mutually exclusive: `ahead == 0` means HEAD is an ancestor of
-/// main (can fast-forward), while `MatchesMain` requires unique commits that happen
-/// to produce identical content.
+/// 2. **`NoAddedChanges`**: Commits exist but no file changes beyond merge-base.
+///    The three-dot diff (`main...branch`) is empty.
+///
+/// 3. **`TreesMatch`**: Tree SHA matches main, or working tree matches main.
+///    Examples: merge commits that pull in main, rebases, squash merges.
+///
+/// 4. **`MergeAddsNothing`**: Merge simulation adds nothing to main.
+///    Catches squash-merged branches where main has advanced.
 ///
 /// # Parameters
 ///
+/// - `is_ancestor`: Whether branch HEAD is ancestor of main (None = not computed)
 /// - `committed_trees_match`: Whether committed tree SHAs match (HEAD^{tree} == main^{tree})
+/// - `has_file_changes`: Whether three-dot diff has file changes (None = not computed)
+/// - `would_merge_add`: Whether merge simulation shows changes (None = not computed, `--full` only)
 /// - `working_tree_diff_with_main`: Diff between working tree and main. May be `None` (not
 ///   computed) or `Some(None)` (skipped). When unavailable, assumes no match.
+#[allow(clippy::too_many_arguments)]
 fn determine_worktree_base_state(
     is_main: bool,
     default_branch: Option<&str>,
-    ahead: usize,
+    is_ancestor: Option<bool>,
     committed_trees_match: bool,
+    has_file_changes: Option<bool>,
+    would_merge_add: Option<bool>,
     working_tree_diff: Option<&LineDiff>,
     working_tree_diff_with_main: &Option<Option<LineDiff>>,
 ) -> BranchOpState {
@@ -559,26 +649,37 @@ fn determine_worktree_base_state(
 
     let is_clean = working_tree_diff.map(|d| d.is_empty()).unwrap_or(true);
 
-    if ahead == 0 && is_clean {
-        return BranchOpState::NoCommits;
+    // Priority 1: Branch is ancestor of main (same commit or already merged)
+    if is_ancestor == Some(true) && is_clean {
+        return BranchOpState::SameCommit;
     }
 
-    // If committed trees match AND no uncommitted changes, working tree must match main.
-    let working_tree_matches_main = if committed_trees_match && is_clean {
-        true
-    } else {
-        // Check pre-computed diff. None/Some(None) → assume no match
-        working_tree_diff_with_main
-            .as_ref()
-            .and_then(|opt| opt.as_ref())
-            .is_some_and(|diff| diff.is_empty())
-    };
+    // Priority 2: No file changes beyond merge-base (squash-merged)
+    if has_file_changes == Some(false) && is_clean {
+        return BranchOpState::NoAddedChanges;
+    }
+
+    // Priority 3: Tree SHA matches main (squash merge/rebase with identical content)
+    if committed_trees_match && is_clean {
+        return BranchOpState::TreesMatch;
+    }
+
+    // Priority 4: Working tree matches main
+    let working_tree_matches_main = working_tree_diff_with_main
+        .as_ref()
+        .and_then(|opt| opt.as_ref())
+        .is_some_and(|diff| diff.is_empty());
 
     if working_tree_matches_main {
-        BranchOpState::MatchesMain
-    } else {
-        BranchOpState::None
+        return BranchOpState::TreesMatch;
     }
+
+    // Priority 5: Merge simulation shows no changes (--full only)
+    if would_merge_add == Some(false) && is_clean {
+        return BranchOpState::MergeAddsNothing;
+    }
+
+    BranchOpState::None
 }
 
 /// Main branch divergence state
@@ -765,8 +866,19 @@ impl serde::Serialize for WorktreeState {
 /// 2. Rebase (↻) - active operation
 /// 3. Merge (⋈) - active operation
 /// 4. MergeTreeConflicts (⚔) - potential problem
-/// 5. MatchesMain (≡) - removable
-/// 6. NoCommits (_) - removable
+/// 5. SameCommit (·) - removable, maps to [`IntegrationReason::SameCommit`]
+/// 6. NoAddedChanges (⊂) - removable, maps to [`IntegrationReason::NoAddedChanges`]
+/// 7. TreesMatch (⊂) - removable, maps to [`IntegrationReason::TreesMatch`]
+/// 8. MergeAddsNothing (⊂) - removable, maps to [`IntegrationReason::MergeAddsNothing`]
+///
+/// Integration states use two symbols:
+/// - `·` for identical commit (SameCommit)
+/// - `⊂` for content integrated via different history (all others)
+///
+/// [`IntegrationReason::SameCommit`]: worktrunk::git::IntegrationReason::SameCommit
+/// [`IntegrationReason::TreesMatch`]: worktrunk::git::IntegrationReason::TreesMatch
+/// [`IntegrationReason::NoAddedChanges`]: worktrunk::git::IntegrationReason::NoAddedChanges
+/// [`IntegrationReason::MergeAddsNothing`]: worktrunk::git::IntegrationReason::MergeAddsNothing
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::IntoStaticStr)]
 pub enum BranchOpState {
     #[strum(serialize = "")]
@@ -781,10 +893,18 @@ pub enum BranchOpState {
     Merge,
     /// Merge-tree conflicts with main (simulated via git merge-tree)
     MergeTreeConflicts,
-    /// Working tree identical to main branch
-    MatchesMain,
-    /// No commits ahead and clean working tree (not matching main)
-    NoCommits,
+    /// Branch HEAD is same commit as main or ancestor of main.
+    /// Maps to [`worktrunk::git::IntegrationReason::SameCommit`].
+    SameCommit,
+    /// Tree SHA matches main - identical file contents.
+    /// Maps to [`worktrunk::git::IntegrationReason::TreesMatch`].
+    TreesMatch,
+    /// No file changes beyond merge-base (three-dot diff empty).
+    /// Maps to [`worktrunk::git::IntegrationReason::NoAddedChanges`].
+    NoAddedChanges,
+    /// Merge simulation adds nothing to main.
+    /// Maps to [`worktrunk::git::IntegrationReason::MergeAddsNothing`].
+    MergeAddsNothing,
 }
 
 impl std::fmt::Display for BranchOpState {
@@ -795,8 +915,9 @@ impl std::fmt::Display for BranchOpState {
             Self::Rebase => write!(f, "↻"),
             Self::Merge => write!(f, "⋈"),
             Self::MergeTreeConflicts => write!(f, "⚔"),
-            Self::MatchesMain => write!(f, "≡"),
-            Self::NoCommits => write!(f, "_"),
+            Self::SameCommit => write!(f, "·"),
+            // All other integration states use ⊂ (content is subset of main)
+            Self::TreesMatch | Self::NoAddedChanges | Self::MergeAddsNothing => write!(f, "⊂"),
         }
     }
 }
@@ -807,7 +928,7 @@ impl BranchOpState {
     /// Color semantics:
     /// - ERROR (red): Conflicts - blocking problems
     /// - WARNING (yellow): Rebase, Merge, MergeTreeConflicts - active/stuck states
-    /// - HINT (dimmed): MatchesMain, NoCommits - low urgency removability indicators
+    /// - HINT (dimmed): SameCommit, TreesMatch, NoAddedChanges, MergeAddsNothing - low urgency removability indicators
     pub fn styled(&self) -> Option<String> {
         use color_print::cformat;
         match self {
@@ -816,8 +937,19 @@ impl BranchOpState {
             Self::Rebase | Self::Merge | Self::MergeTreeConflicts => {
                 Some(cformat!("<yellow>{self}</>"))
             }
-            Self::MatchesMain | Self::NoCommits => Some(cformat!("<dim>{self}</>")),
+            Self::SameCommit | Self::TreesMatch | Self::NoAddedChanges | Self::MergeAddsNothing => {
+                Some(cformat!("<dim>{self}</>"))
+            }
         }
+    }
+
+    /// Returns true if this state indicates the branch content is integrated into main.
+    /// These states correspond to [`worktrunk::git::IntegrationReason`] variants.
+    pub fn is_integrated(&self) -> bool {
+        matches!(
+            self,
+            Self::SameCommit | Self::TreesMatch | Self::NoAddedChanges | Self::MergeAddsNothing
+        )
     }
 }
 
@@ -882,7 +1014,7 @@ impl PositionMask {
             1, // STAGED: + (1 char)
             1, // MODIFIED: ! (1 char)
             1, // UNTRACKED: ? (1 char)
-            1, // BRANCH_OP_STATE: ✖↻⋈⚠≡_ (1 char, priority: conflicts > rebase > merge > merge-tree > no-commits > matches)
+            1, // BRANCH_OP_STATE: ✖↻⋈⚔·⊂ (1 char, priority: conflicts > rebase > merge > merge-tree > same-commit > integrated)
             1, // MAIN_DIVERGENCE: ^, ↑, ↓, ↕ (1 char)
             1, // UPSTREAM_DIVERGENCE: ⇡, ⇣, ⇅ (1 char)
             1, // WORKTREE_STATE: / for branches, ⚑⌫⊠ for worktrees (priority: path_mismatch > prunable > locked)
@@ -900,7 +1032,7 @@ impl PositionMask {
 ///
 /// Symbols are categorized to enable vertical alignment in table output:
 /// - Working tree: +, !, ? (staged, modified, untracked - priority order)
-/// - Branch/op state: ✖, ↻, ⋈, ⚠, ≡, _ (combined position with priority)
+/// - Branch/op state: ✖, ↻, ⋈, ⚔, ·, ⊂ (combined position with priority)
 /// - Main divergence: ^, ↑, ↓, ↕
 /// - Upstream divergence: ⇡, ⇣, ⇅
 /// - Worktree state: / for branches, ⚑⌫⊠ for worktrees (priority-only)
@@ -909,13 +1041,13 @@ impl PositionMask {
 /// ## Mutual Exclusivity
 ///
 /// **Combined with priority (branch state + git operation):**
-/// Priority: ✖ > ↻ > ⋈ > ⚠ > ≡ > _
+/// Priority: ✖ > ↻ > ⋈ > ⚔ > · > ⊂
 /// - ✖: Actual conflicts (must resolve)
 /// - ↻: Rebase in progress
 /// - ⋈: Merge in progress
-/// - ⚠: Merge-tree conflicts (potential problem)
-/// - ≡: Matches main (removable)
-/// - _: No commits (removable)
+/// - ⚔: Merge-tree conflicts (potential problem)
+/// - ·: Same commit (removable)
+/// - ⊂: Content integrated (removable)
 ///
 /// **Mutually exclusive (enforced by type system):**
 /// - ^ vs ↑ vs ↓ vs ↕: Main divergence (MainDivergence enum)
@@ -930,7 +1062,7 @@ impl PositionMask {
 #[derive(Debug, Clone, Default)]
 pub struct StatusSymbols {
     /// Combined branch and operation state (mutually exclusive with priority)
-    /// Priority: Conflicts (✖) > Rebase (↻) > Merge (⋈) > MergeTreeConflicts (⚔) > MatchesMain (≡) > NoCommits (∅)
+    /// Priority: Conflicts (✖) > Rebase (↻) > Merge (⋈) > MergeTreeConflicts (⚔) > SameCommit (·) > others (⊂)
     pub(crate) branch_op_state: BranchOpState,
 
     /// Worktree state: / for branches, ⚑⌫⊠ for worktrees (priority: path_mismatch > prunable > locked)

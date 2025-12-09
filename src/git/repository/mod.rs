@@ -614,6 +614,13 @@ impl Repository {
         self.run_command_check(&["merge-base", "--is-ancestor", base, head])
     }
 
+    /// Check if two refs point to the same commit.
+    pub fn same_commit(&self, ref1: &str, ref2: &str) -> anyhow::Result<bool> {
+        let sha1 = self.run_command(&["rev-parse", ref1])?;
+        let sha2 = self.run_command(&["rev-parse", ref2])?;
+        Ok(sha1.trim() == sha2.trim())
+    }
+
     /// Check if a branch has file changes beyond the merge-base with target.
     ///
     /// Uses three-dot diff (`target...branch`) which shows files changed from merge-base

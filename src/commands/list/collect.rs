@@ -71,6 +71,19 @@ pub(super) enum TaskResult {
         item_idx: usize,
         committed_trees_match: bool,
     },
+    /// Whether branch has file changes beyond the merge-base (three-dot diff)
+    HasFileChanges {
+        item_idx: usize,
+        has_file_changes: bool,
+    },
+    /// Whether merging branch into main would add changes (merge simulation)
+    /// Only computed with --full flag
+    WouldMergeAdd {
+        item_idx: usize,
+        would_merge_add: bool,
+    },
+    /// Whether branch HEAD is ancestor of main (same commit or already merged)
+    IsAncestor { item_idx: usize, is_ancestor: bool },
     /// Line diff vs main branch
     BranchDiff {
         item_idx: usize,
@@ -119,6 +132,9 @@ impl TaskResult {
             TaskResult::CommitDetails { item_idx, .. }
             | TaskResult::AheadBehind { item_idx, .. }
             | TaskResult::CommittedTreesMatch { item_idx, .. }
+            | TaskResult::HasFileChanges { item_idx, .. }
+            | TaskResult::WouldMergeAdd { item_idx, .. }
+            | TaskResult::IsAncestor { item_idx, .. }
             | TaskResult::BranchDiff { item_idx, .. }
             | TaskResult::WorkingTreeDiff { item_idx, .. }
             | TaskResult::MergeTreeConflicts { item_idx, .. }
@@ -300,6 +316,24 @@ fn drain_results(
                 committed_trees_match,
             } => {
                 items[item_idx].committed_trees_match = Some(committed_trees_match);
+            }
+            TaskResult::HasFileChanges {
+                item_idx,
+                has_file_changes,
+            } => {
+                items[item_idx].has_file_changes = Some(has_file_changes);
+            }
+            TaskResult::WouldMergeAdd {
+                item_idx,
+                would_merge_add,
+            } => {
+                items[item_idx].would_merge_add = Some(would_merge_add);
+            }
+            TaskResult::IsAncestor {
+                item_idx,
+                is_ancestor,
+            } => {
+                items[item_idx].is_ancestor = Some(is_ancestor);
             }
             TaskResult::BranchDiff {
                 item_idx,
@@ -545,6 +579,9 @@ pub fn collect(
                 counts: None,
                 branch_diff: None,
                 committed_trees_match: None,
+                has_file_changes: None,
+                would_merge_add: None,
+                is_ancestor: None,
                 upstream: None,
                 pr_status: None,
                 status_symbols: None,
@@ -944,6 +981,9 @@ pub fn build_worktree_item(
         counts: None,
         branch_diff: None,
         committed_trees_match: None,
+        has_file_changes: None,
+        would_merge_add: None,
+        is_ancestor: None,
         upstream: None,
         pr_status: None,
         status_symbols: None,

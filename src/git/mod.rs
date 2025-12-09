@@ -41,6 +41,57 @@ pub use error::{
 };
 pub use repository::{Repository, ResolvedWorktree, set_base_path};
 
+/// Why branch content is considered integrated into the target branch.
+///
+/// Used by both `wt list` (for status symbols) and `wt remove` (for messages).
+/// Each variant corresponds to a specific integration check. In `wt list`,
+/// two symbols represent these checks:
+/// - `·` for [`SameCommit`](Self::SameCommit) (identical commit)
+/// - `⊂` for all others (content integrated via different history)
+///
+/// The checks are ordered by cost (cheapest first):
+/// 1. [`SameCommit`](Self::SameCommit) - commit SHA comparison (~1ms)
+/// 2. [`NoAddedChanges`](Self::NoAddedChanges) - three-dot diff (~50-100ms)
+/// 3. [`TreesMatch`](Self::TreesMatch) - tree SHA comparison (~100-300ms)
+/// 4. [`MergeAddsNothing`](Self::MergeAddsNothing) - merge simulation (~500ms-2s)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntegrationReason {
+    /// Branch HEAD is literally the same commit as target.
+    ///
+    /// Symbol in `wt list`: `·`
+    SameCommit,
+
+    /// Three-dot diff (`main...branch`) shows no files.
+    /// The branch has no file changes beyond the merge-base.
+    ///
+    /// Symbol in `wt list`: `⊂`
+    NoAddedChanges,
+
+    /// Branch tree SHA equals target tree SHA.
+    /// Commit history differs but file contents are identical.
+    ///
+    /// Symbol in `wt list`: `⊂`
+    TreesMatch,
+
+    /// Simulated merge (`git merge-tree`) produces the same tree as target.
+    /// The branch has changes, but they're already in target via a different path.
+    ///
+    /// Symbol in `wt list`: `⊂`
+    MergeAddsNothing,
+}
+
+impl IntegrationReason {
+    /// Human-readable description for use in messages (e.g., `wt remove` output).
+    pub fn description(&self) -> &'static str {
+        match self {
+            Self::SameCommit => "already in",
+            Self::NoAddedChanges => "no file changes",
+            Self::TreesMatch => "files match",
+            Self::MergeAddsNothing => "all changes in",
+        }
+    }
+}
+
 /// Category of branch for completion display
 #[derive(Debug, Clone, PartialEq)]
 pub enum BranchCategory {

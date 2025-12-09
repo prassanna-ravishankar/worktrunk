@@ -209,6 +209,105 @@ impl Task for CommittedTreesMatchTask {
     }
 }
 
+/// Task 3b: File changes check (does branch have file changes beyond merge-base?)
+///
+/// Uses three-dot diff (`main...branch`) to detect if the branch has any file
+/// changes relative to the merge-base with main. Returns false when the diff
+/// is empty, indicating the branch content is already integrated into main.
+///
+/// This catches branches where commits exist (ahead > 0) but those commits
+/// don't add any file changes - e.g., squash-merged branches, merge commits
+/// that pulled in main, or commits whose changes were reverted.
+pub struct HasFileChangesTask;
+
+impl Task for HasFileChangesTask {
+    const KIND: TaskKind = TaskKind::HasFileChanges;
+
+    fn compute(ctx: TaskContext) -> TaskResult {
+        let has_file_changes = if let Some(base) = ctx.default_branch.as_deref() {
+            let repo = Repository::at(&ctx.repo_path);
+            if let Some(branch) = ctx.branch.as_deref() {
+                // Check if three-dot diff is empty
+                repo.has_added_changes(branch, base).unwrap_or(true)
+            } else {
+                // No branch name (detached HEAD) - assume has changes
+                true
+            }
+        } else {
+            // No default branch - assume has changes
+            true
+        };
+
+        TaskResult::HasFileChanges {
+            item_idx: ctx.item_idx,
+            has_file_changes,
+        }
+    }
+}
+
+/// Task 3b: Merge simulation (--full only)
+///
+/// Checks if merging the branch into main would add any changes by simulating
+/// the merge with `git merge-tree --write-tree`. Returns false when the merge
+/// result equals main's tree, indicating the branch is already integrated.
+///
+/// This catches branches where main has advanced past the squash-merge point -
+/// the three-dot diff might show changes, but those changes are already in main
+/// via the squash merge.
+pub struct WouldMergeAddTask;
+
+impl Task for WouldMergeAddTask {
+    const KIND: TaskKind = TaskKind::WouldMergeAdd;
+
+    fn compute(ctx: TaskContext) -> TaskResult {
+        let would_merge_add = if let Some(base) = ctx.default_branch.as_deref() {
+            let repo = Repository::at(&ctx.repo_path);
+            if let Some(branch) = ctx.branch.as_deref() {
+                // Simulate merging branch into main
+                repo.would_merge_add_to_target(branch, base).unwrap_or(true)
+            } else {
+                // No branch name (detached HEAD) - assume would add changes
+                true
+            }
+        } else {
+            // No default branch - assume would add changes
+            true
+        };
+
+        TaskResult::WouldMergeAdd {
+            item_idx: ctx.item_idx,
+            would_merge_add,
+        }
+    }
+}
+
+/// Task 3c: Ancestor check (is branch HEAD an ancestor of main?)
+///
+/// This is the cheapest integration check - just runs `git merge-base --is-ancestor`.
+/// Returns true when the branch HEAD is the same commit as main, or is an ancestor
+/// of main (already merged via fast-forward or rebase).
+pub struct IsAncestorTask;
+
+impl Task for IsAncestorTask {
+    const KIND: TaskKind = TaskKind::IsAncestor;
+
+    fn compute(ctx: TaskContext) -> TaskResult {
+        let is_ancestor = if let Some(base) = ctx.default_branch.as_deref() {
+            let repo = Repository::at(&ctx.repo_path);
+            // Check if branch HEAD is ancestor of main (or same commit)
+            repo.is_ancestor(&ctx.commit_sha, base).unwrap_or(false)
+        } else {
+            // No default branch - assume not ancestor
+            false
+        };
+
+        TaskResult::IsAncestor {
+            item_idx: ctx.item_idx,
+            is_ancestor,
+        }
+    }
+}
+
 /// Task 4: Branch diff stats vs default branch
 pub struct BranchDiffTask;
 
@@ -461,6 +560,8 @@ pub fn collect_worktree_progressive(
         spawner.spawn::<CommitDetailsTask>(s, &ctx);
         spawner.spawn::<AheadBehindTask>(s, &ctx);
         spawner.spawn::<CommittedTreesMatchTask>(s, &ctx);
+        spawner.spawn::<HasFileChangesTask>(s, &ctx);
+        spawner.spawn::<IsAncestorTask>(s, &ctx);
         spawner.spawn::<WorkingTreeDiffTask>(s, &ctx);
         spawner.spawn::<GitOperationTask>(s, &ctx);
         spawner.spawn::<UserMarkerTask>(s, &ctx);
@@ -475,6 +576,9 @@ pub fn collect_worktree_progressive(
         }
         if !skip.contains(&TaskKind::CiStatus) {
             spawner.spawn::<CiStatusTask>(s, &ctx);
+        }
+        if !skip.contains(&TaskKind::WouldMergeAdd) {
+            spawner.spawn::<WouldMergeAddTask>(s, &ctx);
         }
     });
 }
@@ -513,6 +617,8 @@ pub fn collect_branch_progressive(
         spawner.spawn::<CommitDetailsTask>(s, &ctx);
         spawner.spawn::<AheadBehindTask>(s, &ctx);
         spawner.spawn::<CommittedTreesMatchTask>(s, &ctx);
+        spawner.spawn::<HasFileChangesTask>(s, &ctx);
+        spawner.spawn::<IsAncestorTask>(s, &ctx);
         spawner.spawn::<UpstreamTask>(s, &ctx);
 
         // Optional tasks (check skip set)
@@ -524,6 +630,9 @@ pub fn collect_branch_progressive(
         }
         if !skip.contains(&TaskKind::CiStatus) {
             spawner.spawn::<CiStatusTask>(s, &ctx);
+        }
+        if !skip.contains(&TaskKind::WouldMergeAdd) {
+            spawner.spawn::<WouldMergeAddTask>(s, &ctx);
         }
     });
 }

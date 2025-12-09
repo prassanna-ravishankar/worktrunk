@@ -9,6 +9,7 @@ use crate::commands::process::spawn_detached;
 use crate::commands::worktree::{RemoveResult, SwitchResult};
 use worktrunk::config::WorktrunkConfig;
 use worktrunk::git::GitError;
+use worktrunk::git::IntegrationReason;
 use worktrunk::git::Repository;
 use worktrunk::path::format_path_for_display;
 use worktrunk::shell::Shell;
@@ -51,26 +52,15 @@ fn format_switch_success_message(
     }
 }
 
-/// Why a branch is considered integrated into the target.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum IntegrationReason {
-    /// Branch has no file changes beyond the merge-base with target
-    NoAddedChanges,
-    /// Branch's tree SHA matches target's tree SHA (squash merge/rebase)
-    ContentsMatch,
-    /// Merge simulation shows branch would add nothing to target
-    /// (squash merge where target has since advanced)
-    MergeAddsNothing,
-}
-
 /// Check if a branch's content has been integrated into the target.
 ///
-/// Returns the reason if the branch is safe to delete:
+/// Returns the reason if the branch is safe to delete (ordered by check cost):
+/// - `SameCommit`: Branch HEAD is literally the same commit as target
 /// - `NoAddedChanges`: Branch has no file changes beyond merge-base (empty three-dot diff)
-/// - `ContentsMatch`: The branch's tree SHA matches the target's tree SHA (squash merge/rebase)
+/// - `TreesMatch`: The branch's tree SHA matches the target's tree SHA (squash merge/rebase)
 /// - `MergeAddsNothing`: Merge simulation shows branch would add nothing (squash + target advanced)
 ///
-/// Returns None if neither condition is met, or if an error occurs (e.g., invalid refs).
+/// Returns None if no condition is met, or if an error occurs (e.g., invalid refs).
 /// This fail-safe default prevents accidental branch deletion when integration cannot
 /// be determined.
 fn get_integration_reason(
@@ -78,18 +68,24 @@ fn get_integration_reason(
     branch_name: &str,
     target: &str,
 ) -> Option<IntegrationReason> {
-    // Check if branch has no file changes beyond merge-base (empty three-dot diff)
+    // Check 1 (cheapest): Is branch HEAD literally the same commit as target?
+    // On error, continue to next check
+    if repo.same_commit(branch_name, target).unwrap_or(false) {
+        return Some(IntegrationReason::SameCommit);
+    }
+
+    // Check 2: Does branch have no file changes beyond merge-base (empty three-dot diff)?
     // On error, conservatively assume branch HAS changes (won't delete)
     if !repo.has_added_changes(branch_name, target).unwrap_or(true) {
         return Some(IntegrationReason::NoAddedChanges);
     }
 
-    // Check if tree content matches (handles squash merge/rebase)
+    // Check 3: Does tree content match (handles squash merge/rebase)?
     if repo.trees_match(branch_name, target).unwrap_or(false) {
-        return Some(IntegrationReason::ContentsMatch);
+        return Some(IntegrationReason::TreesMatch);
     }
 
-    // Check via merge simulation: would merging this branch into target add anything?
+    // Check 4: Would merging this branch into target add anything?
     // This handles squash-merged branches where target has since advanced.
     // If merge would NOT add anything, the branch's content is already in target.
     if !repo
@@ -182,10 +178,11 @@ fn get_flag_note(
     } else if let Some(target) = target_branch {
         // Show integration reason when branch is deleted (both wt merge and wt remove)
         match deletion_result {
-            Some(Some(IntegrationReason::NoAddedChanges)) => {
+            Some(Some(IntegrationReason::SameCommit)) => {
                 format!(" (already in {target})")
             }
-            Some(Some(IntegrationReason::ContentsMatch)) => format!(" (files match {target})"),
+            Some(Some(IntegrationReason::NoAddedChanges)) => " (no file changes)".to_string(),
+            Some(Some(IntegrationReason::TreesMatch)) => format!(" (files match {target})"),
             Some(Some(IntegrationReason::MergeAddsNothing)) => {
                 format!(" (all changes in {target})")
             }

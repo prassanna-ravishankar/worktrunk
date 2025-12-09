@@ -439,7 +439,7 @@ fn test_list_json_tree_matches_main_after_merge() {
         .unwrap();
 
     // Now feature-merged is ahead of main (has merge commit) but tree content matches main
-    // JSON output should show branch_op_state: "MatchesMain" with ahead > 0
+    // JSON output should show branch_op_state: "TreesMatch" with ahead > 0
     snapshot_list_json("json_tree_matches_main_after_merge", &repo);
 }
 

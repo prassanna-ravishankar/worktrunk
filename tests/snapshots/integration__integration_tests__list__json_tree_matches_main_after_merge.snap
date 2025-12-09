@@ -88,20 +88,20 @@ exit_code: 0
         "renamed": false,
         "deleted": false
       },
-      "branch_op_state": "MatchesMain",
+      "branch_op_state": "NoAddedChanges",
       "main_divergence": "Ahead",
       "upstream_divergence": "",
       "worktree_state": ""
     },
     "status_symbols": {
       "working_tree": "",
-      "branch_op_state": "≡",
+      "branch_op_state": "⊂",
       "main_divergence": "↑",
       "upstream_divergence": "",
       "worktree_state": ""
     },
     "commits_display": "/u001b[32m↑2/u001b[0m",
-    "status_line": "feature-merged  /u001b[2m≡/u001b[22m/u001b[2m↑/u001b[22m  /u001b[32m↑2/u001b[0m",
+    "status_line": "feature-merged  /u001b[2m⊂/u001b[22m/u001b[2m↑/u001b[22m  /u001b[32m↑2/u001b[0m",
     "type": "worktree",
     "path": "[REPO].feature-merged",
     "bare": false,

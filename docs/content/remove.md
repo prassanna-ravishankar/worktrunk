@@ -41,13 +41,14 @@ wt remove -D experimental
 
 Branches delete automatically when their content is already in the target branch (typically main). This works with squash-merge and rebase workflows where commit history differs but file changes match.
 
-A branch is safe to delete when its content is already reflected in the target. Worktrunk checks three conditions:
+A branch is safe to delete when its content is already reflected in the target. Worktrunk checks four conditions (in order of cost):
 
-1. **No added changes** — Three-dot diff (`main...branch`) shows no files. The branch has no file changes beyond the merge-base.
-2. **Tree contents match** — Branch tree SHA equals main tree SHA. Commit history differs but file contents are identical (e.g., after a revert or merge commit pulling in main).
-3. **Merge adds nothing** — Simulated merge (`git merge-tree`) produces the same tree as main. Handles squash-merged branches where main has since advanced.
+1. **Same commit** — Branch HEAD is literally the same commit as target.
+2. **No added changes** — Three-dot diff (`main...branch`) shows no files. The branch has no file changes beyond the merge-base (includes "branch is ancestor" case).
+3. **Tree contents match** — Branch tree SHA equals main tree SHA. Commit history differs but file contents are identical (e.g., after a revert or merge commit pulling in main).
+4. **Merge adds nothing** — Simulated merge (`git merge-tree`) produces the same tree as main. Handles squash-merged branches where main has since advanced.
 
-In `wt list`, `_` indicates no commits ahead of main, and `≡` indicates tree contents match. Branches showing either are dimmed as safe to delete.
+In `wt list`, `·` indicates same commit, and `⊂` indicates content is integrated. Branches showing either are dimmed as safe to delete.
 
 Use `-D` to force-delete branches with unmerged changes. Use `--no-delete-branch` to keep the branch regardless of status.
 

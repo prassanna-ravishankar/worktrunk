@@ -151,13 +151,17 @@ pub fn handle_list(
     let repo = Repository::current();
 
     // Build skip set based on flags
-    // Without --full: skip expensive operations (BranchDiff, CiStatus)
+    // Without --full: skip expensive operations (BranchDiff, CiStatus, WouldMergeAdd)
     let skip_tasks: std::collections::HashSet<TaskKind> = if show_full {
         std::collections::HashSet::new() // Compute everything
     } else {
-        [TaskKind::BranchDiff, TaskKind::CiStatus]
-            .into_iter()
-            .collect()
+        [
+            TaskKind::BranchDiff,
+            TaskKind::CiStatus,
+            TaskKind::WouldMergeAdd,
+        ]
+        .into_iter()
+        .collect()
     };
 
     // Progressive rendering only for table format with Progressive mode

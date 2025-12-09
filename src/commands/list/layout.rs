@@ -17,8 +17,8 @@
 //!
 //! Example with branch_state, working_tree, and user_marker used:
 //! ```text
-//! Row 1: "≡   🤖"   (branch=≡, working=space, user=🤖)
-//! Row 2: "≡?!   "   (branch=≡, working=?!, user=space)
+//! Row 1: "·   🤖"   (branch=·, working=space, user=🤖)
+//! Row 2: "·?!   "   (branch=·, working=?!, user=space)
 //! Row 3: "  💬"     (branch=space, working=space, user=💬)
 //! ```
 //!
@@ -838,6 +838,9 @@ mod tests {
                 diff: LineDiff::from((200, 30)),
             }),
             committed_trees_match: Some(false),
+            has_file_changes: Some(true),
+            would_merge_add: None,
+            is_ancestor: None,
             upstream: Some(UpstreamStatus::from_parts(Some("origin".to_string()), 4, 2)),
             pr_status: None,
             status_symbols: Some(StatusSymbols::default()),
@@ -928,6 +931,9 @@ mod tests {
                 diff: LineDiff::default(),
             }),
             committed_trees_match: Some(false),
+            has_file_changes: Some(true),
+            would_merge_add: None,
+            is_ancestor: None,
             upstream: Some(UpstreamStatus::default()),
             pr_status: None,
             status_symbols: Some(StatusSymbols::default()),
