@@ -6,7 +6,7 @@ weight = 16
 group = "Commands"
 +++
 
-<!-- ⚠️ AUTO-GENERATED from `wt step --help-page` — edit src/cli.rs to update -->
+<!-- ⚠️ AUTO-GENERATED from `wt step --help-page` — edit cli.rs to update -->
 
 Run individual git workflow operations: commits, squashes, rebases, and pushes.
 
@@ -44,8 +44,6 @@ wt step push
 
 ## Command reference
 
-<!-- ⚠️ AUTO-GENERATED from `wt step --help-page` — edit cli.rs to update -->
-
 ```
 wt step - Run individual workflow operations
 Usage: wt step [OPTIONS] <COMMAND>
@@ -70,3 +68,5 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 ```
+
+<!-- END AUTO-GENERATED from `wt step --help-page` -->

@@ -6,7 +6,7 @@ weight = 17
 group = "Commands"
 +++
 
-<!-- ⚠️ AUTO-GENERATED from `wt hook --help-page` — edit src/cli.rs to update -->
+<!-- ⚠️ AUTO-GENERATED from `wt hook --help-page` — edit cli.rs to update -->
 
 Run project-defined lifecycle hooks from `.config/wt.toml`.
 
@@ -295,8 +295,6 @@ env = "cp {{ repo_root }}/.env.local .env"
 
 ## Command reference
 
-<!-- ⚠️ AUTO-GENERATED from `wt hook --help-page` — edit cli.rs to update -->
-
 ```
 wt hook - Run project hooks
 Usage: wt hook [OPTIONS] <COMMAND>
@@ -323,3 +321,5 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 ```
+
+<!-- END AUTO-GENERATED from `wt hook --help-page` -->

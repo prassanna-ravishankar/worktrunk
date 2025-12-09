@@ -241,35 +241,11 @@ fn handle_help_page(args: &[String]) {
         help_block
     };
 
-    // Title uses "wt <command>" format for consistency
-    let title = format!("wt {subcommand}");
-
-    // Weight mapping (for nav order)
-    // Commands are grouped together after Concepts (weight 3)
-    // Order: switch, list (daily use), remove, merge (workflow completion), then utilities
-    let weight = match subcommand.as_str() {
-        "switch" => 10,
-        "list" => 11,
-        "remove" => 12,
-        "merge" => 13,
-        "select" => 14,
-        "config" => 15,
-        "step" => 16,
-        "hook" => 17,
-        other => panic!("Unknown command '{other}' needs a weight assignment"),
-    };
-
-    // Output the page
-    println!("+++");
-    println!("title = \"{title}\"");
-    println!("weight = {weight}");
-    println!();
-    println!("[extra]");
-    println!("group = \"Commands\"");
-    println!("+++");
-    println!();
+    // Output the generated content (frontmatter is in skeleton files)
+    // Uses region markers so sync can replace just this content
+    // END tag mirrors the ID for unambiguous matching with nested markers
     println!(
-        "<!-- ⚠️ AUTO-GENERATED from `wt {subcommand} --help-page` — edit src/cli.rs to update -->"
+        "<!-- ⚠️ AUTO-GENERATED from `wt {subcommand} --help-page` — edit cli.rs to update -->"
     );
     println!();
     println!("{}", after_help.trim());
@@ -278,14 +254,12 @@ fn handle_help_page(args: &[String]) {
     println!();
     println!("## Command reference");
     println!();
-    println!(
-        "<!-- ⚠️ AUTO-GENERATED from `wt {subcommand} --help-page` — edit cli.rs to update -->"
-    );
-    println!();
     println!("```");
     print!("{}", reference_block.trim());
     println!();
     println!("```");
+    println!();
+    println!("<!-- END AUTO-GENERATED from `wt {subcommand} --help-page` -->");
 }
 
 /// Add HTML color spans for CI status dots in help page output.

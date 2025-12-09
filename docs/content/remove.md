@@ -6,7 +6,7 @@ weight = 12
 group = "Commands"
 +++
 
-<!-- ⚠️ AUTO-GENERATED from `wt remove --help-page` — edit src/cli.rs to update -->
+<!-- ⚠️ AUTO-GENERATED from `wt remove --help-page` — edit cli.rs to update -->
 
 Removes worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
 
@@ -67,8 +67,6 @@ Arguments resolve by path first, then branch name. [Shortcuts](@/switch.md#short
 
 ## Command reference
 
-<!-- ⚠️ AUTO-GENERATED from `wt remove --help-page` — edit cli.rs to update -->
-
 ```
 wt remove - Remove worktree and branch
 Usage: wt remove [OPTIONS] [WORKTREES]...
@@ -103,3 +101,5 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 ```
+
+<!-- END AUTO-GENERATED from `wt remove --help-page` -->

@@ -6,7 +6,7 @@ weight = 11
 group = "Commands"
 +++
 
-<!-- ⚠️ AUTO-GENERATED from `wt list --help-page` — edit src/cli.rs to update -->
+<!-- ⚠️ AUTO-GENERATED from `wt list --help-page` — edit cli.rs to update -->
 
 Show all worktrees with their status. The table includes uncommitted changes, divergence from main and remote, and optional CI status.
 
@@ -181,8 +181,6 @@ wt list --format=json | jq '.[] | select(.branch_state == "integrated" or .branc
 
 ## Command reference
 
-<!-- ⚠️ AUTO-GENERATED from `wt list --help-page` — edit cli.rs to update -->
-
 ```
 wt list - List worktrees and optionally branches
 Usage: wt list [OPTIONS]
@@ -224,3 +222,5 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 ```
+
+<!-- END AUTO-GENERATED from `wt list --help-page` -->

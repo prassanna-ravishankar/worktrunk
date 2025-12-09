@@ -6,7 +6,7 @@ weight = 13
 group = "Commands"
 +++
 
-<!-- ⚠️ AUTO-GENERATED from `wt merge --help-page` — edit src/cli.rs to update -->
+<!-- ⚠️ AUTO-GENERATED from `wt merge --help-page` — edit cli.rs to update -->
 
 Merge the current branch into the target branch and clean up. Handles the full workflow: commit uncommitted changes, squash commits, rebase, run hooks, push to target, and remove the worktree.
 
@@ -68,8 +68,6 @@ Use `--no-commit` to skip all git operations (steps 1-2) and only run hooks and 
 
 ## Command reference
 
-<!-- ⚠️ AUTO-GENERATED from `wt merge --help-page` — edit cli.rs to update -->
-
 ```
 wt merge - Merge worktree into target branch
 Usage: wt merge [OPTIONS] [TARGET]
@@ -117,3 +115,5 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 ```
+
+<!-- END AUTO-GENERATED from `wt merge --help-page` -->

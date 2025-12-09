@@ -6,7 +6,7 @@ weight = 15
 group = "Commands"
 +++
 
-<!-- ⚠️ AUTO-GENERATED from `wt config --help-page` — edit src/cli.rs to update -->
+<!-- ⚠️ AUTO-GENERATED from `wt config --help-page` — edit cli.rs to update -->
 
 Manages configuration, shell integration, and runtime settings.
 
@@ -217,8 +217,6 @@ WORKTRUNK_COMMIT_GENERATION__ARGS="test: automated commit" \
 
 ## Command reference
 
-<!-- ⚠️ AUTO-GENERATED from `wt config --help-page` — edit cli.rs to update -->
-
 ```
 wt config - Manage configuration and shell integration
 Usage: wt config [OPTIONS] <COMMAND>
@@ -245,3 +243,5 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 ```
+
+<!-- END AUTO-GENERATED from `wt config --help-page` -->

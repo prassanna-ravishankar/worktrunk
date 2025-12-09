@@ -6,7 +6,7 @@ weight = 10
 group = "Commands"
 +++
 
-<!-- ⚠️ AUTO-GENERATED from `wt switch --help-page` — edit src/cli.rs to update -->
+<!-- ⚠️ AUTO-GENERATED from `wt switch --help-page` — edit cli.rs to update -->
 
 Two distinct operations:
 
@@ -66,8 +66,6 @@ wt switch --create fix --base=@  # Branch from current HEAD
 
 ## Command reference
 
-<!-- ⚠️ AUTO-GENERATED from `wt switch --help-page` — edit cli.rs to update -->
-
 ```
 wt switch - Switch to a worktree
 Usage: wt switch [OPTIONS] <BRANCH>
@@ -117,3 +115,5 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 ```
+
+<!-- END AUTO-GENERATED from `wt switch --help-page` -->

@@ -1048,6 +1048,7 @@ fn test_docs_quickstart_examples_are_in_sync() {
 }
 
 /// Command pages generated via `wt <cmd> --help-page`
+/// Each page preserves its frontmatter and replaces the AUTO-GENERATED marker region.
 const COMMAND_PAGES: &[&str] = &[
     "switch", "list", "merge", "remove", "select", "config", "step", "hook",
 ];
@@ -1065,7 +1066,7 @@ fn test_command_pages_are_in_sync() {
             continue;
         }
 
-        // Run wt <cmd> --help-page
+        // Run wt <cmd> --help-page (outputs START marker + content + END marker)
         let output = Command::new(env!("CARGO_BIN_EXE_wt"))
             .args([cmd, "--help-page"])
             .current_dir(project_root)
@@ -1083,13 +1084,12 @@ fn test_command_pages_are_in_sync() {
         }
 
         // Strip trailing whitespace from each line (pre-commit does this)
-        let expected: String = String::from_utf8_lossy(&output.stdout)
+        let generated: String = String::from_utf8_lossy(&output.stdout)
             .lines()
             .map(|line| line.trim_end())
             .collect::<Vec<_>>()
-            .join("\n")
-            + "\n"; // Ensure trailing newline
-        if expected.trim().is_empty() {
+            .join("\n");
+        if generated.trim().is_empty() {
             errors.push(format!(
                 "Empty output from 'wt {} --help-page': {}",
                 cmd,
@@ -1100,7 +1100,7 @@ fn test_command_pages_are_in_sync() {
 
         // Expand command placeholders ($ wt list -> terminal shortcode with snapshot output)
         let snapshots_dir = project_root.join("tests/snapshots");
-        let expected = match expand_command_placeholders(&expected, &snapshots_dir) {
+        let generated = match expand_command_placeholders(&generated, &snapshots_dir) {
             Ok(expanded) => expanded,
             Err(e) => {
                 errors.push(format!(
@@ -1114,8 +1114,29 @@ fn test_command_pages_are_in_sync() {
         let current = fs::read_to_string(&doc_path)
             .unwrap_or_else(|e| panic!("Failed to read {}: {}", doc_path.display(), e));
 
-        if current != expected {
-            fs::write(&doc_path, &expected)
+        // Find the help-page marker region using mirrored END tag
+        // Pattern: <!-- ⚠️ AUTO-GENERATED from `wt cmd --help-page` ... --> ... <!-- END AUTO-GENERATED from `wt cmd --help-page` -->
+        let marker_pattern = Regex::new(&format!(
+            r"(?s)<!-- ⚠️ AUTO-GENERATED from `wt {} --help-page`[^>]*-->.*?<!-- END AUTO-GENERATED from `wt {} --help-page` -->",
+            cmd, cmd
+        )).unwrap();
+
+        let new_content = if let Some(m) = marker_pattern.find(&current) {
+            let before = &current[..m.start()];
+            let after = &current[m.end()..];
+            format!("{}{}{}", before, generated.trim(), after)
+        } else {
+            errors.push(format!(
+                "No AUTO-GENERATED region found in {}. \
+                 Ensure file has marker region for `wt {} --help-page`.",
+                doc_path.display(),
+                cmd
+            ));
+            continue;
+        };
+
+        if current != new_content {
+            fs::write(&doc_path, &new_content)
                 .unwrap_or_else(|e| panic!("Failed to write {}: {}", doc_path.display(), e));
             updated += 1;
         }
