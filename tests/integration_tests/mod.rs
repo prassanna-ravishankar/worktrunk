@@ -27,7 +27,6 @@ pub mod list;
 pub mod list_column_alignment;
 pub mod list_config;
 pub mod list_progressive;
-pub mod list_pty;
 pub mod merge;
 pub mod post_start_commands;
 pub mod push;
