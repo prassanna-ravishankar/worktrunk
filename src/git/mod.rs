@@ -46,20 +46,27 @@ pub use repository::{Repository, ResolvedWorktree, set_base_path};
 /// Used by both `wt list` (for status symbols) and `wt remove` (for messages).
 /// Each variant corresponds to a specific integration check. In `wt list`,
 /// two symbols represent these checks:
-/// - `·` for [`SameCommit`](Self::SameCommit) (identical commit)
+/// - `_` for [`SameCommit`](Self::SameCommit) (identical commit)
 /// - `⊂` for all others (content integrated via different history)
 ///
 /// The checks are ordered by cost (cheapest first):
 /// 1. [`SameCommit`](Self::SameCommit) - commit SHA comparison (~1ms)
-/// 2. [`NoAddedChanges`](Self::NoAddedChanges) - three-dot diff (~50-100ms)
-/// 3. [`TreesMatch`](Self::TreesMatch) - tree SHA comparison (~100-300ms)
-/// 4. [`MergeAddsNothing`](Self::MergeAddsNothing) - merge simulation (~500ms-2s)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// 2. [`Ancestor`](Self::Ancestor) - ancestor check (~1ms)
+/// 3. [`NoAddedChanges`](Self::NoAddedChanges) - three-dot diff (~50-100ms)
+/// 4. [`TreesMatch`](Self::TreesMatch) - tree SHA comparison (~100-300ms)
+/// 5. [`MergeAddsNothing`](Self::MergeAddsNothing) - merge simulation (~500ms-2s)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum IntegrationReason {
     /// Branch HEAD is literally the same commit as target.
     ///
-    /// Symbol in `wt list`: `·`
+    /// Symbol in `wt list`: `_`
     SameCommit,
+
+    /// Branch HEAD is an ancestor of target (target has moved past this branch).
+    ///
+    /// Symbol in `wt list`: `⊂`
+    Ancestor,
 
     /// Three-dot diff (`main...branch`) shows no files.
     /// The branch has no file changes beyond the merge-base.
@@ -85,9 +92,21 @@ impl IntegrationReason {
     pub fn description(&self) -> &'static str {
         match self {
             Self::SameCommit => "already in",
+            Self::Ancestor => "already in",
             Self::NoAddedChanges => "no file changes",
             Self::TreesMatch => "files match",
             Self::MergeAddsNothing => "all changes in",
+        }
+    }
+
+    /// Returns the JSON string representation.
+    pub fn as_json_str(self) -> &'static str {
+        match self {
+            Self::SameCommit => "same_commit",
+            Self::Ancestor => "ancestor",
+            Self::NoAddedChanges => "no_added_changes",
+            Self::TreesMatch => "trees_match",
+            Self::MergeAddsNothing => "merge_adds_nothing",
         }
     }
 }

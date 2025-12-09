@@ -91,8 +91,8 @@ exit_code: 0
       "bare": false
     },
     "is_main": false,
-    "statusline": "feature-detached  /u001b[2m·/u001b[22m",
-    "symbols": "·"
+    "statusline": "feature-detached  /u001b[2m_/u001b[22m",
+    "symbols": "_"
   },
   {
     "branch": "locked-feature",
@@ -131,8 +131,8 @@ exit_code: 0
       "bare": false
     },
     "is_main": false,
-    "statusline": "locked-feature  /u001b[2m·/u001b[22m/u001b[33m⊞/u001b[39m",
-    "symbols": "·⊞"
+    "statusline": "locked-feature  /u001b[2m_/u001b[22m/u001b[33m⊞/u001b[39m",
+    "symbols": "_⊞"
   }
 ]
 

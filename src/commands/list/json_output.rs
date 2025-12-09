@@ -47,7 +47,7 @@ pub struct JsonItem {
     pub branch_state: Option<&'static str>,
 
     /// Why branch is integrated (only present when branch_state == "integrated")
-    /// Values: trees_match, no_added_changes, merge_adds_nothing
+    /// Values: ancestor, trees_match, no_added_changes, merge_adds_nothing
     #[serde(skip_serializing_if = "Option::is_none")]
     pub integration_reason: Option<&'static str>,
 

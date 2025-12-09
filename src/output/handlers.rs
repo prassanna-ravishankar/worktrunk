@@ -74,18 +74,24 @@ fn get_integration_reason(
         return Some(IntegrationReason::SameCommit);
     }
 
-    // Check 2: Does branch have no file changes beyond merge-base (empty three-dot diff)?
+    // Check 2 (cheap): Is branch an ancestor of target (target has moved past)?
+    // On error, continue to next check
+    if repo.is_ancestor(branch_name, target).unwrap_or(false) {
+        return Some(IntegrationReason::Ancestor);
+    }
+
+    // Check 3: Does branch have no file changes beyond merge-base (empty three-dot diff)?
     // On error, conservatively assume branch HAS changes (won't delete)
     if !repo.has_added_changes(branch_name, target).unwrap_or(true) {
         return Some(IntegrationReason::NoAddedChanges);
     }
 
-    // Check 3: Does tree content match (handles squash merge/rebase)?
+    // Check 4: Does tree content match (handles squash merge/rebase)?
     if repo.trees_match(branch_name, target).unwrap_or(false) {
         return Some(IntegrationReason::TreesMatch);
     }
 
-    // Check 4: Would merging this branch into target add anything?
+    // Check 5: Would merging this branch into target add anything?
     // This handles squash-merged branches where target has since advanced.
     // If merge would NOT add anything, the branch's content is already in target.
     if !repo
@@ -178,7 +184,7 @@ fn get_flag_note(
     } else if let Some(target) = target_branch {
         // Show integration reason when branch is deleted (both wt merge and wt remove)
         match deletion_result {
-            Some(Some(IntegrationReason::SameCommit)) => {
+            Some(Some(IntegrationReason::SameCommit | IntegrationReason::Ancestor)) => {
                 format!(" (already in {target})")
             }
             Some(Some(IntegrationReason::NoAddedChanges)) => " (no file changes)".to_string(),

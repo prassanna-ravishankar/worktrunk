@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use worktrunk::git::LineDiff;
+use worktrunk::git::{IntegrationReason, LineDiff};
 
 use super::ci_status::PrStatus;
 use super::columns::ColumnKind;
@@ -528,6 +528,7 @@ impl ListItem {
                     data.is_main,
                     default_branch,
                     self.is_ancestor,
+                    self.counts.as_ref().map(|c| c.behind),
                     self.committed_trees_match.unwrap_or(false),
                     self.has_file_changes,
                     self.would_merge_add,
@@ -572,8 +573,14 @@ impl ListItem {
                 let branch_state = if has_merge_tree_conflicts {
                     BranchState::WouldConflict
                 } else if self.is_ancestor == Some(true) {
-                    // Branch HEAD is ancestor of main - same commit or already merged
-                    BranchState::SameCommit
+                    // Branch HEAD is ancestor of main
+                    if self.counts.as_ref().is_some_and(|c| c.behind == 0) {
+                        // Same commit as main
+                        BranchState::SameCommit
+                    } else {
+                        // Main has moved past this branch
+                        BranchState::Integrated(IntegrationReason::Ancestor)
+                    }
                 } else if self.has_file_changes == Some(false) {
                     // No file changes beyond merge-base - content is integrated
                     BranchState::Integrated(IntegrationReason::NoAddedChanges)
@@ -584,7 +591,8 @@ impl ListItem {
                     // Merge simulation shows no changes would be added (--full only)
                     BranchState::Integrated(IntegrationReason::MergeAddsNothing)
                 } else if let Some(ref c) = self.counts {
-                    if c.ahead == 0 {
+                    if c.ahead == 0 && c.behind == 0 {
+                        // Same commit as main (fallback when is_ancestor not computed)
                         BranchState::SameCommit
                     } else {
                         BranchState::None
@@ -613,20 +621,23 @@ impl ListItem {
 ///
 /// # States (priority order)
 ///
-/// 1. **`SameCommit`**: Branch HEAD is ancestor of main (same commit or already merged).
+/// 1. **`SameCommit`**: Branch HEAD is exactly the same commit as main.
 ///
-/// 2. **`Integrated(NoAddedChanges)`**: Commits exist but no file changes beyond merge-base.
+/// 2. **`Integrated(Ancestor)`**: Branch HEAD is ancestor of main (main has moved past).
+///
+/// 3. **`Integrated(NoAddedChanges)`**: Commits exist but no file changes beyond merge-base.
 ///    The three-dot diff (`main...branch`) is empty.
 ///
-/// 3. **`Integrated(TreesMatch)`**: Tree SHA matches main, or working tree matches main.
+/// 4. **`Integrated(TreesMatch)`**: Tree SHA matches main, or working tree matches main.
 ///    Examples: merge commits that pull in main, rebases, squash merges.
 ///
-/// 4. **`Integrated(MergeAddsNothing)`**: Merge simulation adds nothing to main.
+/// 5. **`Integrated(MergeAddsNothing)`**: Merge simulation adds nothing to main.
 ///    Catches squash-merged branches where main has advanced.
 ///
 /// # Parameters
 ///
 /// - `is_ancestor`: Whether branch HEAD is ancestor of main (None = not computed)
+/// - `behind_main`: Number of commits branch is behind main (None = not computed)
 /// - `committed_trees_match`: Whether committed tree SHAs match (HEAD^{tree} == main^{tree})
 /// - `has_file_changes`: Whether three-dot diff has file changes (None = not computed)
 /// - `would_merge_add`: Whether merge simulation shows changes (None = not computed, `--full` only)
@@ -637,6 +648,7 @@ fn determine_worktree_base_state(
     is_main: bool,
     default_branch: Option<&str>,
     is_ancestor: Option<bool>,
+    behind_main: Option<usize>,
     committed_trees_match: bool,
     has_file_changes: Option<bool>,
     would_merge_add: Option<bool>,
@@ -649,22 +661,27 @@ fn determine_worktree_base_state(
 
     let is_clean = working_tree_diff.map(|d| d.is_empty()).unwrap_or(true);
 
-    // Priority 1: Branch is ancestor of main (same commit or already merged)
-    if is_ancestor == Some(true) && is_clean {
+    // Priority 1: Branch is exactly the same commit as main (ancestor with 0 behind)
+    if is_ancestor == Some(true) && behind_main == Some(0) && is_clean {
         return BranchState::SameCommit;
     }
 
-    // Priority 2: No file changes beyond merge-base (squash-merged)
+    // Priority 2: Branch is ancestor of main but main has moved past (already merged)
+    if is_ancestor == Some(true) && is_clean {
+        return BranchState::Integrated(IntegrationReason::Ancestor);
+    }
+
+    // Priority 3: No file changes beyond merge-base (squash-merged)
     if has_file_changes == Some(false) && is_clean {
         return BranchState::Integrated(IntegrationReason::NoAddedChanges);
     }
 
-    // Priority 3: Tree SHA matches main (squash merge/rebase with identical content)
+    // Priority 4: Tree SHA matches main (squash merge/rebase with identical content)
     if committed_trees_match && is_clean {
         return BranchState::Integrated(IntegrationReason::TreesMatch);
     }
 
-    // Priority 4: Working tree matches main
+    // Priority 5: Working tree matches main
     let working_tree_matches_main = working_tree_diff_with_main
         .as_ref()
         .and_then(|opt| opt.as_ref())
@@ -674,7 +691,7 @@ fn determine_worktree_base_state(
         return BranchState::Integrated(IntegrationReason::TreesMatch);
     }
 
-    // Priority 5: Merge simulation shows no changes (--full only)
+    // Priority 6: Merge simulation shows no changes (--full only)
     if would_merge_add == Some(false) && is_clean {
         return BranchState::Integrated(IntegrationReason::MergeAddsNothing);
     }
@@ -866,11 +883,11 @@ impl serde::Serialize for WorktreeState {
 /// 2. Rebase (⤴) - active operation
 /// 3. Merge (⤵) - active operation
 /// 4. WouldConflict (✗) - potential problem (merge-tree simulation)
-/// 5. SameCommit (·) - removable, branch is ancestor of main
+/// 5. SameCommit (_) - removable, branch is exactly the same commit as main
 /// 6. Integrated (⊂) - removable, content is in main via different history
 ///
 /// The `Integrated` variant carries an [`IntegrationReason`] explaining how the
-/// content was integrated (trees match, no added changes, or merge adds nothing).
+/// content was integrated (ancestor, trees match, no added changes, or merge adds nothing).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BranchState {
     /// Normal working branch
@@ -884,36 +901,10 @@ pub enum BranchState {
     Merge,
     /// Merge-tree conflicts with main (simulated via git merge-tree)
     WouldConflict,
-    /// Branch HEAD is same commit as main or ancestor of main
+    /// Branch HEAD is exactly the same commit as main
     SameCommit,
     /// Content is integrated into main via different history
     Integrated(IntegrationReason),
-}
-
-/// Reason why branch content is considered integrated into main
-///
-/// These explain HOW the content was integrated, separate from the fact
-/// that it IS integrated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum IntegrationReason {
-    /// Tree SHA matches main - identical file contents
-    TreesMatch,
-    /// No file changes beyond merge-base (three-dot diff empty)
-    NoAddedChanges,
-    /// Merge simulation adds nothing to main
-    MergeAddsNothing,
-}
-
-impl IntegrationReason {
-    /// Returns the JSON string representation for integration_reason field.
-    pub fn as_json_str(self) -> &'static str {
-        match self {
-            Self::TreesMatch => "trees_match",
-            Self::NoAddedChanges => "no_added_changes",
-            Self::MergeAddsNothing => "merge_adds_nothing",
-        }
-    }
 }
 
 impl std::fmt::Display for BranchState {
@@ -924,7 +915,7 @@ impl std::fmt::Display for BranchState {
             Self::Rebase => write!(f, "⤴"),
             Self::Merge => write!(f, "⤵"),
             Self::WouldConflict => write!(f, "✗"),
-            Self::SameCommit => write!(f, "·"),
+            Self::SameCommit => write!(f, "_"),
             // All integration reasons use ⊂ (content is subset of main)
             Self::Integrated(_) => write!(f, "⊂"),
         }
@@ -1031,7 +1022,7 @@ impl PositionMask {
             1, // STAGED: + (1 char)
             1, // MODIFIED: ! (1 char)
             1, // UNTRACKED: ? (1 char)
-            1, // BRANCH_STATE: ✘⤴⤵✗·⊂ (1 char, priority: conflicts > rebase > merge > would_conflict > same_commit > integrated)
+            1, // BRANCH_STATE: ✘⤴⤵✗_⊂ (1 char, priority: conflicts > rebase > merge > would_conflict > same_commit > integrated)
             1, // MAIN_DIVERGENCE: ^, ↑, ↓, ↕ (1 char)
             1, // UPSTREAM_DIVERGENCE: ⇡, ⇣, ⇅ (1 char)
             1, // WORKTREE_STATE: / for branches, ⚑⊟⊞ for worktrees (priority: path_mismatch > prunable > locked)
@@ -1049,7 +1040,7 @@ impl PositionMask {
 ///
 /// Symbols are categorized to enable vertical alignment in table output:
 /// - Working tree: +, !, ? (staged, modified, untracked - priority order)
-/// - Branch/op state: ✘, ⤴, ⤵, ✗, ·, ⊂ (combined position with priority)
+/// - Branch/op state: ✘, ⤴, ⤵, ✗, _, ⊂ (combined position with priority)
 /// - Main divergence: ^, ↕, ↑, ↓
 /// - Upstream divergence: ⇅, ⇡, ⇣
 /// - Worktree state: / for branches, ⚑⊟⊞ for worktrees (priority-only)
@@ -1058,12 +1049,12 @@ impl PositionMask {
 /// ## Mutual Exclusivity
 ///
 /// **Combined with priority (branch state + git operation):**
-/// Priority: ✘ > ⤴ > ⤵ > ✗ > · > ⊂
+/// Priority: ✘ > ⤴ > ⤵ > ✗ > _ > ⊂
 /// - ✘: Actual conflicts (must resolve)
 /// - ⤴: Rebase in progress
 /// - ⤵: Merge in progress
 /// - ✗: Merge-tree conflicts (potential problem)
-/// - ·: Same commit (removable)
+/// - _: Same commit as main (removable)
 /// - ⊂: Content integrated (removable)
 ///
 /// **Mutually exclusive (enforced by type system):**
@@ -1079,7 +1070,7 @@ impl PositionMask {
 #[derive(Debug, Clone, Default)]
 pub struct StatusSymbols {
     /// Branch state (mutually exclusive with priority)
-    /// Priority: Conflicts (✘) > Rebase (⤴) > Merge (⤵) > WouldConflict (✗) > SameCommit (·) > Integrated (⊂)
+    /// Priority: Conflicts (✘) > Rebase (⤴) > Merge (⤵) > WouldConflict (✗) > SameCommit (_) > Integrated (⊂)
     pub(crate) branch_state: BranchState,
 
     /// Worktree state: / for branches, ⚑⊟⊞ for worktrees (priority: path_mismatch > prunable > locked)
@@ -1464,6 +1455,8 @@ mod tests {
 
     #[test]
     fn test_integration_reason_as_json_str() {
+        assert_eq!(IntegrationReason::SameCommit.as_json_str(), "same_commit");
+        assert_eq!(IntegrationReason::Ancestor.as_json_str(), "ancestor");
         assert_eq!(IntegrationReason::TreesMatch.as_json_str(), "trees_match");
         assert_eq!(
             IntegrationReason::NoAddedChanges.as_json_str(),
@@ -1483,6 +1476,10 @@ mod tests {
         assert_eq!(BranchState::SameCommit.integration_reason(), None);
 
         // Integrated states return the reason
+        assert_eq!(
+            BranchState::Integrated(IntegrationReason::Ancestor).integration_reason(),
+            Some(IntegrationReason::Ancestor)
+        );
         assert_eq!(
             BranchState::Integrated(IntegrationReason::TreesMatch).integration_reason(),
             Some(IntegrationReason::TreesMatch)

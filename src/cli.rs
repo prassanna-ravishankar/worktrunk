@@ -1406,7 +1406,7 @@ The Status column has multiple subcolumns. Within each, only the first matching 
 | | `⤴` | Rebase in progress |
 | | `⤵` | Merge in progress |
 | | `✗` | Would conflict if merged to main |
-| | `·` | Same commit |
+| | `_` | Same commit as main |
 | | `⊂` | [Content integrated](@/remove.md#branch-cleanup) (`--full` detects additional cases) |
 | Main divergence | `^` | Is the main branch |
 | | `↕` | Diverged from main |
@@ -1421,7 +1421,7 @@ The Status column has multiple subcolumns. Within each, only the first matching 
 | | `⊟` | Prunable (directory missing) |
 | | `⊞` | Locked worktree |
 
-Rows are dimmed when the branch [content is already in main](@/remove.md#branch-cleanup) (`·` same commit or `⊂` content integrated).
+Rows are dimmed when the branch [content is already in main](@/remove.md#branch-cleanup) (`_` same commit or `⊂` content integrated).
 
 ## JSON output
 
@@ -1454,7 +1454,7 @@ wt list --format=json | jq '.[] | select(.branch_state == "integrated" or .branc
 | `commit` | `{sha, short_sha, message, timestamp}` |
 | `working_tree` | `{staged, modified, untracked, renamed, deleted, diff, diff_vs_main}` |
 | `branch_state` | `"conflicts"` `"rebase"` `"merge"` `"would_conflict"` `"same_commit"` `"integrated"` |
-| `integration_reason` | `"trees_match"` `"no_added_changes"` `"merge_adds_nothing"` (when `branch_state == "integrated"`) |
+| `integration_reason` | `"ancestor"` `"trees_match"` `"no_added_changes"` `"merge_adds_nothing"` (when `branch_state == "integrated"`) |
 | `main` | `{ahead, behind, diff}` (absent when `is_main`) |
 | `remote` | `{name, branch, ahead, behind}` (absent when no tracking branch) |
 | `worktree` | `{state, reason, detached, bare}` |
@@ -1643,7 +1643,7 @@ A branch is safe to delete when its content is already reflected in the target. 
 3. **Tree contents match** — Branch tree SHA equals main tree SHA. Commit history differs but file contents are identical (e.g., after a revert or merge commit pulling in main).
 4. **Merge adds nothing** — Simulated merge (`git merge-tree`) produces the same tree as main. Handles squash-merged branches where main has since advanced.
 
-In `wt list`, `·` indicates same commit, and `⊂` indicates content is integrated. Branches showing either are dimmed as safe to delete.
+In `wt list`, `_` indicates same commit, and `⊂` indicates content is integrated. Branches showing either are dimmed as safe to delete.
 
 Use `-D` to force-delete branches with unmerged changes. Use `--no-delete-branch` to keep the branch regardless of status.
 

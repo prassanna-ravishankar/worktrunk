@@ -48,7 +48,7 @@ A branch is safe to delete when its content is already reflected in the target. 
 3. **Tree contents match** — Branch tree SHA equals main tree SHA. Commit history differs but file contents are identical (e.g., after a revert or merge commit pulling in main).
 4. **Merge adds nothing** — Simulated merge (`git merge-tree`) produces the same tree as main. Handles squash-merged branches where main has since advanced.
 
-In `wt list`, `·` indicates same commit, and `⊂` indicates content is integrated. Branches showing either are dimmed as safe to delete.
+In `wt list`, `_` indicates same commit, and `⊂` indicates content is integrated. Branches showing either are dimmed as safe to delete.
 
 Use `-D` to force-delete branches with unmerged changes. Use `--no-delete-branch` to keep the branch regardless of status.
 

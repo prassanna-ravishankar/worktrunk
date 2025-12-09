@@ -17,8 +17,8 @@
 //!
 //! Example with branch_state, working_tree, and user_marker used:
 //! ```text
-//! Row 1: "·   🤖"   (branch=·, working=space, user=🤖)
-//! Row 2: "·?!   "   (branch=·, working=?!, user=space)
+//! Row 1: "_   🤖"   (branch=_, working=space, user=🤖)
+//! Row 2: "_?!   "   (branch=_, working=?!, user=space)
 //! Row 3: "  💬"     (branch=space, working=space, user=💬)
 //! ```
 //!
