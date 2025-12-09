@@ -200,6 +200,47 @@ To add web-only styling for new content, edit `colorize_ci_status_for_html()` in
 
 Similarly, `md_help::colorize_status_symbols()` applies ANSI colors for terminal `--help` output.
 
+### Subdoc expansion
+
+Include subcommand documentation as H2 sections within a parent command's docs page using subdoc placeholders:
+
+```markdown
+<!-- subdoc: subcommand-name -->
+```
+
+In `cli.rs`, add the placeholder anywhere in the parent command's `after_long_help`:
+
+```rust
+after_long_help = r#"...main documentation...
+
+<!-- subdoc: create -->
+
+...more documentation..."#
+```
+
+This expands during `--help-page` generation to:
+
+```markdown
+## wt config create
+
+### User config
+[subcommand's after_long_help content with heading levels increased]
+
+---
+
+### Command reference
+[subcommand's usage and options]
+```
+
+**How it works:**
+- The placeholder is invisible in terminal `--help` output (HTML comment)
+- Heading levels in the subcommand's `after_long_help` are increased by one (## → ###)
+- The subcommand's help reference is formatted as a nested `### Command reference`
+
+**Use cases:**
+- `wt config create` — Shows the actual config file templates (via `include_str!`)
+- `wt config var get` — Shows per-variable examples not in the parent
+
 All AUTO-GENERATED markers use a consistent format with START and END tags:
 ```html
 <!-- ⚠️ AUTO-GENERATED from <source> — edit <file> to update -->

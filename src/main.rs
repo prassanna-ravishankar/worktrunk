@@ -137,6 +137,78 @@ fn maybe_handle_help_with_pager() -> bool {
     }
 }
 
+/// Get the help reference block for a command by invoking clap's help system.
+///
+/// Returns the usage/options/subcommands section without the after_long_help content.
+fn get_help_reference(command_path: &[&str]) -> String {
+    use clap::ColorChoice;
+    use clap::error::ErrorKind;
+
+    // Build args: ["wt", "config", "create", "--help"]
+    let mut args: Vec<String> = vec!["wt".to_string()];
+    args.extend(command_path.iter().map(|s| s.to_string()));
+    args.push("--help".to_string());
+
+    let mut cmd = cli::build_command();
+    cmd = cmd.color(ColorChoice::Never);
+
+    let help_block = if let Err(err) = cmd.try_get_matches_from_mut(args)
+        && matches!(
+            err.kind(),
+            ErrorKind::DisplayHelp | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        ) {
+        err.render()
+            .to_string()
+            .replace("```text\n", "```\n")
+            .replace("```console\n", "```bash\n")
+    } else {
+        return String::new();
+    };
+
+    // Strip after_long_help if present (it appears at the end)
+    // Find it by looking for the first ## heading after Options/Arguments
+    if let Some(after_help_start) = find_after_help_start(&help_block) {
+        help_block[..after_help_start].trim_end().to_string()
+    } else {
+        help_block
+    }
+}
+
+/// Find where after_long_help starts in help output.
+///
+/// Clap outputs: usage, description, commands/options, Global Options, then after_long_help.
+/// The after_long_help can start with a heading or plain text.
+fn find_after_help_start(help: &str) -> Option<usize> {
+    // After Global Options section, a blank line followed by non-indented text is after_long_help
+    let mut past_global_options = false;
+    let mut saw_blank_after_options = false;
+    let mut blank_offset = None;
+    let mut offset = 0;
+
+    for line in help.lines() {
+        if line.starts_with("Global Options:") {
+            past_global_options = true;
+            offset += line.len() + 1;
+            continue;
+        }
+
+        if past_global_options {
+            if line.is_empty() {
+                saw_blank_after_options = true;
+                blank_offset = Some(offset);
+            } else if saw_blank_after_options && !line.starts_with(' ') {
+                // Non-indented line after blank = start of after_long_help
+                return blank_offset;
+            } else if line.starts_with(' ') {
+                // Still in indented options, reset blank tracking
+                saw_blank_after_options = false;
+            }
+        }
+        offset += line.len() + 1;
+    }
+    None
+}
+
 /// Generate a full documentation page for a command.
 ///
 /// Output format:
@@ -161,7 +233,6 @@ fn maybe_handle_help_with_pager() -> bool {
 /// This is used to generate docs/content/merge.md etc from the source.
 fn handle_help_page(args: &[String]) {
     use clap::ColorChoice;
-    use clap::error::ErrorKind;
 
     let mut cmd = cli::build_command();
     cmd = cmd.color(ColorChoice::Never);
@@ -189,57 +260,20 @@ fn handle_help_page(args: &[String]) {
     };
 
     // Get the after_long_help content
-    // Transform for web docs: console→bash, status colors, demo images
+    // Transform for web docs: console→bash, status colors, demo images, subdocs
+    let parent_name = format!("wt {}", subcommand);
     let after_help = sub
         .get_after_long_help()
         .map(|s| {
             let text = s.to_string().replace("```console\n", "```bash\n");
             let text = expand_demo_placeholders(&text);
+            let text = expand_subdoc_placeholders(&text, sub, &parent_name);
             colorize_ci_status_for_html(&text)
         })
         .unwrap_or_default();
 
     // Get the help reference block
-    let filtered_args: Vec<String> = args
-        .iter()
-        .map(|a| {
-            if a == "--help-page" {
-                "--help".to_string()
-            } else {
-                a.clone()
-            }
-        })
-        .collect();
-
-    let mut cmd_for_help = cli::build_command();
-    cmd_for_help = cmd_for_help.color(ColorChoice::Never);
-
-    let help_block = if let Err(err) = cmd_for_help.try_get_matches_from_mut(filtered_args)
-        && matches!(
-            err.kind(),
-            ErrorKind::DisplayHelp | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
-        ) {
-        err.render()
-            .to_string()
-            .replace("```text\n", "```\n")
-            .replace("```console\n", "```bash\n")
-    } else {
-        String::new()
-    };
-
-    // Split help_block into before and after the after_help section
-    // The help block includes the after_help at the end, we want just the reference part
-    let reference_block = if !after_help.is_empty() {
-        // Find where after_help starts in the help output and take everything before it
-        // The after_help starts after the last option block
-        if let Some(pos) = help_block.find(&after_help[..after_help.len().min(50)]) {
-            help_block[..pos].trim_end().to_string()
-        } else {
-            help_block.clone()
-        }
-    } else {
-        help_block
-    };
+    let reference_block = get_help_reference(&[subcommand]);
 
     // Output the generated content (frontmatter is in skeleton files)
     // Uses region markers so sync can replace just this content
@@ -275,6 +309,131 @@ fn colorize_ci_status_for_html(text: &str) -> String {
         .replace("`●` red", "<span style='color:#a00'>●</span> red")
         .replace("`●` yellow", "<span style='color:#a60'>●</span> yellow")
         .replace("`●` gray", "<span style='color:#888'>●</span> gray")
+}
+
+/// Increase markdown heading levels by one (## -> ###, ### -> ####, etc.)
+///
+/// This makes subdoc headings children of the subdoc's main heading.
+/// Only transforms actual markdown headings, not code block content.
+fn increase_heading_levels(content: &str) -> String {
+    let mut result = Vec::new();
+    let mut in_code_block = false;
+
+    for line in content.lines() {
+        // Track code block boundaries (``` or ````+)
+        if line.trim_start().starts_with("```") {
+            in_code_block = !in_code_block;
+            result.push(line.to_string());
+            continue;
+        }
+
+        // Only transform headings outside code blocks
+        if !in_code_block && line.starts_with('#') {
+            result.push(format!("#{}", line));
+        } else {
+            result.push(line.to_string());
+        }
+    }
+
+    let mut output = result.join("\n");
+    // Preserve trailing newline if present (.lines() strips it)
+    if content.ends_with('\n') {
+        output.push('\n');
+    }
+    output
+}
+
+/// Expand subdoc placeholders for web docs.
+///
+/// Transforms `<!-- subdoc: subcommand -->` into an H2 section with the subcommand's help output.
+/// For example, `<!-- subdoc: create -->` in `wt config` expands to:
+///
+/// ```markdown
+/// ## wt config create
+///
+/// [help output for `wt config create`]
+/// ```
+///
+/// This allows including subcommand documentation inline in the parent command's docs page.
+fn expand_subdoc_placeholders(text: &str, parent_cmd: &clap::Command, parent_name: &str) -> String {
+    const PREFIX: &str = "<!-- subdoc: ";
+    const SUFFIX: &str = " -->";
+
+    let mut result = text.to_string();
+    while let Some(start) = result.find(PREFIX) {
+        let after_prefix = start + PREFIX.len();
+        if let Some(end_offset) = result[after_prefix..].find(SUFFIX) {
+            let subcommand_name = result[after_prefix..after_prefix + end_offset].trim();
+            let end = after_prefix + end_offset + SUFFIX.len();
+
+            // Find the subcommand in the parent
+            let replacement = if let Some(sub) = parent_cmd
+                .get_subcommands()
+                .find(|s| s.get_name() == subcommand_name)
+            {
+                format_subcommand_section(sub, parent_name, subcommand_name)
+            } else {
+                format!(
+                    "<!-- subdoc error: subcommand '{}' not found -->",
+                    subcommand_name
+                )
+            };
+
+            result.replace_range(start..end, &replacement);
+        } else {
+            break;
+        }
+    }
+    result
+}
+
+/// Format a subcommand as an H2 section for docs.
+///
+/// Includes the subcommand's `after_long_help` (conceptual docs) followed by
+/// the command reference (usage, options).
+fn format_subcommand_section(
+    sub: &clap::Command,
+    parent_name: &str,
+    subcommand_name: &str,
+) -> String {
+    // parent_name is "wt config", subcommand_name is "create"
+    // full_command is "wt config create"
+    let full_command = format!("{} {}", parent_name, subcommand_name);
+
+    // Get the after_long_help content (conceptual docs)
+    // Increase heading levels since this will be nested under an H2
+    let after_help = sub
+        .get_after_long_help()
+        .map(|s| {
+            let text = s.to_string().replace("```console\n", "```bash\n");
+            let text = increase_heading_levels(&text);
+            colorize_ci_status_for_html(&text)
+        })
+        .unwrap_or_default();
+
+    // Build command path from parent_name: "wt config" -> ["config", "create"]
+    let command_path: Vec<&str> = parent_name
+        .strip_prefix("wt ")
+        .unwrap_or(parent_name)
+        .split_whitespace()
+        .chain(std::iter::once(subcommand_name))
+        .collect();
+
+    let reference_block = get_help_reference(&command_path);
+
+    // Format the section
+    let mut section = format!("## {}\n\n", full_command);
+
+    if !after_help.is_empty() {
+        section.push_str(after_help.trim());
+        section.push_str("\n\n---\n\n");
+    }
+
+    section.push_str("### Command reference\n\n```\n");
+    section.push_str(reference_block.trim());
+    section.push_str("\n```\n");
+
+    section
 }
 
 /// Expand demo GIF placeholders for web docs.

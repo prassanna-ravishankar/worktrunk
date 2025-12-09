@@ -942,6 +942,10 @@ WORKTRUNK_COMMIT_GENERATION__ARGS="test: automated commit" \
 | `WORKTRUNK_CONFIG_PATH` | Override user config file location (not a config key) |
 | `NO_COLOR` | Disable colored output ([standard](https://no-color.org/)) |
 | `CLICOLOR_FORCE` | Force colored output even when not a TTY |
+
+<!-- subdoc: create -->
+
+<!-- subdoc: var -->
 "#
     )]
     Config {
