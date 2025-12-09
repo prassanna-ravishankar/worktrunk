@@ -609,7 +609,7 @@ impl ColumnLayout {
                     return StyledLine::new();
                 };
                 // Show centered | when in sync instead of ⇡0  ⇣0
-                // Note: This duplicates the InSync check from UpstreamDivergence, but
+                // Note: This duplicates the InSync check from Divergence::Special, but
                 // checking counts directly is simpler than threading the enum through.
                 if ahead == 0 && behind == 0 {
                     let mut cell = StyledLine::new();

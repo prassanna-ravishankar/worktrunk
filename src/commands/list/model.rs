@@ -150,14 +150,13 @@ pub struct AheadBehind {
 
 impl AheadBehind {
     /// Compute divergence states from ahead/behind counts and upstream status.
-    pub fn compute_divergences(
-        &self,
-        upstream: &UpstreamStatus,
-    ) -> (MainDivergence, UpstreamDivergence) {
-        let main_divergence = MainDivergence::from_counts(self.ahead, self.behind);
+    ///
+    /// Returns (main_divergence, upstream_divergence) as a tuple of `Divergence` values.
+    pub fn compute_divergences(&self, upstream: &UpstreamStatus) -> (Divergence, Divergence) {
+        let main_divergence = Divergence::from_counts(self.ahead, self.behind);
         let upstream_divergence = match upstream.active() {
-            None => UpstreamDivergence::None,
-            Some((_, ahead, behind)) => UpstreamDivergence::from_counts_with_remote(ahead, behind),
+            None => Divergence::None,
+            Some((_, ahead, behind)) => Divergence::from_counts_with_remote(ahead, behind),
         };
 
         (main_divergence, upstream_divergence)
@@ -243,8 +242,9 @@ pub struct ListItem {
 
     /// CI/PR status: None = not loaded, Some(None) = no CI, Some(Some(status)) = has CI
     pub pr_status: Option<Option<PrStatus>>,
-    /// Git status symbols - None until all dependencies are ready
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    /// Git status symbols - None until all dependencies are ready.
+    /// Note: This field is not serialized directly. JSON output converts to JsonItem first.
+    #[serde(skip)]
     pub status_symbols: Option<StatusSymbols>,
 
     // Display fields for json-pretty format (with ANSI colors)
@@ -551,7 +551,7 @@ impl ListItem {
 
                 // Override main_divergence for the main worktree
                 let main_divergence = if data.is_main {
-                    MainDivergence::IsMain
+                    Divergence::IsMain
                 } else {
                     main_divergence
                 };
@@ -699,52 +699,50 @@ fn determine_worktree_base_state(
     BranchState::None
 }
 
-/// Main branch divergence state
+/// Divergence state relative to a reference (main branch or upstream remote).
 ///
-/// Represents relationship to the main/primary branch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::IntoStaticStr)]
-pub enum MainDivergence {
-    #[strum(serialize = "")]
-    /// Up to date with main branch
+/// Unified representation for both main-branch divergence and upstream-remote divergence.
+/// The display symbols differ based on context:
+///
+/// | Variant   | Main symbols | Upstream symbols |
+/// |-----------|--------------|------------------|
+/// | None      | (empty)      | (empty)          |
+/// | IsMain    | `^`          | (not used)       |
+/// | InSync    | (not used)   | `\|`             |
+/// | Ahead     | `↑`          | `⇡`              |
+/// | Behind    | `↓`          | `⇣`              |
+/// | Diverged  | `↕`          | `⇅`              |
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Divergence {
+    /// No relationship to reference (up-to-date for main, no remote configured for upstream)
     #[default]
     None,
-    /// This is the default branch itself
+    /// This IS the main branch (only used in Main context)
     IsMain,
-    /// Ahead of main (has commits main doesn't have)
+    /// In sync with upstream remote (only used in Upstream context)
+    InSync,
+    /// Has commits the reference doesn't have
     Ahead,
-    /// Behind main (missing commits from main)
+    /// Missing commits from the reference
     Behind,
-    /// Diverged (both ahead and behind main)
+    /// Both ahead and behind the reference
     Diverged,
 }
 
-impl std::fmt::Display for MainDivergence {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Self::None => Ok(()),
-            Self::IsMain => write!(f, "^"),
-            Self::Ahead => write!(f, "↑"),
-            Self::Behind => write!(f, "↓"),
-            Self::Diverged => write!(f, "↕"),
-        }
-    }
+/// Context for divergence display (determines which symbols to use)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DivergenceContext {
+    /// Divergence relative to main branch (uses ↑↓↕^)
+    Main,
+    /// Divergence relative to upstream remote (uses ⇡⇣⇅|)
+    Upstream,
 }
 
-impl serde::Serialize for MainDivergence {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        // Serialize as empty string for None, or the character for other variants
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-impl MainDivergence {
+impl Divergence {
     /// Compute divergence state from ahead/behind counts.
     ///
-    /// Note: This cannot produce `IsMain` - that variant is set explicitly
-    /// when the worktree is on the main branch.
+    /// For main context: returns `None` for 0/0 (caller sets `IsMain` for main branch itself)
+    /// For upstream context with known remote: use `from_counts_with_remote` instead
     pub fn from_counts(ahead: usize, behind: usize) -> Self {
         match (ahead, behind) {
             (0, 0) => Self::None,
@@ -754,63 +752,10 @@ impl MainDivergence {
         }
     }
 
-    /// Returns styled symbol (dimmed), or None for None variant.
-    pub fn styled(&self) -> Option<String> {
-        use color_print::cformat;
-        if *self == Self::None {
-            None
-        } else {
-            Some(cformat!("<dim>{self}</>"))
-        }
-    }
-}
-
-/// Upstream/remote divergence state
-///
-/// Represents relationship to the remote tracking branch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, strum::IntoStaticStr)]
-pub enum UpstreamDivergence {
-    #[strum(serialize = "")]
-    /// No remote tracking branch configured
-    #[default]
-    None,
-    /// In sync with remote (has remote, 0 ahead, 0 behind)
-    InSync,
-    /// Ahead of remote (has commits remote doesn't have)
-    Ahead,
-    /// Behind remote (missing commits from remote)
-    Behind,
-    /// Diverged (both ahead and behind remote)
-    Diverged,
-}
-
-impl std::fmt::Display for UpstreamDivergence {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Self::None => Ok(()),
-            Self::InSync => write!(f, "|"),
-            Self::Ahead => write!(f, "⇡"),
-            Self::Behind => write!(f, "⇣"),
-            Self::Diverged => write!(f, "⇅"),
-        }
-    }
-}
-
-impl serde::Serialize for UpstreamDivergence {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        // Serialize as empty string for None, or the character for other variants
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-impl UpstreamDivergence {
-    /// Compute divergence state from ahead/behind counts when a remote exists.
+    /// Compute divergence state when a remote tracking branch exists.
     ///
-    /// Returns `InSync` for 0/0 since we know a remote tracking branch exists.
-    /// For cases where there's no remote, use `UpstreamDivergence::None` directly.
+    /// Returns `InSync` for 0/0 since we know a remote exists.
+    /// For cases where there's no remote, use `Divergence::None` directly.
     pub fn from_counts_with_remote(ahead: usize, behind: usize) -> Self {
         match (ahead, behind) {
             (0, 0) => Self::InSync,
@@ -820,13 +765,28 @@ impl UpstreamDivergence {
         }
     }
 
-    /// Returns styled symbol (dimmed), or None for None variant.
-    pub fn styled(&self) -> Option<String> {
+    /// Get the display symbol for this divergence state in the given context.
+    pub fn symbol(self, ctx: DivergenceContext) -> &'static str {
+        match (self, ctx) {
+            (Self::None, _) => "",
+            (Self::IsMain, _) => "^",
+            (Self::InSync, _) => "|",
+            (Self::Ahead, DivergenceContext::Main) => "↑",
+            (Self::Ahead, DivergenceContext::Upstream) => "⇡",
+            (Self::Behind, DivergenceContext::Main) => "↓",
+            (Self::Behind, DivergenceContext::Upstream) => "⇣",
+            (Self::Diverged, DivergenceContext::Main) => "↕",
+            (Self::Diverged, DivergenceContext::Upstream) => "⇅",
+        }
+    }
+
+    /// Returns styled symbol (dimmed) for the given context, or None for None variant.
+    pub fn styled(self, ctx: DivergenceContext) -> Option<String> {
         use color_print::cformat;
-        if *self == Self::None {
+        if self == Self::None {
             None
         } else {
-            Some(cformat!("<dim>{self}</>"))
+            Some(cformat!("<dim>{}</>", self.symbol(ctx)))
         }
     }
 }
@@ -1058,8 +1018,8 @@ impl PositionMask {
 /// - ⊂: Content integrated (removable)
 ///
 /// **Mutually exclusive (enforced by type system):**
-/// - ^ vs ↕ vs ↑ vs ↓: Main divergence (MainDivergence enum)
-/// - ⇅ vs ⇡ vs ⇣: Upstream divergence (UpstreamDivergence enum)
+/// - ^ vs ↕ vs ↑ vs ↓: Main divergence (Divergence with Main context)
+/// - ⇅ vs ⇡ vs ⇣: Upstream divergence (Divergence with Upstream context)
 ///
 /// **Priority-only (can co-occur but only highest priority shown):**
 /// - ⚑ vs ⊟ vs ⊞: Worktree attrs (priority: path_mismatch ⚑ > prunable ⊟ > locked ⊞)
@@ -1077,10 +1037,10 @@ pub struct StatusSymbols {
     pub(crate) worktree_state: WorktreeState,
 
     /// Main branch divergence state (mutually exclusive)
-    pub(crate) main_divergence: MainDivergence,
+    pub(crate) main_divergence: Divergence,
 
     /// Remote/upstream divergence state (mutually exclusive)
-    pub(crate) upstream_divergence: UpstreamDivergence,
+    pub(crate) upstream_divergence: Divergence,
 
     /// Working tree changes (NOT mutually exclusive, can have multiple)
     pub(crate) working_tree: WorkingTreeStatus,
@@ -1134,8 +1094,8 @@ impl StatusSymbols {
     pub fn is_empty(&self) -> bool {
         self.branch_state == BranchState::None
             && self.worktree_state == WorktreeState::None
-            && self.main_divergence == MainDivergence::None
-            && self.upstream_divergence == UpstreamDivergence::None
+            && self.main_divergence == Divergence::None
+            && self.upstream_divergence == Divergence::None
             && !self.working_tree.is_dirty()
             && self.user_marker.is_none()
     }
@@ -1181,11 +1141,11 @@ impl StatusSymbols {
             .map_or((String::new(), false), |s| (s, true));
         let (main_divergence_str, has_main_divergence) = self
             .main_divergence
-            .styled()
+            .styled(DivergenceContext::Main)
             .map_or((String::new(), false), |s| (s, true));
         let (upstream_divergence_str, has_upstream_divergence) = self
             .upstream_divergence
-            .styled()
+            .styled(DivergenceContext::Upstream)
             .map_or((String::new(), false), |s| (s, true));
 
         let worktree_state_str = match self.worktree_state {
@@ -1291,81 +1251,6 @@ impl WorkingTreeStatus {
             s.push('✘');
         }
         s
-    }
-}
-
-/// Status variant names (for queryability)
-///
-/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_state → ...
-#[derive(Debug, Clone, serde::Serialize)]
-struct QueryableStatus {
-    working_tree: WorkingTreeStatus,
-    branch_state: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    integration_reason: Option<IntegrationReason>,
-    main_divergence: &'static str,
-    upstream_divergence: &'static str,
-    worktree_state: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    user_marker: Option<String>,
-}
-
-/// Status symbols (for display)
-///
-/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_state → ...
-#[derive(Debug, Clone, serde::Serialize)]
-struct DisplaySymbols {
-    working_tree: String,
-    branch_state: String,
-    main_divergence: String,
-    upstream_divergence: String,
-    worktree_state: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    user_marker: Option<String>,
-}
-
-impl serde::Serialize for StatusSymbols {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut state = serializer.serialize_struct("StatusSymbols", 2)?;
-
-        // Get branch state string and optional integration reason
-        let branch_state_str = self.branch_state.as_json_str().unwrap_or("");
-        let integration_reason = self.branch_state.integration_reason();
-
-        // Status variant names (derived via strum::IntoStaticStr)
-        let main_divergence_variant: &'static str = self.main_divergence.into();
-        let upstream_divergence_variant: &'static str = self.upstream_divergence.into();
-
-        // Worktree state (derived via strum::IntoStaticStr)
-        let worktree_state_variant: &'static str = self.worktree_state.into();
-
-        let queryable_status = QueryableStatus {
-            working_tree: self.working_tree,
-            branch_state: branch_state_str,
-            integration_reason,
-            main_divergence: main_divergence_variant,
-            upstream_divergence: upstream_divergence_variant,
-            worktree_state: worktree_state_variant,
-            user_marker: self.user_marker.clone(),
-        };
-
-        let display_symbols = DisplaySymbols {
-            working_tree: self.working_tree.to_symbols(),
-            branch_state: self.branch_state.to_string(),
-            main_divergence: self.main_divergence.to_string(),
-            upstream_divergence: self.upstream_divergence.to_string(),
-            worktree_state: self.worktree_state.to_string(),
-            user_marker: self.user_marker.clone(),
-        };
-
-        state.serialize_field("status", &queryable_status)?;
-        state.serialize_field("status_symbols", &display_symbols)?;
-
-        state.end()
     }
 }
 

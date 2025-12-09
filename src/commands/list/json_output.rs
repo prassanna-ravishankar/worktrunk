@@ -20,7 +20,7 @@ use serde::Serialize;
 use worktrunk::git::LineDiff;
 
 use super::ci_status::PrStatus;
-use super::model::{ItemKind, ListItem, UpstreamStatus};
+use super::model::{DivergenceContext, ItemKind, ListItem, UpstreamStatus};
 
 /// JSON output for a single list item
 #[derive(Debug, Clone, Serialize)]
@@ -431,15 +431,17 @@ fn format_raw_symbols(symbols: &super::model::StatusSymbols) -> String {
     }
 
     // Main divergence
-    let main_div = symbols.main_divergence.to_string();
+    let main_div = symbols.main_divergence.symbol(DivergenceContext::Main);
     if !main_div.is_empty() {
-        result.push_str(&main_div);
+        result.push_str(main_div);
     }
 
     // Upstream divergence
-    let upstream_div = symbols.upstream_divergence.to_string();
+    let upstream_div = symbols
+        .upstream_divergence
+        .symbol(DivergenceContext::Upstream);
     if !upstream_div.is_empty() {
-        result.push_str(&upstream_div);
+        result.push_str(upstream_div);
     }
 
     // Worktree state
