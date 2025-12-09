@@ -229,8 +229,8 @@ pub struct PrStatus {
 /// Cached CI status stored in git config
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct CachedCiStatus {
-    /// The cached CI status
-    pub status: PrStatus,
+    /// The cached CI status (None means no CI found for this branch)
+    pub status: Option<PrStatus>,
     /// Unix timestamp when the status was fetched
     pub checked_at: u64,
     /// The HEAD commit SHA when the status was fetched
@@ -316,16 +316,6 @@ impl CachedCiStatus {
         {
             log::debug!("Failed to write CI cache for {}: {}", branch, e);
         }
-    }
-
-    /// Clear cached CI status from git config
-    fn clear(branch: &str, repo_root: &str) {
-        let config_key = format!("worktrunk.ci.{}", Self::escape_branch(branch));
-        // Ignore errors - key may not exist, which is fine
-        let _ = Command::new("git")
-            .args(["config", "--unset", &config_key])
-            .current_dir(repo_root)
-            .output();
     }
 
     /// List all cached CI statuses as (branch_name, cached_status) pairs
@@ -432,9 +422,10 @@ impl PrStatus {
     /// Returns None if no CI found or CLI tools unavailable
     ///
     /// # Caching
-    /// Results are cached in git config (`worktrunk.ci.{branch}`) for 30-60 seconds to avoid
-    /// hitting GitHub API rate limits. TTL uses deterministic jitter based on repo path to
-    /// spread cache expirations across concurrent statuslines. Invalidated when HEAD changes.
+    /// Results (including None) are cached in git config (`worktrunk.ci.{branch}`) for 30-60
+    /// seconds to avoid hitting GitHub API rate limits. TTL uses deterministic jitter based on
+    /// repo path to spread cache expirations across concurrent statuslines. Invalidated when
+    /// HEAD changes.
     ///
     /// # Fork Support
     /// Runs gh commands from the repository directory to enable auto-detection of
@@ -455,12 +446,13 @@ impl PrStatus {
         if let Some(cached) = CachedCiStatus::read(branch, repo_root) {
             if cached.is_valid(local_head, now_secs, repo_root) {
                 log::debug!(
-                    "Using cached CI status for {} (age={}s, ttl={}s)",
+                    "Using cached CI status for {} (age={}s, ttl={}s, status={:?})",
                     branch,
                     now_secs - cached.checked_at,
-                    CachedCiStatus::ttl_for_repo(repo_root)
+                    CachedCiStatus::ttl_for_repo(repo_root),
+                    cached.status.as_ref().map(|s| &s.ci_status)
                 );
-                return Some(cached.status);
+                return cached.status;
             }
             log::debug!(
                 "Cache expired for {} (age={}s, ttl={}s, head_match={})",
@@ -474,18 +466,13 @@ impl PrStatus {
         // Cache miss or expired - fetch fresh status
         let status = Self::detect_uncached(branch, local_head, repo_root);
 
-        // Update cache
-        if let Some(ref status) = status {
-            let cached = CachedCiStatus {
-                status: status.clone(),
-                checked_at: now_secs,
-                head: local_head.to_string(),
-            };
-            cached.write(branch, repo_root);
-        } else {
-            // Clear stale cache if no CI found
-            CachedCiStatus::clear(branch, repo_root);
-        }
+        // Cache the result (including None - means no CI found for this branch)
+        let cached = CachedCiStatus {
+            status: status.clone(),
+            checked_at: now_secs,
+            head: local_head.to_string(),
+        };
+        cached.write(branch, repo_root);
 
         status
     }

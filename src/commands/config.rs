@@ -687,9 +687,12 @@ pub fn handle_cache_show() -> anyhow::Result<()> {
 
     let mut ci_lines = Vec::new();
     for (branch, cached) in entries {
-        let status = serde_json::to_string(&cached.status.ci_status)
-            .map(|s| s.trim_matches('"').to_string())
-            .unwrap_or_else(|_| "unknown".to_string());
+        let status = match &cached.status {
+            Some(pr_status) => serde_json::to_string(&pr_status.ci_status)
+                .map(|s| s.trim_matches('"').to_string())
+                .unwrap_or_else(|_| "unknown".to_string()),
+            None => "none".to_string(),
+        };
         let age = now_secs.saturating_sub(cached.checked_at);
         let head: String = cached.head.chars().take(8).collect();
 
