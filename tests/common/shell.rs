@@ -56,8 +56,7 @@ pub fn shell_available(shell: &str) -> bool {
 }
 
 /// Path to dev-detach binary (workspace member built automatically by cargo).
-static DEV_DETACH_BIN: LazyLock<std::path::PathBuf> =
-    LazyLock::new(|| get_cargo_bin("dev-detach"));
+static DEV_DETACH_BIN: LazyLock<std::path::PathBuf> = LazyLock::new(|| get_cargo_bin("dev-detach"));
 
 /// Convert signal number to human-readable name
 #[cfg(unix)]
