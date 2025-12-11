@@ -900,19 +900,12 @@ fn expand_command_template(template: &str, ctx: &CommandContext, hook_type: Hook
         _ => Vec::new(),
     };
     let template_ctx = build_hook_context(ctx, &extra_vars);
+    let vars: std::collections::HashMap<&str, &str> = template_ctx
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
 
-    // Use the standard template expansion
-    worktrunk::config::expand_template(
-        template,
-        ctx.repo_root
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown"),
-        ctx.branch_or_head(),
-        &template_ctx
-            .iter()
-            .map(|(k, v)| (k.as_str(), v.as_str()))
-            .collect(),
-    )
-    .unwrap_or_else(|_| template.to_string())
+    // Use the standard template expansion (shell-escaped)
+    worktrunk::config::expand_template(template, &vars, true)
+        .unwrap_or_else(|_| template.to_string())
 }

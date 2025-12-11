@@ -3,35 +3,32 @@
 //! These tests target potential shell injection vulnerabilities and
 //! edge cases in template variable substitution.
 
-use super::expand_template;
+use super::{expand_template, sanitize_branch_name};
 use std::collections::HashMap;
+
+/// Helper to build vars with common fields
+fn vars_with_branch(branch: &str) -> HashMap<&str, &str> {
+    let mut vars = HashMap::new();
+    vars.insert("branch", branch);
+    vars.insert("main_worktree", "myrepo");
+    vars.insert("repo", "myrepo");
+    vars
+}
 
 #[test]
 fn test_expand_template_normal() {
-    let extras = HashMap::new();
-    let result = expand_template(
-        "echo {{ branch }} {{ main_worktree }}",
-        "myrepo",
-        "feature",
-        &extras,
-    )
-    .unwrap();
+    let branch = sanitize_branch_name("feature");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ branch }} {{ main_worktree }}", &vars, true).unwrap();
     assert_eq!(result, "echo feature myrepo");
 }
 
 #[test]
 fn test_expand_template_branch_with_slashes() {
-    // Bug hypothesis: Branch names with slashes are sanitized to dashes
-    let extras = HashMap::new();
-    let result = expand_template(
-        "echo {{ branch }}",
-        "myrepo",
-        "feature/nested/branch",
-        &extras,
-    )
-    .unwrap();
-
-    // Line 459: safe_branch = branch.replace(['/', '\\'], "-")
+    // Caller is responsible for sanitizing branch names
+    let branch = sanitize_branch_name("feature/nested/branch");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
     assert_eq!(result, "echo feature-nested-branch");
 }
 
@@ -40,8 +37,9 @@ fn test_expand_template_branch_with_slashes() {
 #[cfg(unix)]
 fn test_expand_template_branch_with_spaces() {
     // Branch names with spaces are shell-escaped
-    let extras = HashMap::new();
-    let result = expand_template("echo {{ branch }}", "myrepo", "feature name", &extras).unwrap();
+    let branch = sanitize_branch_name("feature name");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
 
     // Shell-escaped with single quotes
     assert_eq!(result, "echo 'feature name'");
@@ -51,9 +49,9 @@ fn test_expand_template_branch_with_spaces() {
 #[cfg(unix)]
 fn test_expand_template_branch_with_special_shell_chars() {
     // Special shell characters are escaped
-    let extras = HashMap::new();
-    let result =
-        expand_template("echo {{ branch }}", "myrepo", "feature$(whoami)", &extras).unwrap();
+    let branch = sanitize_branch_name("feature$(whoami)");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
 
     // Shell-escaped, prevents command substitution
     assert_eq!(result, "echo 'feature$(whoami)'");
@@ -64,8 +62,9 @@ fn test_expand_template_branch_with_special_shell_chars() {
 #[cfg(unix)]
 fn test_expand_template_branch_with_backticks() {
     // Backticks are escaped
-    let extras = HashMap::new();
-    let result = expand_template("echo {{ branch }}", "myrepo", "feature`id`", &extras).unwrap();
+    let branch = sanitize_branch_name("feature`id`");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
 
     assert_eq!(result, "echo 'feature`id`'");
 }
@@ -74,8 +73,9 @@ fn test_expand_template_branch_with_backticks() {
 #[cfg(unix)]
 fn test_expand_template_branch_with_quotes() {
     // Quotes are shell-escaped to prevent injection
-    let extras = HashMap::new();
-    let result = expand_template("echo '{{ branch }}'", "myrepo", "feature'test", &extras).unwrap();
+    let branch = sanitize_branch_name("feature'test");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo '{{ branch }}'", &vars, true).unwrap();
 
     // Shell escapes single quotes as '\''
     assert_eq!(result, "echo ''feature'\\''test''");
@@ -85,9 +85,10 @@ fn test_expand_template_branch_with_quotes() {
 #[cfg(unix)]
 fn test_expand_template_extra_vars_with_spaces() {
     // Extra variables with spaces are shell-escaped
-    let mut extras = HashMap::new();
-    extras.insert("worktree", "/path with spaces/to/worktree");
-    let result = expand_template("cd {{ worktree }}", "myrepo", "main", &extras).unwrap();
+    let branch = sanitize_branch_name("main");
+    let mut vars = vars_with_branch(&branch);
+    vars.insert("worktree", "/path with spaces/to/worktree");
+    let result = expand_template("cd {{ worktree }}", &vars, true).unwrap();
 
     assert_eq!(result, "cd '/path with spaces/to/worktree'");
 }
@@ -96,9 +97,10 @@ fn test_expand_template_extra_vars_with_spaces() {
 #[cfg(unix)]
 fn test_expand_template_extra_vars_with_dollar_sign() {
     // Dollar signs are shell-escaped to prevent variable expansion
-    let mut extras = HashMap::new();
-    extras.insert("worktree", "/path/$USER/worktree");
-    let result = expand_template("cd {{ worktree }}", "myrepo", "main", &extras).unwrap();
+    let branch = sanitize_branch_name("main");
+    let mut vars = vars_with_branch(&branch);
+    vars.insert("worktree", "/path/$USER/worktree");
+    let result = expand_template("cd {{ worktree }}", &vars, true).unwrap();
 
     assert_eq!(result, "cd '/path/$USER/worktree'");
     // Shell-escaped, prevents $USER from being expanded
@@ -108,47 +110,30 @@ fn test_expand_template_extra_vars_with_dollar_sign() {
 #[cfg(unix)]
 fn test_expand_template_extra_vars_with_command_substitution() {
     // Special shell characters are shell-escaped to prevent injection
-    let mut extras = HashMap::new();
-    extras.insert("target", "main; rm -rf /");
-    let result = expand_template("git merge {{ target }}", "myrepo", "feature", &extras).unwrap();
+    let branch = sanitize_branch_name("feature");
+    let mut vars = vars_with_branch(&branch);
+    vars.insert("target", "main; rm -rf /");
+    let result = expand_template("git merge {{ target }}", &vars, true).unwrap();
 
     assert_eq!(result, "git merge 'main; rm -rf /'");
     // Shell-escaped, prevents semicolon from being executed as command separator
 }
 
 #[test]
-fn test_expand_template_variable_collision() {
-    // What if extra vars contain "branch"? With minijinja, extra vars added later override built-ins
-    let mut extras = HashMap::new();
-    extras.insert("branch", "hacked");
-    let result = expand_template("echo {{ branch }}", "myrepo", "feature", &extras).unwrap();
+fn test_expand_template_variable_override() {
+    // Variables in the hashmap take precedence
+    let mut vars = HashMap::new();
+    vars.insert("branch", "overridden");
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
 
-    // Extra vars are added to context after built-ins, so they override
-    assert_eq!(result, "echo hacked");
-}
-
-#[test]
-fn test_expand_template_extra_var_named_branch() {
-    // What if we have both {{ branch }} in template and "branch" in extras?
-    let mut extras = HashMap::new();
-    extras.insert("branch", "extra-branch");
-    let result = expand_template(
-        "echo {{ branch }} from {{ branch }}",
-        "myrepo",
-        "main",
-        &extras,
-    )
-    .unwrap();
-
-    // Extra vars override built-ins, so both occurrences use "extra-branch"
-    assert_eq!(result, "echo extra-branch from extra-branch");
+    assert_eq!(result, "echo overridden");
 }
 
 #[test]
 fn test_expand_template_missing_variable() {
     // What happens with undefined variables?
-    let extras = HashMap::new();
-    let result = expand_template("echo {{ undefined }}", "myrepo", "main", &extras).unwrap();
+    let vars: HashMap<&str, &str> = HashMap::new();
+    let result = expand_template("echo {{ undefined }}", &vars, true).unwrap();
 
     // minijinja will render undefined variables as empty string
     assert_eq!(result, "echo ");
@@ -157,8 +142,9 @@ fn test_expand_template_missing_variable() {
 #[test]
 #[cfg(unix)]
 fn test_expand_template_empty_branch() {
-    let extras = HashMap::new();
-    let result = expand_template("echo {{ branch }}", "myrepo", "", &extras).unwrap();
+    let mut vars = HashMap::new();
+    vars.insert("branch", "");
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
 
     // Empty string is shell-escaped to ''
     assert_eq!(result, "echo ''");
@@ -168,35 +154,36 @@ fn test_expand_template_empty_branch() {
 #[cfg(unix)]
 fn test_expand_template_unicode_in_branch() {
     // Unicode characters in branch name are shell-escaped
-    let extras = HashMap::new();
-    let result = expand_template("echo {{ branch }}", "myrepo", "feature-🚀", &extras).unwrap();
+    let branch = sanitize_branch_name("feature-\u{1F680}");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
 
     // Unicode is preserved but quoted for shell safety
-    assert_eq!(result, "echo 'feature-🚀'");
+    assert_eq!(result, "echo 'feature-\u{1F680}'");
 }
 
 #[test]
 fn test_expand_template_backslash_in_branch() {
-    // Windows-style path separators
-    let extras = HashMap::new();
-    let result =
-        expand_template("echo {{ branch }}", "myrepo", "feature\\branch", &extras).unwrap();
+    // Windows-style path separators - caller sanitizes
+    let branch = sanitize_branch_name("feature\\branch");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
 
-    // Line 459: backslashes also replaced with dashes
+    // Backslashes are replaced with dashes by sanitize_branch_name
     assert_eq!(result, "echo feature-branch");
 }
 
 #[test]
 fn test_expand_template_multiple_replacements() {
-    let mut extras = HashMap::new();
-    extras.insert("worktree", "/path/to/wt");
-    extras.insert("target", "develop");
+    let branch = sanitize_branch_name("feature");
+    let mut vars = vars_with_branch(&branch);
+    vars.insert("worktree", "/path/to/wt");
+    vars.insert("target", "develop");
 
     let result = expand_template(
         "cd {{ worktree }} && git merge {{ target }} from {{ branch }}",
-        "myrepo",
-        "feature",
-        &extras,
+        &vars,
+        true,
     )
     .unwrap();
 
@@ -206,8 +193,8 @@ fn test_expand_template_multiple_replacements() {
 #[test]
 fn test_expand_template_curly_braces_without_variables() {
     // Just curly braces, not variables
-    let extras = HashMap::new();
-    let result = expand_template("echo {}", "myrepo", "main", &extras).unwrap();
+    let vars: HashMap<&str, &str> = HashMap::new();
+    let result = expand_template("echo {}", &vars, true).unwrap();
 
     assert_eq!(result, "echo {}");
 }
@@ -215,9 +202,9 @@ fn test_expand_template_curly_braces_without_variables() {
 #[test]
 fn test_expand_template_nested_curly_braces() {
     // Nested braces - minijinja doesn't support {{{ syntax, use literal curly braces instead
-    let extras = HashMap::new();
-    let result =
-        expand_template("echo {{ '{' ~ branch ~ '}' }}", "myrepo", "main", &extras).unwrap();
+    let branch = sanitize_branch_name("main");
+    let vars = vars_with_branch(&branch);
+    let result = expand_template("echo {{ '{' ~ branch ~ '}' }}", &vars, true).unwrap();
 
     // Renders as {main}
     assert_eq!(result, "echo {main}");
@@ -232,8 +219,6 @@ fn test_expand_template_nested_curly_braces() {
 #[test]
 #[cfg(unix)]
 fn snapshot_shell_escaping_special_chars() {
-    let extras = HashMap::new();
-
     // Test various shell special characters
     let test_cases = vec![
         ("spaces", "feature name"),
@@ -250,9 +235,11 @@ fn snapshot_shell_escaping_special_chars() {
     ];
 
     let mut results = Vec::new();
-    for (name, branch) in test_cases {
-        let result = expand_template("echo {{ branch }}", "myrepo", branch, &extras).unwrap();
-        results.push((name, branch, result));
+    for (name, branch_raw) in test_cases {
+        let branch = sanitize_branch_name(branch_raw);
+        let vars = vars_with_branch(&branch);
+        let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
+        results.push((name, branch_raw, result));
     }
 
     insta::assert_yaml_snapshot!(results);
@@ -261,8 +248,6 @@ fn snapshot_shell_escaping_special_chars() {
 #[test]
 #[cfg(unix)]
 fn snapshot_shell_escaping_quotes() {
-    let extras = HashMap::new();
-
     // Test quote handling
     let test_cases = vec![
         ("single_quote", "feature'test"),
@@ -272,9 +257,11 @@ fn snapshot_shell_escaping_quotes() {
     ];
 
     let mut results = Vec::new();
-    for (name, branch) in test_cases {
-        let result = expand_template("echo {{ branch }}", "myrepo", branch, &extras).unwrap();
-        results.push((name, branch, result));
+    for (name, branch_raw) in test_cases {
+        let branch = sanitize_branch_name(branch_raw);
+        let vars = vars_with_branch(&branch);
+        let result = expand_template("echo {{ branch }}", &vars, true).unwrap();
+        results.push((name, branch_raw, result));
     }
 
     insta::assert_yaml_snapshot!(results);
@@ -283,28 +270,22 @@ fn snapshot_shell_escaping_quotes() {
 #[test]
 #[cfg(unix)]
 fn snapshot_shell_escaping_paths() {
-    let mut extras = HashMap::new();
-
     // Test path escaping with various special characters
     let test_cases = vec![
         ("spaces", "/path with spaces/to/worktree"),
         ("dollar", "/path/$USER/worktree"),
         ("tilde", "~/worktree"),
         ("special_chars", "/path/to/worktree (new)"),
-        ("unicode", "/path/to/🚀/worktree"),
+        ("unicode", "/path/to/\u{1F680}/worktree"),
     ];
 
     let mut results = Vec::new();
     for (name, path) in test_cases {
-        extras.clear();
-        extras.insert("worktree", path);
-        let result = expand_template(
-            "cd {{ worktree }} && echo {{ branch }}",
-            "myrepo",
-            "main",
-            &extras,
-        )
-        .unwrap();
+        let branch = sanitize_branch_name("main");
+        let mut vars = vars_with_branch(&branch);
+        vars.insert("worktree", path);
+        let result =
+            expand_template("cd {{ worktree }} && echo {{ branch }}", &vars, true).unwrap();
         results.push((name, path, result));
     }
 
@@ -314,10 +295,6 @@ fn snapshot_shell_escaping_paths() {
 #[test]
 #[cfg(unix)]
 fn snapshot_complex_templates() {
-    let mut extras = HashMap::new();
-    extras.insert("worktree", "/path with spaces/wt");
-    extras.insert("target", "main; rm -rf /");
-
     // Test realistic complex template commands
     let test_cases = vec![
         (
@@ -338,10 +315,91 @@ fn snapshot_complex_templates() {
     ];
 
     let mut results = Vec::new();
-    for (name, template, branch) in test_cases {
-        let result = expand_template(template, "/repo/path", branch, &extras).unwrap();
-        results.push((name, template, branch, result));
+    for (name, template, branch_raw) in test_cases {
+        let branch = sanitize_branch_name(branch_raw);
+        let mut vars = HashMap::new();
+        vars.insert("branch", branch.as_str());
+        vars.insert("main_worktree", "/repo/path");
+        vars.insert("worktree", "/path with spaces/wt");
+        vars.insert("target", "main; rm -rf /");
+        let result = expand_template(template, &vars, true).unwrap();
+        results.push((name, template, branch_raw, result));
     }
 
     insta::assert_yaml_snapshot!(results);
+}
+
+// Tests for literal expansion (shell_escape=false)
+
+#[test]
+fn test_expand_template_literal_normal() {
+    let branch = sanitize_branch_name("feature");
+    let mut vars = HashMap::new();
+    vars.insert("main_worktree", "myrepo");
+    vars.insert("branch", branch.as_str());
+    let result = expand_template("{{ main_worktree }}.{{ branch }}", &vars, false).unwrap();
+    assert_eq!(result, "myrepo.feature");
+}
+
+#[test]
+fn test_expand_template_literal_unicode_no_escaping() {
+    // Unicode should NOT be shell-escaped in filesystem paths
+    let branch = sanitize_branch_name("test-\u{2282}");
+    let mut vars = HashMap::new();
+    vars.insert("main_worktree", "myrepo");
+    vars.insert("branch", branch.as_str());
+    let result = expand_template("{{ main_worktree }}.{{ branch }}", &vars, false).unwrap();
+    // Path should contain literal unicode, NO quotes
+    assert_eq!(result, "myrepo.test-\u{2282}");
+    assert!(
+        !result.contains('\''),
+        "Path should not contain shell quotes"
+    );
+}
+
+#[test]
+fn test_expand_template_literal_spaces_no_escaping() {
+    // Spaces should NOT be shell-escaped (filesystem paths can have spaces)
+    let branch = sanitize_branch_name("feature name");
+    let mut vars = HashMap::new();
+    vars.insert("main_worktree", "my repo");
+    vars.insert("branch", branch.as_str());
+    let result = expand_template("{{ main_worktree }}.{{ branch }}", &vars, false).unwrap();
+    // No shell quotes around spaces
+    assert_eq!(result, "my repo.feature name");
+    assert!(
+        !result.contains('\''),
+        "Path should not contain shell quotes"
+    );
+}
+
+#[test]
+fn test_expand_template_literal_sanitizes_slashes() {
+    // Branch name sanitization is caller's responsibility
+    let branch = sanitize_branch_name("feature/nested/branch");
+    let mut vars = HashMap::new();
+    vars.insert("main_worktree", "myrepo");
+    vars.insert("branch", branch.as_str());
+    let result = expand_template("{{ main_worktree }}.{{ branch }}", &vars, false).unwrap();
+    assert_eq!(result, "myrepo.feature-nested-branch");
+}
+
+#[test]
+#[cfg(unix)]
+fn test_expand_template_literal_vs_escaped_unicode() {
+    // Demonstrate the difference between literal and escaped expansion
+    let branch = sanitize_branch_name("test-\u{2282}");
+    let mut vars = HashMap::new();
+    vars.insert("main_worktree", "myrepo");
+    vars.insert("branch", branch.as_str());
+    let template = "{{ main_worktree }}.{{ branch }}";
+
+    let literal_result = expand_template(template, &vars, false).unwrap();
+    let escaped_result = expand_template(template, &vars, true).unwrap();
+
+    // Literal has no quotes
+    assert_eq!(literal_result, "myrepo.test-\u{2282}");
+    // Escaped has shell quotes around the unicode part
+    // (shell_escape only quotes strings containing special chars)
+    assert_eq!(escaped_result, "myrepo.'test-\u{2282}'");
 }

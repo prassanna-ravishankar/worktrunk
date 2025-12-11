@@ -71,18 +71,13 @@ pub fn step_for_each(args: Vec<String>) -> anyhow::Result<()> {
         let context_map = build_hook_context(&ctx, &[]);
 
         // Convert to &str references for expand_template
-        let extras_ref: HashMap<&str, &str> = context_map
+        let vars: HashMap<&str, &str> = context_map
             .iter()
             .map(|(k, v)| (k.as_str(), v.as_str()))
             .collect();
 
-        let repo_name = repo_root
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown");
-
-        // Expand template with full context
-        let command = expand_template(&command_template, repo_name, branch, &extras_ref)
+        // Expand template with full context (shell-escaped)
+        let command = expand_template(&command_template, &vars, true)
             .map_err(|e| anyhow::anyhow!("Template expansion failed: {e}"))?;
 
         // Build JSON context for stdin

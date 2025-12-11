@@ -72,6 +72,7 @@ pub fn build_hook_context(
 
     let mut map = HashMap::new();
     map.insert("repo".into(), repo_name.into());
+    map.insert("main_worktree".into(), repo_name.into()); // Alias for repo
     map.insert("branch".into(), sanitize_branch_name(ctx.branch_or_head()));
     map.insert("worktree".into(), worktree.into());
     map.insert("worktree_name".into(), worktree_name.into());
@@ -125,14 +126,8 @@ fn expand_commands(
 
     let base_context = build_hook_context(ctx, extra_vars);
 
-    let repo_name = ctx
-        .repo_root
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("unknown");
-
     // Convert to &str references for expand_template
-    let extras_ref: HashMap<&str, &str> = base_context
+    let vars: HashMap<&str, &str> = base_context
         .iter()
         .map(|(k, v)| (k.as_str(), v.as_str()))
         .collect();
@@ -140,16 +135,13 @@ fn expand_commands(
     let mut result = Vec::new();
 
     for cmd in commands {
-        let expanded_str =
-            expand_template(&cmd.template, repo_name, ctx.branch_or_head(), &extras_ref).map_err(
-                |e| {
-                    anyhow::anyhow!(
-                        "Failed to expand command template '{}': {}",
-                        cmd.template,
-                        e
-                    )
-                },
-            )?;
+        let expanded_str = expand_template(&cmd.template, &vars, true).map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to expand command template '{}': {}",
+                cmd.template,
+                e
+            )
+        })?;
 
         // Build per-command JSON with hook_type and hook_name
         let mut cmd_context = base_context.clone();

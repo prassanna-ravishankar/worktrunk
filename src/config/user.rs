@@ -59,7 +59,7 @@ pub fn set_config_path(path: PathBuf) {
     CONFIG_PATH.set(path).ok();
 }
 
-use super::expansion::expand_template;
+use super::expansion::{expand_template, sanitize_branch_name};
 
 /// What to stage before committing
 #[derive(
@@ -428,12 +428,13 @@ impl WorktrunkConfig {
     /// assert_eq!(path, "../myproject.feature-foo");
     /// ```
     pub fn format_path(&self, main_worktree: &str, branch: &str) -> Result<String, String> {
-        expand_template(
-            &self.worktree_path,
-            main_worktree,
-            branch,
-            &std::collections::HashMap::new(),
-        )
+        use std::collections::HashMap;
+        let safe_branch = sanitize_branch_name(branch);
+        let mut vars = HashMap::new();
+        vars.insert("main_worktree", main_worktree);
+        vars.insert("repo", main_worktree);
+        vars.insert("branch", safe_branch.as_str());
+        expand_template(&self.worktree_path, &vars, false)
     }
 
     /// Check if a command is approved for the given project

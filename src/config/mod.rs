@@ -554,13 +554,10 @@ task2 = "echo 'Task 2 running' > task2.txt"
     fn test_expand_template_basic() {
         use std::collections::HashMap;
 
-        let result = expand_template(
-            "../{{ main_worktree }}.{{ branch }}",
-            "myrepo",
-            "feature-x",
-            &HashMap::new(),
-        )
-        .unwrap();
+        let mut vars = HashMap::new();
+        vars.insert("main_worktree", "myrepo");
+        vars.insert("branch", "feature-x");
+        let result = expand_template("../{{ main_worktree }}.{{ branch }}", &vars, true).unwrap();
         assert_eq!(result, "../myrepo.feature-x");
     }
 
@@ -568,22 +565,20 @@ task2 = "echo 'Task 2 running' > task2.txt"
     fn test_expand_template_sanitizes_branch() {
         use std::collections::HashMap;
 
-        let result = expand_template(
-            "{{ main_worktree }}/{{ branch }}",
-            "myrepo",
-            "feature/foo",
-            &HashMap::new(),
-        )
-        .unwrap();
+        // Caller is responsible for sanitizing branch names
+        let branch = sanitize_branch_name("feature/foo");
+        let mut vars = HashMap::new();
+        vars.insert("main_worktree", "myrepo");
+        vars.insert("branch", branch.as_str());
+        let result = expand_template("{{ main_worktree }}/{{ branch }}", &vars, true).unwrap();
         assert_eq!(result, "myrepo/feature-foo");
 
-        let result = expand_template(
-            ".worktrees/{{ main_worktree }}/{{ branch }}",
-            "myrepo",
-            "feat\\bar",
-            &HashMap::new(),
-        )
-        .unwrap();
+        let branch = sanitize_branch_name("feat\\bar");
+        let mut vars = HashMap::new();
+        vars.insert("main_worktree", "myrepo");
+        vars.insert("branch", branch.as_str());
+        let result =
+            expand_template(".worktrees/{{ main_worktree }}/{{ branch }}", &vars, true).unwrap();
         assert_eq!(result, ".worktrees/myrepo/feat-bar");
     }
 
@@ -591,15 +586,14 @@ task2 = "echo 'Task 2 running' > task2.txt"
     fn test_expand_template_with_extra_vars() {
         use std::collections::HashMap;
 
-        let mut extra = HashMap::new();
-        extra.insert("worktree", "/path/to/worktree");
-        extra.insert("repo_root", "/path/to/repo");
+        let mut vars = HashMap::new();
+        vars.insert("worktree", "/path/to/worktree");
+        vars.insert("repo_root", "/path/to/repo");
 
         let result = expand_template(
             "{{ repo_root }}/target -> {{ worktree }}/target",
-            "myrepo",
-            "main",
-            &extra,
+            &vars,
+            true,
         )
         .unwrap();
         assert_eq!(result, "/path/to/repo/target -> /path/to/worktree/target");

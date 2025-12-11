@@ -1,9 +1,13 @@
 //! Template expansion utilities for worktrunk
 //!
-//! Uses minijinja for all template rendering with automatic shell escaping.
+//! Uses minijinja for template rendering. Single generic function with escaping flag:
+//! - `shell_escape: true` — Shell-escaped for safe command execution
+//! - `shell_escape: false` — Literal values for filesystem paths
+//!
 //! All templates support Jinja2 syntax including filters, conditionals, and loops.
 
 use minijinja::Environment;
+use std::collections::HashMap;
 
 /// Sanitize a branch name for use in filesystem paths.
 ///
@@ -22,67 +26,61 @@ pub fn sanitize_branch_name(branch: &str) -> String {
     branch.replace(['/', '\\'], "-")
 }
 
-/// Expand template variables using minijinja
+/// Expand a template with variable substitution.
 ///
-/// All templates support:
-/// - `{{ main_worktree }}` - Main worktree directory name
-/// - `{{ branch }}` - Branch name (sanitized: slashes → dashes)
-/// - `{{ repo }}` - Repository name (alias for main_worktree for consistency)
-///
-/// Additional variables can be provided via the `extra` parameter.
-///
-/// Variables are automatically shell-escaped for safe use in commands.
-/// Use the `|e` or `|escape` filter for additional escaping if needed.
+/// # Arguments
+/// * `template` - Template string using Jinja2 syntax (e.g., `{{ branch }}`)
+/// * `vars` - Variables to substitute. Callers should sanitize branch names with
+///   [`sanitize_branch_name`] before inserting.
+/// * `shell_escape` - If true, shell-escape all values for safe command execution.
+///   If false, substitute values literally (for filesystem paths).
 ///
 /// # Examples
 /// ```
-/// use worktrunk::config::expand_template;
+/// use worktrunk::config::{expand_template, sanitize_branch_name};
 /// use std::collections::HashMap;
 ///
-/// // Simple variable substitution
-/// let result = expand_template("path/{{ main_worktree }}/{{ branch }}", "myrepo", "feature/foo", &HashMap::new()).unwrap();
-/// assert_eq!(result, "path/myrepo/feature-foo");
+/// // For shell commands (escaped)
+/// let branch = sanitize_branch_name("feature/foo");
+/// let mut vars = HashMap::new();
+/// vars.insert("branch", branch.as_str());
+/// vars.insert("repo", "myrepo");
+/// let cmd = expand_template("echo {{ branch }} in {{ repo }}", &vars, true).unwrap();
+/// assert_eq!(cmd, "echo feature-foo in myrepo");
 ///
-/// // Using conditionals
-/// let result = expand_template("{% if branch == 'main' %}production{% else %}development{% endif %}", "myrepo", "main", &HashMap::new()).unwrap();
-/// assert_eq!(result, "production");
+/// // For filesystem paths (literal)
+/// let branch = sanitize_branch_name("feature/foo");
+/// let mut vars = HashMap::new();
+/// vars.insert("branch", branch.as_str());
+/// vars.insert("main_worktree", "myrepo");
+/// let path = expand_template("{{ main_worktree }}.{{ branch }}", &vars, false).unwrap();
+/// assert_eq!(path, "myrepo.feature-foo");
 /// ```
 pub fn expand_template(
     template: &str,
-    main_worktree: &str,
-    branch: &str,
-    extra: &std::collections::HashMap<&str, &str>,
+    vars: &HashMap<&str, &str>,
+    shell_escape: bool,
 ) -> Result<String, String> {
     use shell_escape::escape;
     use std::borrow::Cow;
 
-    // Sanitize branch name by replacing path separators
-    let safe_branch = sanitize_branch_name(branch);
-
-    // Shell-escape all variables
-    let escaped_worktree = escape(Cow::Borrowed(main_worktree)).to_string();
-    let escaped_branch = escape(Cow::Borrowed(safe_branch.as_str())).to_string();
-
-    // Build context map with shell-escaped values
-    let mut context = std::collections::HashMap::new();
-    context.insert("branch".to_string(), minijinja::Value::from(escaped_branch));
-    context.insert(
-        "main_worktree".to_string(),
-        minijinja::Value::from(escaped_worktree.clone()),
-    );
-    context.insert("repo".to_string(), minijinja::Value::from(escaped_worktree));
-
-    for (key, value) in extra {
-        context.insert(
-            key.to_string(),
-            minijinja::Value::from(escape(Cow::Borrowed(*value)).to_string()),
-        );
+    // Build context map, optionally shell-escaping values
+    let mut context = HashMap::new();
+    for (key, value) in vars {
+        let val = if shell_escape {
+            escape(Cow::Borrowed(*value)).to_string()
+        } else {
+            (*value).to_string()
+        };
+        context.insert(key.to_string(), minijinja::Value::from(val));
     }
 
     // Render template with minijinja
     let mut env = Environment::new();
-    // Preserve trailing newlines in templates (important for multiline shell commands)
-    env.set_keep_trailing_newline(true);
+    if shell_escape {
+        // Preserve trailing newlines in templates (important for multiline shell commands)
+        env.set_keep_trailing_newline(true);
+    }
     let tmpl = env
         .template_from_str(template)
         .map_err(|e| format!("Template syntax error: {}", e))?;
@@ -94,6 +92,7 @@ pub fn expand_template(
 /// Expand command template variables using minijinja
 ///
 /// Convenience function for expanding command templates with common variables.
+/// Shell-escapes all values for safe command execution.
 ///
 /// Supported variables:
 /// - `{{ repo }}` - Repository name
@@ -130,14 +129,18 @@ pub fn expand_command_template(
     repo_root: &std::path::Path,
     target_branch: Option<&str>,
 ) -> Result<String, String> {
-    let mut extra = std::collections::HashMap::new();
+    let safe_branch = sanitize_branch_name(branch);
     let worktree_str = worktree_path.to_string_lossy();
     let repo_root_str = repo_root.to_string_lossy();
-    extra.insert("worktree", worktree_str.as_ref());
-    extra.insert("repo_root", repo_root_str.as_ref());
+
+    let mut vars = HashMap::new();
+    vars.insert("repo", repo_name);
+    vars.insert("branch", safe_branch.as_str());
+    vars.insert("worktree", worktree_str.as_ref());
+    vars.insert("repo_root", repo_root_str.as_ref());
     if let Some(target) = target_branch {
-        extra.insert("target", target);
+        vars.insert("target", target);
     }
 
-    expand_template(command, repo_name, branch, &extra)
+    expand_template(command, &vars, true)
 }
