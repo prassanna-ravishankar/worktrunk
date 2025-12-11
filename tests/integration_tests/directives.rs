@@ -1,7 +1,7 @@
-use crate::common::{TestRepo, setup_snapshot_settings, wt_command};
+use crate::common::{TestRepo, repo, setup_snapshot_settings, wt_command};
 use insta::Settings;
 use insta_cmd::assert_cmd_snapshot;
-use std::process::Command;
+use rstest::rstest;
 
 // ============================================================================
 // PowerShell Directive Tests
@@ -12,10 +12,8 @@ use std::process::Command;
 // - Proper single-quote escaping ('' instead of '\'' for embedded quotes)
 
 /// Test that switch with --internal=powershell outputs PowerShell Set-Location syntax
-#[test]
-fn test_switch_internal_powershell_directive() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+#[rstest]
+fn test_switch_internal_powershell_directive(mut repo: TestRepo) {
     repo.setup_remote("main");
     let _feature_wt = repo.add_worktree("feature");
 
@@ -38,38 +36,18 @@ fn test_switch_internal_powershell_directive() {
 }
 
 /// Test merge with --internal=powershell (switch back to main after merge)
-#[test]
-fn test_merge_internal_powershell_directive() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+#[rstest]
+fn test_merge_internal_powershell_directive(mut repo: TestRepo) {
     repo.setup_remote("main");
-
-    // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree("feature");
-    std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "feature.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Add feature file"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "feature.txt",
+        "feature content",
+        "Add feature file",
+    );
 
     let mut settings = setup_snapshot_settings(&repo);
     // Normalize the PowerShell Set-Location path
@@ -92,11 +70,9 @@ fn test_merge_internal_powershell_directive() {
 /// Note: Skipped on Windows due to platform differences in ANSI escape code handling
 /// (Unix doubles ESC[36m, Windows doesn't). The Set-Location syntax itself works correctly
 /// on both platforms - this is purely a test snapshot compatibility issue.
-#[test]
+#[rstest]
 #[cfg_attr(windows, ignore)]
-fn test_remove_internal_powershell_directive() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
+fn test_remove_internal_powershell_directive(mut repo: TestRepo) {
     repo.setup_remote("main");
     let feature_wt = repo.add_worktree("feature");
 
@@ -120,10 +96,8 @@ fn test_remove_internal_powershell_directive() {
 // ============================================================================
 
 /// Test the directive protocol for switch command
-#[test]
-fn test_switch_internal_directive() {
-    let repo = TestRepo::new();
-
+#[rstest]
+fn test_switch_internal_directive(repo: TestRepo) {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
 
@@ -152,10 +126,8 @@ fn test_switch_internal_directive() {
 }
 
 /// Test switch without internal flag (should show help message)
-#[test]
-fn test_switch_without_internal() {
-    let repo = TestRepo::new();
-
+#[rstest]
+fn test_switch_without_internal(repo: TestRepo) {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
 
@@ -180,10 +152,8 @@ fn test_switch_without_internal() {
 }
 
 /// Test remove command with internal flag
-#[test]
-fn test_remove_internal_directive() {
-    let repo = TestRepo::new();
-
+#[rstest]
+fn test_remove_internal_directive(repo: TestRepo) {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
 
@@ -209,10 +179,8 @@ fn test_remove_internal_directive() {
 }
 
 /// Test remove without internal flag
-#[test]
-fn test_remove_without_internal() {
-    let repo = TestRepo::new();
-
+#[rstest]
+fn test_remove_without_internal(repo: TestRepo) {
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
 
@@ -233,36 +201,17 @@ fn test_remove_without_internal() {
 }
 
 /// Test merge command with internal flag and --no-remove
-#[test]
-fn test_merge_internal_no_remove() {
-    let mut repo = TestRepo::new();
-
-    // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+#[rstest]
+fn test_merge_internal_no_remove(mut repo: TestRepo) {
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree("feature");
-    std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "feature.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Add feature file"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "feature.txt",
+        "feature content",
+        "Add feature file",
+    );
 
     let settings = setup_snapshot_settings(&repo);
 
@@ -283,36 +232,17 @@ fn test_merge_internal_no_remove() {
 
 /// Test merge command with internal flag (removes worktree, emits cd shell script)
 /// This test verifies that the shell script output is correctly formatted
-#[test]
-fn test_merge_internal_remove() {
-    let mut repo = TestRepo::new();
-
-    // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+#[rstest]
+fn test_merge_internal_remove(mut repo: TestRepo) {
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree("feature");
-    std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "feature.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Add feature file"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "feature.txt",
+        "feature content",
+        "Add feature file",
+    );
 
     let mut settings = setup_snapshot_settings(&repo);
     settings.add_filter(r"cd '[^']+'", "cd '[PATH]'");

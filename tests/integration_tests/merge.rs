@@ -60,23 +60,13 @@ fn test_merge_when_primary_not_on_default_but_default_has_worktree(mut repo: Tes
     // Ensure main still has a worktree (secondary)
     let _main_wt = repo.add_main_worktree();
 
-    // Create a feature worktree and commit
-    let feature_wt = repo.add_worktree("feature");
-    std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "feature.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Add feature file"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    // Create a feature worktree with a commit
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "feature.txt",
+        "feature content",
+        "Add feature file",
+    );
 
     snapshot_merge(
         "merge_when_primary_not_on_default_but_default_has_worktree",
@@ -141,22 +131,12 @@ fn test_merge_not_fast_forward(mut repo: TestRepo) {
         .unwrap();
 
     // Create a feature worktree branching from before the main commit
-    let feature_wt = repo.add_worktree("feature");
-    std::fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "feature.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Add feature file"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "feature.txt",
+        "feature content",
+        "Add feature file",
+    );
 
     // Try to merge (should fail or require actual merge)
     snapshot_merge(
@@ -259,13 +239,7 @@ fn test_merge_rebase_conflict(repo: TestRepo) {
     repo.commit("Add shared file");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Modify shared.txt in main branch (from the base commit)
     std::fs::write(repo.root_path().join("shared.txt"), "main version\n").unwrap();
@@ -364,58 +338,13 @@ fn test_merge_error_detached_head(repo: TestRepo) {
 #[rstest]
 fn test_merge_squash_deterministic(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make multiple commits
     let feature_wt = repo.add_worktree("feature");
-
-    std::fs::write(feature_wt.join("file1.txt"), "content 1").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file1.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: add file 1"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    std::fs::write(feature_wt.join("file2.txt"), "content 2").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file2.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "fix: update logic"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    std::fs::write(feature_wt.join("file3.txt"), "content 3").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file3.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "docs: update readme"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    repo.commit_in_worktree(&feature_wt, "file1.txt", "content 1", "feat: add file 1");
+    repo.commit_in_worktree(&feature_wt, "file2.txt", "content 2", "fix: update logic");
+    repo.commit_in_worktree(&feature_wt, "file3.txt", "content 3", "docs: update readme");
 
     // Merge (squashing is now the default - no LLM configured, should use deterministic message)
     snapshot_merge(
@@ -429,44 +358,22 @@ fn test_merge_squash_deterministic(mut repo: TestRepo) {
 #[rstest]
 fn test_merge_squash_with_llm(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make multiple commits
     let feature_wt = repo.add_worktree("feature");
-
-    std::fs::write(feature_wt.join("auth.txt"), "auth module").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "auth.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: add authentication"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    std::fs::write(feature_wt.join("auth.txt"), "auth module updated").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "auth.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "fix: handle edge case"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    repo.commit_in_worktree(
+        &feature_wt,
+        "auth.txt",
+        "auth module",
+        "feat: add authentication",
+    );
+    repo.commit_in_worktree(
+        &feature_wt,
+        "auth.txt",
+        "auth module updated",
+        "fix: handle edge case",
+    );
 
     // Configure mock LLM command via config file
     // Use sh to consume stdin and return a fixed message
@@ -484,44 +391,12 @@ args = ["-c", "cat >/dev/null && echo 'feat: implement user authentication syste
 #[rstest]
 fn test_merge_squash_llm_command_not_found(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make multiple commits
     let feature_wt = repo.add_worktree("feature");
-
-    std::fs::write(feature_wt.join("file1.txt"), "content 1").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file1.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: new feature"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    std::fs::write(feature_wt.join("file2.txt"), "content 2").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file2.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "fix: bug fix"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    repo.commit_in_worktree(&feature_wt, "file1.txt", "content 1", "feat: new feature");
+    repo.commit_in_worktree(&feature_wt, "file2.txt", "content 2", "fix: bug fix");
 
     // Configure LLM command that doesn't exist - should error
     snapshot_merge_with_env(
@@ -541,44 +416,12 @@ fn test_merge_squash_llm_error(mut repo: TestRepo) {
     // Test that LLM command errors show proper gutter formatting with full command
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make commits
     let feature_wt = repo.add_worktree("feature");
-
-    std::fs::write(feature_wt.join("file1.txt"), "content 1").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file1.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: new feature"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    std::fs::write(feature_wt.join("file2.txt"), "content 2").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file2.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "fix: bug fix"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    repo.commit_in_worktree(&feature_wt, "file1.txt", "content 1", "feat: new feature");
+    repo.commit_in_worktree(&feature_wt, "file2.txt", "content 2", "fix: bug fix");
 
     // Configure LLM command via config file with command that will fail
     // This tests that:
@@ -604,30 +447,11 @@ args = ["-c", "cat > /dev/null; echo 'Error: connection refused' >&2 && exit 1"]
 #[rstest]
 fn test_merge_squash_single_commit(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with only one commit
-    let feature_wt = repo.add_worktree("feature");
-
-    std::fs::write(feature_wt.join("file1.txt"), "content").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file1.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: single commit"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt =
+        repo.add_worktree_with_commit("feature", "file1.txt", "content", "feat: single commit");
 
     // Merge (squashing is default) - should skip squashing since there's only one commit
     snapshot_merge(
@@ -654,13 +478,7 @@ fn test_merge_no_squash(merge_scenario_multi_commit: (TestRepo, PathBuf)) {
 #[rstest]
 fn test_merge_squash_empty_changes(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with commits that result in no net changes
     let feature_wt = repo.add_worktree("feature");
@@ -670,49 +488,18 @@ fn test_merge_squash_empty_changes(mut repo: TestRepo) {
     let initial_content = std::fs::read_to_string(&file_path).unwrap();
 
     // Commit 1: Modify file.txt
-    std::fs::write(&file_path, "change1").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Change 1"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    repo.commit_in_worktree(&feature_wt, "file.txt", "change1", "Change 1");
 
     // Commit 2: Modify file.txt again
-    std::fs::write(&file_path, "change2").unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Change 2"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    repo.commit_in_worktree(&feature_wt, "file.txt", "change2", "Change 2");
 
     // Commit 3: Revert to original content
-    std::fs::write(&file_path, initial_content).unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "file.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Revert to initial"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    repo.commit_in_worktree(
+        &feature_wt,
+        "file.txt",
+        &initial_content,
+        "Revert to initial",
+    );
 
     // Merge (squashing is default) - should succeed even when commits result in no net changes
     snapshot_merge(
@@ -726,31 +513,15 @@ fn test_merge_squash_empty_changes(mut repo: TestRepo) {
 #[rstest]
 fn test_merge_auto_commit_deterministic(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with a commit
-    let feature_wt = repo.add_worktree("feature");
-    std::fs::write(feature_wt.join("feature.txt"), "initial content").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "feature.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: initial feature"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "feature.txt",
+        "initial content",
+        "feat: initial feature",
+    );
 
     // Now add uncommitted tracked changes
     std::fs::write(feature_wt.join("feature.txt"), "modified content").unwrap();
@@ -767,31 +538,15 @@ fn test_merge_auto_commit_deterministic(mut repo: TestRepo) {
 #[rstest]
 fn test_merge_auto_commit_with_llm(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with a commit
-    let feature_wt = repo.add_worktree("feature");
-    std::fs::write(feature_wt.join("auth.txt"), "initial auth").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "auth.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: add authentication"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "auth.txt",
+        "initial auth",
+        "feat: add authentication",
+    );
 
     // Now add uncommitted tracked changes
     std::fs::write(feature_wt.join("auth.txt"), "improved auth with validation").unwrap();
@@ -842,13 +597,7 @@ args = ["-c", "cat >/dev/null && echo 'fix: update file 1 content'"]
 #[rstest]
 fn test_merge_with_untracked_files(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with one commit
     let feature_wt = repo.add_worktree("feature");
@@ -895,13 +644,7 @@ fn test_merge_pre_merge_command_success(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -942,13 +685,7 @@ fn test_merge_pre_merge_command_failure(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -987,13 +724,7 @@ fn test_merge_pre_merge_command_no_hooks(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -1043,13 +774,7 @@ test = "exit 0"
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -1094,13 +819,7 @@ fn test_merge_post_merge_command_success(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -1156,13 +875,7 @@ fn test_merge_post_merge_command_skipped_with_no_verify(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -1210,13 +923,7 @@ fn test_merge_post_merge_command_failure(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -1265,13 +972,7 @@ deploy = "echo 'Deploying branch {{ branch }}' > deploy.txt"
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -1330,13 +1031,7 @@ fn test_merge_post_merge_runs_with_nothing_to_merge(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main (destination for post-merge commands)
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with NO commits (already up-to-date with main)
     let feature_wt = repo.add_worktree("feature");
@@ -1406,13 +1101,7 @@ fn test_merge_pre_commit_command_success(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a change
     let feature_wt = repo.add_worktree("feature");
@@ -1439,13 +1128,7 @@ fn test_merge_pre_commit_command_failure(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a change
     let feature_wt = repo.add_worktree("feature");
@@ -1476,13 +1159,7 @@ fn test_merge_pre_squash_command_success(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make commits
     let feature_wt = repo.add_worktree("feature");
@@ -1523,13 +1200,7 @@ fn test_merge_pre_squash_command_failure(mut repo: TestRepo) {
     repo.commit("Add config");
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make commits
     let feature_wt = repo.add_worktree("feature");
@@ -1755,13 +1426,7 @@ EOF
         .unwrap();
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make multiple commits
     let feature_wt = repo.add_worktree("feature-auth");
@@ -2077,13 +1742,7 @@ fi
         .unwrap();
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make multiple commits
     let feature_wt = repo.add_worktree("feature-auth");
@@ -2229,13 +1888,7 @@ command = "{}"
 #[rstest]
 fn test_merge_no_commit_with_clean_tree(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with commits (clean tree)
     let feature_wt = repo.add_worktree("feature");
@@ -2324,13 +1977,7 @@ fn test_merge_no_commit_with_dirty_tree(mut repo: TestRepo) {
 #[rstest]
 fn test_merge_no_commit_no_squash_no_remove_redundant(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree with commits (clean tree)
     let feature_wt = repo.add_worktree("feature");
@@ -2592,13 +2239,7 @@ fn test_merge_primary_on_different_branch_dirty(mut repo: TestRepo) {
 #[rstest]
 fn test_merge_race_condition_commit_after_push(mut repo: TestRepo) {
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree and make a commit
     let feature_wt = repo.add_worktree("feature");
@@ -3280,13 +2921,7 @@ fn test_merge_error_uncommitted_changes_with_no_commit(mut repo: TestRepo) {
     // Tests the `uncommitted_changes()` error function when using --no-commit with dirty tree
 
     // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
+    repo.add_main_worktree();
 
     // Create a feature worktree
     let feature_wt = repo.add_worktree("feature");
@@ -3311,38 +2946,16 @@ fn test_merge_error_conflicting_changes_in_target(mut repo: TestRepo) {
     // Switch primary worktree off main so we can create a worktree for main
     repo.switch_primary_to("develop");
 
-    // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    let output = cmd
-        .args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "git worktree add failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    // Create a worktree for main (succeeds because we switched primary off main)
+    let main_wt = repo.add_main_worktree();
 
     // Create a feature worktree and commit a change to shared.txt
-    let feature_wt = repo.add_worktree("feature");
-    fs::write(feature_wt.join("shared.txt"), "feature content").unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "shared.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "Add shared.txt on feature"])
-        .current_dir(&feature_wt)
-        .output()
-        .unwrap();
+    let feature_wt = repo.add_worktree_with_commit(
+        "feature",
+        "shared.txt",
+        "feature content",
+        "Add shared.txt on feature",
+    );
 
     // Now make uncommitted changes to shared.txt in main worktree
     // This creates a conflict - we're trying to push changes to shared.txt

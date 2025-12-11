@@ -826,6 +826,117 @@ impl TestRepo {
         main_wt
     }
 
+    /// Creates a worktree with a file and commits it.
+    ///
+    /// This is a convenience method that combines the common pattern of:
+    /// 1. Creating a worktree for a new branch
+    /// 2. Writing a file to it
+    /// 3. Staging and committing the file
+    ///
+    /// # Example
+    /// ```ignore
+    /// let feature_wt = repo.add_worktree_with_commit(
+    ///     "feature",
+    ///     "feature.txt",
+    ///     "feature content",
+    ///     "Add feature file",
+    /// );
+    /// ```
+    pub fn add_worktree_with_commit(
+        &mut self,
+        branch: &str,
+        filename: &str,
+        content: &str,
+        message: &str,
+    ) -> PathBuf {
+        let worktree_path = self.add_worktree(branch);
+
+        std::fs::write(worktree_path.join(filename), content).unwrap();
+
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(["add", filename])
+            .current_dir(&worktree_path)
+            .output()
+            .unwrap();
+
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(["commit", "-m", message])
+            .current_dir(&worktree_path)
+            .output()
+            .unwrap();
+
+        worktree_path
+    }
+
+    /// Adds a commit to an existing worktree.
+    ///
+    /// This writes a file, stages it, and commits it in the specified worktree.
+    /// Useful for tests that need multiple commits in the same worktree.
+    ///
+    /// # Arguments
+    /// * `worktree_path` - Path to the existing worktree
+    /// * `filename` - Name of the file to create/modify
+    /// * `content` - Content to write to the file
+    /// * `message` - Commit message
+    ///
+    /// # Example
+    /// ```ignore
+    /// let feature_wt = repo.add_worktree("feature");
+    /// repo.commit_in_worktree(&feature_wt, "file1.txt", "content 1", "feat: add file 1");
+    /// repo.commit_in_worktree(&feature_wt, "file2.txt", "content 2", "feat: add file 2");
+    /// ```
+    pub fn commit_in_worktree(
+        &self,
+        worktree_path: &Path,
+        filename: &str,
+        content: &str,
+        message: &str,
+    ) {
+        std::fs::write(worktree_path.join(filename), content).unwrap();
+
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(["add", filename])
+            .current_dir(worktree_path)
+            .output()
+            .unwrap();
+
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(["commit", "-m", message])
+            .current_dir(worktree_path)
+            .output()
+            .unwrap();
+    }
+
+    /// Creates a branch without a worktree.
+    ///
+    /// This creates a local branch pointing to HEAD without checking it out.
+    /// Useful for testing branch listing without creating worktrees.
+    pub fn create_branch(&self, branch_name: &str) {
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(["branch", branch_name])
+            .current_dir(self.root_path())
+            .output()
+            .unwrap();
+    }
+
+    /// Pushes a branch to origin.
+    ///
+    /// Creates a remote tracking branch on origin. Requires `setup_remote()`
+    /// to have been called first.
+    pub fn push_branch(&self, branch_name: &str) {
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(["push", "origin", branch_name])
+            .current_dir(self.root_path())
+            .output()
+            .unwrap();
+    }
+
     /// Detach HEAD in the main repository
     pub fn detach_head(&self) {
         self.detach_head_at(&self.root);

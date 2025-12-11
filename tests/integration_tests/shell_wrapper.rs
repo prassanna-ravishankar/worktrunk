@@ -670,6 +670,7 @@ fn exec_through_wrapper_with_env(
 
 mod tests {
     use super::*;
+    use crate::common::repo;
     use rstest::rstest;
 
     // ========================================================================
@@ -1008,9 +1009,8 @@ approved-commands = [
     #[case("bash")]
     #[case("zsh")]
     // #[case("fish")] // TODO: Fish shell has non-deterministic PTY output ordering
-    fn test_wrapper_merge_with_pre_merge_success(#[case] shell: &str) {
+    fn test_wrapper_merge_with_pre_merge_success(#[case] shell: &str, mut repo: TestRepo) {
         skip_if_shell_unavailable!(shell);
-        let mut repo = TestRepo::new();
 
         // Create project config with pre-merge validation
         let config_dir = repo.root_path().join(".config");
@@ -1026,33 +1026,15 @@ test = "echo '✓ All 47 tests passed in 2.3s'"
         .unwrap();
 
         repo.commit("Add pre-merge validation");
-
-        // Create a main worktree
-        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-            .current_dir(repo.root_path())
-            .output()
-            .unwrap();
+        repo.add_main_worktree();
 
         // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree("feature");
-        fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["add", "feature.txt"])
-            .current_dir(&feature_wt)
-            .output()
-            .unwrap();
-
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["commit", "-m", "Add feature"])
-            .current_dir(&feature_wt)
-            .output()
-            .unwrap();
+        let feature_wt = repo.add_worktree_with_commit(
+            "feature",
+            "feature.txt",
+            "feature content",
+            "Add feature",
+        );
 
         // Pre-approve commands
         fs::write(
@@ -1089,9 +1071,8 @@ approved-commands = [
     #[case("bash")]
     #[case("zsh")]
     // #[case("fish")] // TODO: Fish shell has non-deterministic PTY output ordering
-    fn test_wrapper_merge_with_pre_merge_failure(#[case] shell: &str) {
+    fn test_wrapper_merge_with_pre_merge_failure(#[case] shell: &str, mut repo: TestRepo) {
         skip_if_shell_unavailable!(shell);
-        let mut repo = TestRepo::new();
 
         // Create project config with failing pre-merge validation
         let config_dir = repo.root_path().join(".config");
@@ -1106,33 +1087,15 @@ test = "echo '✗ Test suite failed: 3 tests failing' && exit 1"
         .unwrap();
 
         repo.commit("Add failing pre-merge validation");
-
-        // Create a main worktree
-        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-            .current_dir(repo.root_path())
-            .output()
-            .unwrap();
+        repo.add_main_worktree();
 
         // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree("feature-fail");
-        fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["add", "feature.txt"])
-            .current_dir(&feature_wt)
-            .output()
-            .unwrap();
-
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["commit", "-m", "Add feature"])
-            .current_dir(&feature_wt)
-            .output()
-            .unwrap();
+        let feature_wt = repo.add_worktree_with_commit(
+            "feature-fail",
+            "feature.txt",
+            "feature content",
+            "Add feature",
+        );
 
         // Pre-approve the commands
         fs::write(
@@ -1168,9 +1131,8 @@ approved-commands = [
     #[case("bash")]
     #[case("zsh")]
     // #[case("fish")] // TODO: Fish shell has non-deterministic PTY output ordering
-    fn test_wrapper_merge_with_mixed_stdout_stderr(#[case] shell: &str) {
+    fn test_wrapper_merge_with_mixed_stdout_stderr(#[case] shell: &str, mut repo: TestRepo) {
         skip_if_shell_unavailable!(shell);
-        let mut repo = TestRepo::new();
 
         // Copy the fixture script to the test repo to avoid path issues with special characters
         // (CARGO_MANIFEST_DIR may contain single quotes like worktrunk.'∅' which break shell parsing)
@@ -1202,33 +1164,15 @@ check2 = "{} check2 3"
         .unwrap();
 
         repo.commit("Add pre-merge validation with mixed output");
-
-        // Create a main worktree
-        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-            .current_dir(repo.root_path())
-            .output()
-            .unwrap();
+        repo.add_main_worktree();
 
         // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree("feature");
-        fs::write(feature_wt.join("feature.txt"), "feature content").unwrap();
-
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["add", "feature.txt"])
-            .current_dir(&feature_wt)
-            .output()
-            .unwrap();
-
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["commit", "-m", "Add feature"])
-            .current_dir(&feature_wt)
-            .output()
-            .unwrap();
+        let feature_wt = repo.add_worktree_with_commit(
+            "feature",
+            "feature.txt",
+            "feature content",
+            "Add feature",
+        );
 
         // Pre-approve commands
         fs::write(
@@ -2221,10 +2165,8 @@ approved-commands = ["echo 'cleanup test'"]
     /// - Pre-merge hooks (test, lint) running before merge
     ///
     /// Source: tests/snapshots/shell_wrapper__tests__readme_example_hooks_pre_merge.snap
-    #[test]
-    fn test_readme_example_hooks_pre_merge() {
-        let mut repo = TestRepo::new();
-
+    #[rstest]
+    fn test_readme_example_hooks_pre_merge(mut repo: TestRepo) {
         // Create project config with pre-merge hooks
         let config_dir = repo.root_path().join(".config");
         fs::create_dir_all(&config_dir).unwrap();
@@ -2325,14 +2267,7 @@ fi
             .output()
             .unwrap();
 
-        // Create a worktree for main
-        let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
-        let mut cmd = Command::new("git");
-        repo.configure_git_cmd(&mut cmd);
-        cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-            .current_dir(repo.root_path())
-            .output()
-            .unwrap();
+        repo.add_main_worktree();
 
         // Create a feature worktree and make multiple commits
         let feature_wt = repo.add_worktree("feature-auth");

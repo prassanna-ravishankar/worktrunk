@@ -202,26 +202,6 @@ fn setup_timestamped_worktrees(repo: &mut TestRepo) -> std::path::PathBuf {
     current_path
 }
 
-/// Helper to create a branch without a worktree
-fn create_branch(repo: &TestRepo, branch_name: &str) {
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["branch", branch_name])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
-}
-
-/// Helper to push a branch to origin (creating a remote branch)
-fn push_branch(repo: &TestRepo, branch_name: &str) {
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["push", "origin", branch_name])
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap();
-}
-
 #[rstest]
 fn test_list_single_worktree(repo: TestRepo) {
     snapshot_list("single_worktree", &repo);
@@ -407,9 +387,9 @@ fn test_list_json_tree_matches_main_after_merge(mut repo: TestRepo) {
 #[rstest]
 fn test_list_with_branches_flag(mut repo: TestRepo) {
     // Create some branches without worktrees
-    create_branch(&repo, "feature-without-worktree");
-    create_branch(&repo, "another-branch");
-    create_branch(&repo, "fix-bug");
+    repo.create_branch("feature-without-worktree");
+    repo.create_branch("another-branch");
+    repo.create_branch("fix-bug");
 
     // Create one branch with a worktree
     repo.add_worktree("feature-with-worktree");
@@ -429,9 +409,9 @@ fn test_list_with_branches_flag_no_available(mut repo: TestRepo) {
 #[rstest]
 fn test_list_with_branches_flag_only_branches(repo: TestRepo) {
     // Create several branches without worktrees
-    create_branch(&repo, "branch-alpha");
-    create_branch(&repo, "branch-beta");
-    create_branch(&repo, "branch-gamma");
+    repo.create_branch("branch-alpha");
+    repo.create_branch("branch-beta");
+    repo.create_branch("branch-gamma");
 
     snapshot_list_with_branches("with_branches_flag_only_branches", &repo);
 }
@@ -439,10 +419,10 @@ fn test_list_with_branches_flag_only_branches(repo: TestRepo) {
 #[rstest]
 fn test_list_with_remotes_flag(#[from(repo_with_remote)] repo: TestRepo) {
     // Create feature branches in the main repo and push them
-    create_branch(&repo, "remote-feature-1");
-    create_branch(&repo, "remote-feature-2");
-    push_branch(&repo, "remote-feature-1");
-    push_branch(&repo, "remote-feature-2");
+    repo.create_branch("remote-feature-1");
+    repo.create_branch("remote-feature-2");
+    repo.push_branch("remote-feature-1");
+    repo.push_branch("remote-feature-2");
 
     // Delete the local branches - now they only exist as origin/remote-feature-*
     let mut cmd = Command::new("git");
@@ -463,14 +443,14 @@ fn test_list_with_remotes_flag(#[from(repo_with_remote)] repo: TestRepo) {
 #[rstest]
 fn test_list_with_remotes_and_branches(#[from(repo_with_remote)] repo: TestRepo) {
     // Create local-only branches (not worktrees, not pushed)
-    create_branch(&repo, "local-only-1");
-    create_branch(&repo, "local-only-2");
+    repo.create_branch("local-only-1");
+    repo.create_branch("local-only-2");
 
     // Create branches, push them, then delete locally to make them remote-only
-    create_branch(&repo, "remote-only-1");
-    create_branch(&repo, "remote-only-2");
-    push_branch(&repo, "remote-only-1");
-    push_branch(&repo, "remote-only-2");
+    repo.create_branch("remote-only-1");
+    repo.create_branch("remote-only-2");
+    repo.push_branch("remote-only-1");
+    repo.push_branch("remote-only-2");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["branch", "-D", "remote-only-1", "remote-only-2"])
@@ -491,11 +471,11 @@ fn test_list_with_remotes_and_branches(#[from(repo_with_remote)] repo: TestRepo)
 fn test_list_with_remotes_filters_existing_worktrees(#[from(repo_with_remote)] mut repo: TestRepo) {
     // Create a worktree and push the branch
     repo.add_worktree("feature-with-worktree");
-    push_branch(&repo, "feature-with-worktree");
+    repo.push_branch("feature-with-worktree");
 
     // Create a branch, push it, delete it locally (remote-only)
-    create_branch(&repo, "remote-only");
-    push_branch(&repo, "remote-only");
+    repo.create_branch("remote-only");
+    repo.push_branch("remote-only");
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
     cmd.args(["branch", "-D", "remote-only"])
@@ -1854,8 +1834,8 @@ fn test_list_progressive_with_branches(mut repo: TestRepo) {
     repo.add_worktree("feature-a");
 
     // Create branches without worktrees
-    create_branch(&repo, "orphan-1");
-    create_branch(&repo, "orphan-2");
+    repo.create_branch("orphan-1");
+    repo.create_branch("orphan-2");
 
     // Critical: test that --branches works with --progressive
     // This ensures progressive mode supports the --branches flag
