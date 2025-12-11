@@ -228,20 +228,14 @@ impl SummaryMetrics {
             if data
                 .working_tree_diff
                 .as_ref()
-                .map(|d| !d.is_empty())
-                .unwrap_or(false)
+                .is_some_and(|d| !d.is_empty())
             {
                 self.dirty_worktrees += 1;
             }
         } else {
             // Distinguish local vs remote branches by presence of '/' in name
             // Remote branches are like "origin/feature", local are like "feature"
-            if item
-                .branch
-                .as_ref()
-                .map(|b| b.contains('/'))
-                .unwrap_or(false)
-            {
+            if item.branch.as_ref().is_some_and(|b| b.contains('/')) {
                 self.remote_branches += 1;
             } else {
                 self.local_branches += 1;

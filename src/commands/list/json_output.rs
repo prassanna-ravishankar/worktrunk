@@ -225,9 +225,9 @@ impl JsonItem {
             ItemKind::Branch => ("branch", None),
         };
 
-        let is_main = worktree_data.map(|d| d.is_main).unwrap_or(false);
-        let is_current = worktree_data.map(|d| d.is_current).unwrap_or(false);
-        let is_previous = worktree_data.map(|d| d.is_previous).unwrap_or(false);
+        let is_main = worktree_data.is_some_and(|d| d.is_main);
+        let is_current = worktree_data.is_some_and(|d| d.is_current);
+        let is_previous = worktree_data.is_some_and(|d| d.is_previous);
 
         // Commit info
         let sha = item.head.clone();

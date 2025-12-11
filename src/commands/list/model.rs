@@ -514,28 +514,19 @@ impl ListItem {
                 // Simplified status computation for branches
                 // Only compute symbols that apply to branches (no working tree, git operation, or worktree attrs)
 
-                // Determine integration state for branches
-                let (same_commit, integration_reason) = if self.is_ancestor == Some(true) {
-                    if self.counts.as_ref().is_some_and(|c| c.behind == 0) {
-                        (true, None) // Same commit as main
-                    } else {
-                        (false, Some(IntegrationReason::Ancestor)) // Main has moved past
-                    }
-                } else if self.has_file_changes == Some(false) {
-                    (false, Some(IntegrationReason::NoAddedChanges))
-                } else if self.committed_trees_match == Some(true) {
-                    (false, Some(IntegrationReason::TreesMatch))
-                } else if self.would_merge_add == Some(false) {
-                    (false, Some(IntegrationReason::MergeAddsNothing))
-                } else if let Some(ref c) = self.counts {
-                    if c.ahead == 0 && c.behind == 0 {
-                        (true, None) // Same commit as main (fallback)
-                    } else {
-                        (false, None)
-                    }
-                } else {
-                    (false, None)
-                };
+                // Branches don't have working trees, so pass empty diff as "inherently clean"
+                let empty_diff = LineDiff::default();
+                let (same_commit, integration_reason) = determine_integration_state(
+                    false, // branches are never main worktree
+                    default_branch,
+                    self.is_ancestor,
+                    self.counts.as_ref().map(|c| c.behind),
+                    self.committed_trees_match.unwrap_or(false),
+                    self.has_file_changes,
+                    self.would_merge_add,
+                    Some(&empty_diff), // branches are always "clean" (no working tree)
+                    &None,             // no working_tree_diff_with_main for branches
+                );
 
                 // Compute main state
                 let main_state = MainState::from_integration_and_counts(
