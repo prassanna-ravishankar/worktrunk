@@ -213,6 +213,86 @@ pub fn repo_with_feature_worktree(mut repo_with_main_worktree: TestRepo) -> Test
     repo_with_main_worktree
 }
 
+/// Repo with remote, main worktree, and a feature branch with one commit.
+///
+/// Combines `repo_with_remote` with a main worktree and feature worktree setup.
+/// Access the feature worktree path via `repo.worktrees["feature"]`.
+///
+/// Use for tests that need remote tracking AND a feature branch ready to merge/push.
+/// ```ignore
+/// #[rstest]
+/// fn test_push(mut repo_with_remote_and_feature: TestRepo) {
+///     let repo = &mut repo_with_remote_and_feature;
+///     let feature_wt = &repo.worktrees["feature"];
+///     // Has remote, main worktree, and feature with one commit
+/// }
+/// ```
+#[rstest::fixture]
+pub fn repo_with_remote_and_feature(mut repo_with_remote: TestRepo) -> TestRepo {
+    repo_with_remote.add_main_worktree();
+    repo_with_remote.add_worktree_with_commit(
+        "feature",
+        "feature.txt",
+        "feature content",
+        "Add feature file",
+    );
+    repo_with_remote
+}
+
+/// Repo with primary worktree on a non-default branch and main in separate worktree.
+///
+/// Switches the primary worktree to "develop" branch, then creates a worktree
+/// for the default branch (main). This tests scenarios where the user's primary
+/// checkout is not on the default branch.
+///
+/// Use for merge/switch tests that need to verify behavior when primary != default.
+/// ```ignore
+/// #[rstest]
+/// fn test_merge_primary_not_default(mut repo_with_alternate_primary: TestRepo) {
+///     let repo = &mut repo_with_alternate_primary;
+///     // Primary is on "develop", main is in repo.main-wt
+///     let feature_wt = repo.add_worktree_with_commit("feature", ...);
+/// }
+/// ```
+#[rstest::fixture]
+pub fn repo_with_alternate_primary(repo: TestRepo) -> TestRepo {
+    repo.switch_primary_to("develop");
+    repo.add_main_worktree();
+    repo
+}
+
+/// Repo with main worktree and a feature branch with two commits.
+///
+/// Builds on `repo_with_main_worktree`, adding a "feature" worktree with two
+/// commits (file1.txt and file2.txt). Useful for testing squash merges.
+/// Access the feature worktree path via `repo.worktrees["feature"]`.
+///
+/// ```ignore
+/// #[rstest]
+/// fn test_squash(mut repo_with_multi_commit_feature: TestRepo) {
+///     let repo = &mut repo_with_multi_commit_feature;
+///     let feature_wt = &repo.worktrees["feature"];
+///     // feature has 2 commits, ready to squash-merge
+/// }
+/// ```
+#[rstest::fixture]
+pub fn repo_with_multi_commit_feature(mut repo_with_main_worktree: TestRepo) -> TestRepo {
+    let feature_wt = repo_with_main_worktree.add_worktree("feature");
+    repo_with_main_worktree.commit_in_worktree(
+        &feature_wt,
+        "file1.txt",
+        "content 1",
+        "feat: add file 1",
+    );
+    repo_with_main_worktree.commit_in_worktree(
+        &feature_wt,
+        "file2.txt",
+        "content 2",
+        "feat: add file 2",
+    );
+    repo_with_main_worktree
+}
+
 /// Merge test setup with a single commit on feature branch.
 ///
 /// Creates a repo with:
@@ -931,6 +1011,23 @@ impl TestRepo {
             .unwrap();
 
         worktree_path
+    }
+
+    /// Shorthand: adds a "feature" worktree with a canonical commit.
+    ///
+    /// Equivalent to:
+    /// ```ignore
+    /// repo.add_worktree_with_commit("feature", "feature.txt", "feature content", "Add feature file")
+    /// ```
+    ///
+    /// Returns the path to the feature worktree.
+    pub fn add_feature(&mut self) -> PathBuf {
+        self.add_worktree_with_commit(
+            "feature",
+            "feature.txt",
+            "feature content",
+            "Add feature file",
+        )
     }
 
     /// Adds a commit to an existing worktree.

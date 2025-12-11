@@ -1,6 +1,7 @@
 use crate::common::{
-    TestRepo, make_snapshot_cmd, merge_scenario, merge_scenario_multi_commit, repo,
-    repo_with_feature_worktree, repo_with_main_worktree, setup_snapshot_settings,
+    TestRepo, make_snapshot_cmd, merge_scenario, repo, repo_with_alternate_primary,
+    repo_with_feature_worktree, repo_with_main_worktree, repo_with_multi_commit_feature,
+    setup_snapshot_settings,
 };
 use insta_cmd::assert_cmd_snapshot;
 use rstest::rstest;
@@ -53,24 +54,15 @@ fn test_merge_fast_forward(merge_scenario: (TestRepo, PathBuf)) {
 }
 
 #[rstest]
-fn test_merge_when_primary_not_on_default_but_default_has_worktree(mut repo: TestRepo) {
-    // Move the primary worktree off main
-    repo.switch_primary_to("develop");
-
-    // Ensure main still has a worktree (secondary)
-    let _main_wt = repo.add_main_worktree();
-
-    // Create a feature worktree with a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+fn test_merge_when_primary_not_on_default_but_default_has_worktree(
+    mut repo_with_alternate_primary: TestRepo,
+) {
+    let repo = &mut repo_with_alternate_primary;
+    let feature_wt = repo.add_feature();
 
     snapshot_merge(
         "merge_when_primary_not_on_default_but_default_has_worktree",
-        &repo,
+        repo,
         &["main"],
         Some(&feature_wt),
     );
@@ -131,12 +123,7 @@ fn test_merge_not_fast_forward(mut repo: TestRepo) {
         .unwrap();
 
     // Create a feature worktree branching from before the main commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Try to merge (should fail or require actual merge)
     snapshot_merge(
@@ -448,15 +435,16 @@ fn test_merge_squash_single_commit(mut repo_with_main_worktree: TestRepo) {
 }
 
 #[rstest]
-fn test_merge_no_squash(merge_scenario_multi_commit: (TestRepo, PathBuf)) {
-    let (repo, feature_wt) = merge_scenario_multi_commit;
+fn test_merge_no_squash(repo_with_multi_commit_feature: TestRepo) {
+    let repo = &repo_with_multi_commit_feature;
+    let feature_wt = &repo.worktrees["feature"];
 
     // Merge with --no-squash - should NOT squash the commits
     snapshot_merge(
         "merge_no_squash",
-        &repo,
+        repo,
         &["main", "--no-squash"],
-        Some(&feature_wt),
+        Some(feature_wt),
     );
 }
 
@@ -549,8 +537,9 @@ args = ["-c", "cat >/dev/null && echo 'fix: improve auth validation logic'"]
 }
 
 #[rstest]
-fn test_merge_auto_commit_and_squash(merge_scenario_multi_commit: (TestRepo, PathBuf)) {
-    let (repo, feature_wt) = merge_scenario_multi_commit;
+fn test_merge_auto_commit_and_squash(repo_with_multi_commit_feature: TestRepo) {
+    let repo = &repo_with_multi_commit_feature;
+    let feature_wt = &repo.worktrees["feature"];
 
     // Add uncommitted tracked changes
     std::fs::write(feature_wt.join("file1.txt"), "updated content 1").unwrap();
@@ -567,9 +556,9 @@ args = ["-c", "cat >/dev/null && echo 'fix: update file 1 content'"]
     // Merge (squashing is default) - should stage uncommitted changes, then squash all commits including the staged changes
     snapshot_merge(
         "merge_auto_commit_and_squash",
-        &repo,
+        repo,
         &["main"],
-        Some(&feature_wt),
+        Some(feature_wt),
     );
 }
 
@@ -608,14 +597,7 @@ fn test_merge_pre_merge_command_success(mut repo: TestRepo) {
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force to skip approval prompts
     snapshot_merge(
@@ -637,14 +619,7 @@ fn test_merge_pre_merge_command_failure(mut repo: TestRepo) {
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force - pre-merge command should fail and block merge
     snapshot_merge(
@@ -666,14 +641,7 @@ fn test_merge_pre_merge_command_no_hooks(mut repo: TestRepo) {
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --no-verify - should skip pre-merge commands and succeed
     snapshot_merge(
@@ -704,14 +672,7 @@ test = "exit 0"
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force - all pre-merge commands should pass
     snapshot_merge(
@@ -737,14 +698,7 @@ fn test_merge_post_merge_command_success(mut repo: TestRepo) {
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force
     snapshot_merge(
@@ -783,14 +737,7 @@ fn test_merge_post_merge_command_skipped_with_no_verify(mut repo: TestRepo) {
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --no-verify - hook should be skipped entirely
     snapshot_merge(
@@ -819,14 +766,7 @@ fn test_merge_post_merge_command_failure(mut repo: TestRepo) {
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force - post-merge command should fail but merge should complete
     snapshot_merge(
@@ -856,14 +796,7 @@ deploy = "echo 'Deploying branch {{ branch }}' > deploy.txt"
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force
     snapshot_merge(
@@ -1025,12 +958,7 @@ fn test_merge_pre_squash_command_success(mut repo: TestRepo) {
     repo.add_main_worktree();
 
     // Create a feature worktree and make commits
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force (squashing is now the default)
     snapshot_merge(
@@ -1052,14 +980,7 @@ fn test_merge_pre_squash_command_failure(mut repo: TestRepo) {
 
     // Create a worktree for main
     repo.add_main_worktree();
-
-    // Create a feature worktree and make commits
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Merge with --force (squashing is default) - pre-commit command should fail and block merge
     snapshot_merge(
@@ -1071,19 +992,12 @@ fn test_merge_pre_squash_command_failure(mut repo: TestRepo) {
 }
 
 #[rstest]
-fn test_merge_no_remote(mut repo: TestRepo) {
+fn test_merge_no_remote(#[from(repo_with_feature_worktree)] repo: TestRepo) {
     // Deliberately NOT calling setup_remote to test the error case
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.worktree_path("feature");
 
     // Try to merge without specifying target (should fail - no remote to get default branch)
-    snapshot_merge("merge_no_remote", &repo, &[], Some(&feature_wt));
+    snapshot_merge("merge_no_remote", &repo, &[], Some(feature_wt));
 }
 
 // README EXAMPLE GENERATION TESTS
@@ -2658,15 +2572,10 @@ fn test_merge_error_uncommitted_changes_with_no_commit(mut repo_with_main_worktr
 }
 
 #[rstest]
-fn test_merge_error_conflicting_changes_in_target(mut repo: TestRepo) {
+fn test_merge_error_conflicting_changes_in_target(mut repo_with_alternate_primary: TestRepo) {
     // Tests the `conflicting_changes()` error function when target worktree has
     // uncommitted changes that overlap with files being pushed
-
-    // Switch primary worktree off main so we can create a worktree for main
-    repo.switch_primary_to("develop");
-
-    // Create a worktree for main (succeeds because we switched primary off main)
-    let main_wt = repo.add_main_worktree();
+    let repo = &mut repo_with_alternate_primary;
 
     // Create a feature worktree and commit a change to shared.txt
     let feature_wt = repo.add_worktree_with_commit(
@@ -2675,6 +2584,9 @@ fn test_merge_error_conflicting_changes_in_target(mut repo: TestRepo) {
         "feature content",
         "Add shared.txt on feature",
     );
+
+    // Get the main worktree path (created by repo_with_alternate_primary)
+    let main_wt = repo.root_path().parent().unwrap().join("repo.main-wt");
 
     // Now make uncommitted changes to shared.txt in main worktree
     // This creates a conflict - we're trying to push changes to shared.txt
@@ -2688,7 +2600,7 @@ fn test_merge_error_conflicting_changes_in_target(mut repo: TestRepo) {
     // Try to merge - should fail because of conflicting uncommitted changes
     snapshot_merge(
         "merge_error_conflicting_changes",
-        &repo,
+        repo,
         &["main"],
         Some(&feature_wt),
     );

@@ -1,6 +1,6 @@
 use crate::common::{
-    TestRepo, repo, repo_with_feature_worktree, repo_with_remote, setup_snapshot_settings,
-    wt_command,
+    TestRepo, repo, repo_with_feature_worktree, repo_with_remote, repo_with_remote_and_feature,
+    setup_snapshot_settings, wt_command,
 };
 use insta::Settings;
 use insta_cmd::assert_cmd_snapshot;
@@ -39,18 +39,11 @@ fn test_switch_internal_powershell_directive(#[from(repo_with_remote)] mut repo:
 
 /// Test merge with --internal=powershell (switch back to main after merge)
 #[rstest]
-fn test_merge_internal_powershell_directive(#[from(repo_with_remote)] mut repo: TestRepo) {
-    repo.add_main_worktree();
+fn test_merge_internal_powershell_directive(mut repo_with_remote_and_feature: TestRepo) {
+    let repo = &mut repo_with_remote_and_feature;
+    let feature_wt = &repo.worktrees["feature"];
 
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
-
-    let mut settings = setup_snapshot_settings(&repo);
+    let mut settings = setup_snapshot_settings(repo);
     // Normalize the PowerShell Set-Location path
     settings.add_filter(r"Set-Location '[^']+'", "Set-Location '[PATH]'");
 
@@ -60,7 +53,7 @@ fn test_merge_internal_powershell_directive(#[from(repo_with_remote)] mut repo: 
         cmd.arg("--internal=powershell")
             .arg("merge")
             .arg("main")
-            .current_dir(&feature_wt);
+            .current_dir(feature_wt);
 
         assert_cmd_snapshot!(cmd);
     });

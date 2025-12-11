@@ -1019,14 +1019,7 @@ test = "echo '✓ All 47 tests passed in 2.3s'"
 
         repo.commit("Add pre-merge validation");
         repo.add_main_worktree();
-
-        // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree_with_commit(
-            "feature",
-            "feature.txt",
-            "feature content",
-            "Add feature",
-        );
+        let feature_wt = repo.add_feature();
 
         // Pre-approve commands
         fs::write(
@@ -1157,14 +1150,7 @@ check2 = "{} check2 3"
 
         repo.commit("Add pre-merge validation with mixed output");
         repo.add_main_worktree();
-
-        // Create feature worktree with a commit
-        let feature_wt = repo.add_worktree_with_commit(
-            "feature",
-            "feature.txt",
-            "feature content",
-            "Add feature",
-        );
+        let feature_wt = repo.add_feature();
 
         // Pre-approve commands
         fs::write(

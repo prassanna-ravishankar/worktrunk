@@ -1,4 +1,6 @@
-use crate::common::{TestRepo, make_snapshot_cmd, repo, setup_snapshot_settings};
+use crate::common::{
+    TestRepo, make_snapshot_cmd, repo, repo_with_feature_worktree, setup_snapshot_settings,
+};
 use insta_cmd::assert_cmd_snapshot;
 use rstest::rstest;
 use std::process::Command;
@@ -41,30 +43,18 @@ fn test_push_not_fast_forward(mut repo: TestRepo) {
     );
 
     // Create a feature worktree branching from before the main commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Try to push from feature to main (should fail - not fast-forward)
     snapshot_push("push_not_fast_forward", &repo, &["main"], Some(&feature_wt));
 }
 
 #[rstest]
-fn test_push_to_default_branch(mut repo: TestRepo) {
-    repo.add_main_worktree();
-
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+fn test_push_to_default_branch(#[from(repo_with_feature_worktree)] repo: TestRepo) {
+    let feature_wt = repo.worktree_path("feature");
 
     // Push without specifying target (should use default branch)
-    snapshot_push("push_to_default", &repo, &[], Some(&feature_wt));
+    snapshot_push("push_to_default", &repo, &[], Some(feature_wt));
 }
 
 #[rstest]
@@ -110,12 +100,7 @@ fn test_push_dirty_target_autostash(mut repo: TestRepo) {
     // Make main worktree (repo root) dirty with a non-conflicting file
     std::fs::write(repo.root_path().join("notes.txt"), "temporary notes").unwrap();
 
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+    let feature_wt = repo.add_feature();
 
     // Push should succeed by auto-stashing the non-conflicting target changes
     snapshot_push(
@@ -255,17 +240,10 @@ fn test_push_with_merge_commits_allowed(mut repo: TestRepo) {
 }
 
 #[rstest]
-fn test_push_no_remote(mut repo: TestRepo) {
-    // Note: repo fixture doesn't call setup_remote(), so this tests the "no remote" error case
-
-    // Create a feature worktree and make a commit
-    let feature_wt = repo.add_worktree_with_commit(
-        "feature",
-        "feature.txt",
-        "feature content",
-        "Add feature file",
-    );
+fn test_push_no_remote(#[from(repo_with_feature_worktree)] repo: TestRepo) {
+    // Note: repo_with_feature_worktree doesn't call setup_remote(), so this tests the "no remote" error case
+    let feature_wt = repo.worktree_path("feature");
 
     // Try to push without specifying target (should fail - no remote to get default branch)
-    snapshot_push("push_no_remote", &repo, &[], Some(&feature_wt));
+    snapshot_push("push_no_remote", &repo, &[], Some(feature_wt));
 }

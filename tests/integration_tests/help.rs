@@ -14,6 +14,7 @@
 use crate::common::wt_command;
 use insta::Settings;
 use insta_cmd::assert_cmd_snapshot;
+use rstest::rstest;
 
 fn snapshot_help(test_name: &str, args: &[&str]) {
     let mut settings = Settings::clone_current();
@@ -28,149 +29,40 @@ fn snapshot_help(test_name: &str, args: &[&str]) {
     });
 }
 
-// =============================================================================
 // Root command (wt)
-// =============================================================================
-
-#[test]
-fn help_root_short() {
-    snapshot_help("help_root_short", &["-h"]);
-}
-
-#[test]
-fn help_root_long() {
-    snapshot_help("help_root_long", &["--help"]);
-}
-
-#[test]
-fn help_no_args() {
-    // Running `wt` with no args should show short help and exit 0
-    snapshot_help("help_no_args", &[]);
-}
-
-// =============================================================================
+#[rstest]
+#[case("help_root_short", "-h")]
+#[case("help_root_long", "--help")]
+#[case("help_no_args", "")]
 // Major commands - short and long variants
-// =============================================================================
-
-#[test]
-fn help_config_short() {
-    snapshot_help("help_config_short", &["config", "-h"]);
-}
-
-#[test]
-fn help_config_long() {
-    snapshot_help("help_config_long", &["config", "--help"]);
-}
-
-#[test]
-fn help_list_short() {
-    snapshot_help("help_list_short", &["list", "-h"]);
-}
-
-#[test]
-fn help_list_long() {
-    snapshot_help("help_list_long", &["list", "--help"]);
-}
-
-#[test]
-fn help_switch_short() {
-    snapshot_help("help_switch_short", &["switch", "-h"]);
-}
-
-#[test]
-fn help_switch_long() {
-    snapshot_help("help_switch_long", &["switch", "--help"]);
-}
-
-#[test]
-fn help_remove_short() {
-    snapshot_help("help_remove_short", &["remove", "-h"]);
-}
-
-#[test]
-fn help_remove_long() {
-    snapshot_help("help_remove_long", &["remove", "--help"]);
-}
-
-#[test]
-fn help_merge_short() {
-    snapshot_help("help_merge_short", &["merge", "-h"]);
-}
-
-#[test]
-fn help_merge_long() {
-    snapshot_help("help_merge_long", &["merge", "--help"]);
-}
-
-#[test]
-fn help_step_short() {
-    snapshot_help("help_step_short", &["step", "-h"]);
-}
-
-#[test]
-fn help_step_long() {
-    snapshot_help("help_step_long", &["step", "--help"]);
-}
-
-// =============================================================================
+#[case("help_config_short", "config -h")]
+#[case("help_config_long", "config --help")]
+#[case("help_list_short", "list -h")]
+#[case("help_list_long", "list --help")]
+#[case("help_switch_short", "switch -h")]
+#[case("help_switch_long", "switch --help")]
+#[case("help_remove_short", "remove -h")]
+#[case("help_remove_long", "remove --help")]
+#[case("help_merge_short", "merge -h")]
+#[case("help_merge_long", "merge --help")]
+#[case("help_step_short", "step -h")]
+#[case("help_step_long", "step --help")]
 // Config subcommands (long help only - these are less frequently accessed)
-// =============================================================================
-
-#[test]
-fn help_config_shell() {
-    snapshot_help("help_config_shell", &["config", "shell", "--help"]);
-}
-
-#[test]
-fn help_config_create() {
-    snapshot_help("help_config_create", &["config", "create", "--help"]);
-}
-
-#[test]
-fn help_config_show() {
-    snapshot_help("help_config_show", &["config", "show", "--help"]);
-}
-
-#[test]
-fn help_config_var() {
-    snapshot_help("help_config_var", &["config", "var", "--help"]);
-}
-
-#[test]
-fn help_config_var_get() {
-    snapshot_help("help_config_var_get", &["config", "var", "get", "--help"]);
-}
-
-#[test]
-fn help_config_var_set() {
-    snapshot_help("help_config_var_set", &["config", "var", "set", "--help"]);
-}
-
-#[test]
-fn help_config_var_clear() {
-    snapshot_help(
-        "help_config_var_clear",
-        &["config", "var", "clear", "--help"],
-    );
-}
-
-#[test]
-fn help_hook_approvals() {
-    snapshot_help("help_hook_approvals", &["hook", "approvals", "--help"]);
-}
-
-#[test]
-fn help_hook_approvals_add() {
-    snapshot_help(
-        "help_hook_approvals_add",
-        &["hook", "approvals", "add", "--help"],
-    );
-}
-
-#[test]
-fn help_hook_approvals_clear() {
-    snapshot_help(
-        "help_hook_approvals_clear",
-        &["hook", "approvals", "clear", "--help"],
-    );
+#[case("help_config_shell", "config shell --help")]
+#[case("help_config_create", "config create --help")]
+#[case("help_config_show", "config show --help")]
+#[case("help_config_var", "config var --help")]
+#[case("help_config_var_get", "config var get --help")]
+#[case("help_config_var_set", "config var set --help")]
+#[case("help_config_var_clear", "config var clear --help")]
+#[case("help_hook_approvals", "hook approvals --help")]
+#[case("help_hook_approvals_add", "hook approvals add --help")]
+#[case("help_hook_approvals_clear", "hook approvals clear --help")]
+fn test_help(#[case] test_name: &str, #[case] args_str: &str) {
+    let args: Vec<&str> = if args_str.is_empty() {
+        vec![]
+    } else {
+        args_str.split_whitespace().collect()
+    };
+    snapshot_help(test_name, &args);
 }
