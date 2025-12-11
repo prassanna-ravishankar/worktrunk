@@ -289,7 +289,7 @@ jobs:
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --locked --package worktrunk
+        run: cargo publish --package worktrunk
 
   # TODO: Enable after initial manual submission to winget-pkgs repository
   # See: https://github.com/microsoft/winget-pkgs/blob/master/CONTRIBUTING.md

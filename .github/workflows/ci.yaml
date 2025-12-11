@@ -186,7 +186,7 @@ jobs:
     - uses: clechasseur/rs-cargo@v4
       with:
         command: udeps
-        args: --all-targets --locked
+        args: --all-targets
 
   benchmarks:
     runs-on: ubuntu-latest
@@ -212,4 +212,4 @@ jobs:
       with:
         command: bench
         # Run completion benchmarks (list has slow real_repo tests)
-        args: --locked --bench completion -- --warm-up-time 0.3 --measurement-time 1
+        args: --bench completion -- --warm-up-time 0.3 --measurement-time 1
