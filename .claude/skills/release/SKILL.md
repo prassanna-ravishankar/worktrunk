@@ -28,6 +28,18 @@ Check commits since last release for missing entries:
 git log v<last-version>..HEAD --oneline
 ```
 
+**IMPORTANT: Don't trust commit messages.** Commit messages often undersell or misdescribe changes. For any commit that might be user-facing:
+
+1. Run `git show <commit> --stat` to see what files changed
+2. If it touches user-facing code (commands, CLI, output), read the actual diff
+3. Look for changes bundled together — a "rename flag" commit might also add new features
+
+Common patterns where commit messages mislead:
+- "Refactor X" commits that also change behavior
+- "Rename flag" commits that add new functionality
+- "Fix Y" commits that also improve error messages or add hints
+- CI/test commits that include production code fixes
+
 Notable changes to document:
 - New features or commands
 - User-visible behavior changes
