@@ -277,17 +277,28 @@ fn handle_help_page(args: &[String]) {
     };
 
     // Get the after_long_help content
-    // Transform for web docs: console→bash, status colors, demo images, subdocs
+    // Transform for web docs: console→bash, status colors, demo images
+    // Subdocs are expanded separately so main Command reference comes first
     let parent_name = format!("wt {}", subcommand);
-    let after_help = sub
+    let raw_help = sub
         .get_after_long_help()
-        .map(|s| {
-            let text = s.to_string().replace("```console\n", "```bash\n");
-            let text = expand_demo_placeholders(&text);
-            let text = expand_subdoc_placeholders(&text, sub, &parent_name);
-            colorize_ci_status_for_html(&text)
-        })
+        .map(|s| s.to_string())
         .unwrap_or_default();
+
+    // Split content at first subdoc placeholder
+    let subdoc_marker = "<!-- subdoc:";
+    let (main_content, subdoc_content) = if let Some(pos) = raw_help.find(subdoc_marker) {
+        (&raw_help[..pos], Some(&raw_help[pos..]))
+    } else {
+        (raw_help.as_str(), None)
+    };
+
+    // Process main content (before subdocs)
+    let main_help = {
+        let text = main_content.replace("```console\n", "```bash\n");
+        let text = expand_demo_placeholders(&text);
+        colorize_ci_status_for_html(&text)
+    };
 
     // Get the help reference block
     let reference_block = get_help_reference(&[subcommand]);
@@ -299,14 +310,25 @@ fn handle_help_page(args: &[String]) {
         "<!-- ⚠️ AUTO-GENERATED from `wt {subcommand} --help-page` — edit cli.rs to update -->"
     );
     println!();
-    println!("{}", after_help.trim());
+    println!("{}", main_help.trim());
     println!();
+
+    // Main command reference immediately after its content
     println!("## Command reference");
     println!();
     println!("```");
     print!("{}", reference_block.trim());
     println!();
     println!("```");
+
+    // Subdocs follow, each with their own command reference at the end
+    if let Some(subdocs) = subdoc_content {
+        let subdocs_expanded = expand_subdoc_placeholders(subdocs, sub, &parent_name);
+        let subdocs_processed = colorize_ci_status_for_html(&subdocs_expanded);
+        println!();
+        println!("{}", subdocs_processed.trim());
+    }
+
     println!();
     println!("<!-- END AUTO-GENERATED from `wt {subcommand} --help-page` -->");
 }
@@ -405,7 +427,8 @@ fn expand_subdoc_placeholders(text: &str, parent_cmd: &clap::Command, parent_nam
 /// Format a subcommand as an H2 section for docs.
 ///
 /// Includes the subcommand's `after_long_help` (conceptual docs) followed by
-/// the command reference (usage, options).
+/// the command reference (usage, options). If the subdoc has nested subdocs,
+/// the command reference comes before them.
 fn format_subcommand_section(
     sub: &clap::Command,
     parent_name: &str,
@@ -415,26 +438,26 @@ fn format_subcommand_section(
     // full_command is "wt config create"
     let full_command = format!("{} {}", parent_name, subcommand_name);
 
-    // Get the after_long_help content (conceptual docs)
-    // First increase heading levels for the direct content, THEN expand subdocs.
-    // This way subdocs stay at their written level (##) instead of being bumped up.
-    let after_help = sub
+    // Get the raw after_long_help content
+    let raw_help = sub
         .get_after_long_help()
-        .map(|s| {
-            let text = s.to_string().replace("```console\n", "```bash\n");
-            let text = increase_heading_levels(&text);
-            let text = expand_subdoc_placeholders(&text, sub, &full_command);
-            colorize_ci_status_for_html(&text)
-        })
+        .map(|s| s.to_string())
         .unwrap_or_default();
 
-    // Format the section
-    let mut section = format!("## {}\n\n", full_command);
+    // Split content at first subdoc placeholder so command reference comes before nested subdocs
+    let subdoc_marker = "<!-- subdoc:";
+    let (main_content, subdoc_content) = if let Some(pos) = raw_help.find(subdoc_marker) {
+        (&raw_help[..pos], Some(&raw_help[pos..]))
+    } else {
+        (raw_help.as_str(), None)
+    };
 
-    if !after_help.is_empty() {
-        section.push_str(after_help.trim());
-        section.push_str("\n\n");
-    }
+    // Process main content (before any nested subdocs)
+    let main_help = {
+        let text = main_content.replace("```console\n", "```bash\n");
+        let text = increase_heading_levels(&text);
+        colorize_ci_status_for_html(&text)
+    };
 
     // Build command path from parent_name: "wt config" -> ["config", "create"]
     let command_path: Vec<&str> = parent_name
@@ -446,9 +469,27 @@ fn format_subcommand_section(
 
     let reference_block = get_help_reference(&command_path);
 
+    // Format the section: heading, main content, command reference, then nested subdocs
+    let mut section = format!("## {}\n\n", full_command);
+
+    if !main_help.is_empty() {
+        section.push_str(main_help.trim());
+        section.push_str("\n\n");
+    }
+
+    // Command reference comes after main content but before nested subdocs
     section.push_str("### Command reference\n\n```\n");
     section.push_str(reference_block.trim());
     section.push_str("\n```\n");
+
+    // Expand nested subdocs after the command reference
+    if let Some(subdocs) = subdoc_content {
+        let subdocs_expanded = expand_subdoc_placeholders(subdocs, sub, &full_command);
+        let subdocs_processed = colorize_ci_status_for_html(&subdocs_expanded);
+        section.push('\n');
+        section.push_str(subdocs_processed.trim());
+        section.push('\n');
+    }
 
     section
 }

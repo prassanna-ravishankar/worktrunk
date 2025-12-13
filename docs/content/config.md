@@ -229,6 +229,34 @@ WORKTRUNK_COMMIT_GENERATION__ARGS="test: automated commit" \
 | `NO_COLOR` | Disable colored output ([standard](https://no-color.org/)) |
 | `CLICOLOR_FORCE` | Force colored output even when not a TTY |
 
+## Command reference
+
+```
+wt config - Manage configuration and shell integration
+
+Usage: wt config [OPTIONS] <COMMAND>
+
+Commands:
+  shell   Shell integration setup
+  create  Create configuration file
+  show    Show configuration files & locations
+  state   Get, set, or clear stored state
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+Global Options:
+  -C <path>
+          Working directory for this command
+
+      --config <path>
+          User config file path
+
+  -v, --verbose
+          Show commands and debug info
+```
+
 ## wt config create
 
 ### User config
@@ -612,6 +640,37 @@ Clear all stored state:
 wt config state clear
 ```
 
+### Command reference
+
+```
+wt config state - Get, set, or clear stored state
+
+Usage: wt config state [OPTIONS] <COMMAND>
+
+Commands:
+  default-branch   Default branch setting
+  previous-branch  Previous branch (for wt switch -)
+  ci-status        CI status cache
+  marker           Branch markers
+  logs             Background operation logs
+  get              Get all stored state
+  clear            Clear all stored state
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+Global Options:
+  -C <path>
+          Working directory for this command
+
+      --config <path>
+          User config file path
+
+  -v, --verbose
+          Show commands and debug info
+```
+
 ## wt config state default-branch
 
 ### Detection
@@ -836,65 +895,6 @@ Usage: wt config state logs [OPTIONS] [COMMAND]
 Commands:
   get    List background operation log files
   clear  Clear background operation logs
-
-Options:
-  -h, --help
-          Print help (see a summary with '-h')
-
-Global Options:
-  -C <path>
-          Working directory for this command
-
-      --config <path>
-          User config file path
-
-  -v, --verbose
-          Show commands and debug info
-```
-
-### Command reference
-
-```
-wt config state - Get, set, or clear stored state
-
-Usage: wt config state [OPTIONS] <COMMAND>
-
-Commands:
-  default-branch   Default branch setting
-  previous-branch  Previous branch (for wt switch -)
-  ci-status        CI status cache
-  marker           Branch markers
-  logs             Background operation logs
-  get              Get all stored state
-  clear            Clear all stored state
-
-Options:
-  -h, --help
-          Print help (see a summary with '-h')
-
-Global Options:
-  -C <path>
-          Working directory for this command
-
-      --config <path>
-          User config file path
-
-  -v, --verbose
-          Show commands and debug info
-```
-
-## Command reference
-
-```
-wt config - Manage configuration and shell integration
-
-Usage: wt config [OPTIONS] <COMMAND>
-
-Commands:
-  shell   Shell integration setup
-  create  Create configuration file
-  show    Show configuration files & locations
-  state   Get, set, or clear stored state
 
 Options:
   -h, --help

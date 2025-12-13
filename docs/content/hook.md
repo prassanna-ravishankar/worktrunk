@@ -375,4 +375,68 @@ Global Options:
           Show commands and debug info
 ```
 
+## wt hook approvals
+
+### How Approvals Work
+
+Commands from project hooks (`.config/wt.toml`) and LLM configuration require
+approval on first run. This prevents untrusted projects from running arbitrary
+commands.
+
+**Approval flow:**
+1. Command is shown with expanded template variables
+2. User approves or denies
+3. Approved commands are saved to user config under `[projects."project-id"]`
+
+**When re-approval is required:**
+- Command template changes (not just variable values)
+- Project ID changes (repository moves)
+
+**Bypassing prompts:**
+- `--force` flag on individual commands (e.g., `wt merge --force`)
+- Useful for CI/automation where prompts aren't possible
+
+### Examples
+
+Pre-approve all commands for current project:
+```bash
+wt hook approvals add
+```
+
+Clear approvals for current project:
+```bash
+wt hook approvals clear
+```
+
+Clear global approvals:
+```bash
+wt hook approvals clear --global
+```
+
+### Command reference
+
+```
+wt hook approvals - Manage command approvals
+
+Usage: wt hook approvals [OPTIONS] <COMMAND>
+
+Commands:
+  add    Store approvals in config
+  clear  Clear approved commands from config
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+Global Options:
+  -C <path>
+          Working directory for this command
+
+      --config <path>
+          User config file path
+
+  -v, --verbose
+          Show commands and debug info
+```
+
 <!-- END AUTO-GENERATED from `wt hook --help-page` -->

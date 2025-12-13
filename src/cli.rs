@@ -1412,6 +1412,8 @@ wt step push
 
 - [wt merge](@/merge.md) — Runs commit → squash → rebase → hooks → push → cleanup automatically
 - [wt hook](@/hook.md) — Run hooks independently
+
+<!-- subdoc: for-each -->
 "#
     )]
     Step {
@@ -1756,6 +1758,8 @@ env = "cp {{ repo_root }}/.env.local .env"
 - [wt merge](@/merge.md) — Runs hooks automatically during merge
 - [wt switch](@/switch.md) — Runs post-create/post-start hooks on `--create`
 - [wt config](@/config.md) — Manage hook approvals
+
+<!-- subdoc: approvals -->
 "#
     )]
     Hook {
