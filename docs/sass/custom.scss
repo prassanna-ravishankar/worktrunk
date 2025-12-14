@@ -537,19 +537,18 @@ main {
 // Tables - Scrollable like code blocks
 // ============================================================================
 
-// Use border-collapse: separate + overflow: clip for border-radius to work.
-// With separate borders, we remove cell borders on table edges to avoid doubling.
-// Tables naturally expand to content width; .content handles horizontal scroll.
+// Tables use display: block + overflow-x: auto for horizontal scrolling within
+// the content area. This prevents tables from breaking out of the container.
+// border-collapse: separate + overflow: clip on inner tbody handles border-radius.
 .content > table {
-    display: table;
-    width: max-content;
-    min-width: 100%;
+    display: block;
+    overflow-x: auto;
+    width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     margin: 1rem 0;
     border-radius: 0.5rem;
     border: 1px solid var(--wt-color-border-subtle);
-    overflow: clip;
 
     th, td {
         border: 1px solid var(--wt-color-border-subtle);

@@ -22,8 +22,8 @@ supervision, such that it's possible to manage 5-10+ in parallel. Git worktrees
 give each agent its own working directory; no stepping on each other's changes.
 
 But the git worktree UX is clunky. Even a task as simple as starting a new
-worktree requires typing the branch name three times: `git worktree add -b feature
-../repo.feature`, then `cd ../repo.feature`.
+worktree requires typing the branch name three times: `git worktree add -b feat
+../repo.feat`, then `cd ../repo.feat`.
 
 ## Worktrunk makes git worktrees simple
 
@@ -42,22 +42,22 @@ Start with the core commands; add workflow automation as needed.
   <tbody>
     <tr>
       <td>Switch worktrees</td>
-      <td><code>wt switch feature</code></td>
-      <td>{% rawcode() %}cd ../repo.feature{% end %}</td>
+      <td><code>wt switch feat</code></td>
+      <td>{% rawcode() %}cd ../repo.feat{% end %}</td>
     </tr>
     <tr>
       <td>Create + start Claude</td>
-      <td><code>wt switch -c -x claude feature</code></td>
-      <td>{% rawcode() %}git worktree add -b feature ../repo.feature && \
-cd ../repo.feature && \
+      <td><code>wt switch -c -x claude feat</code></td>
+      <td>{% rawcode() %}git worktree add -b feat ../repo.feat && \
+cd ../repo.feat && \
 claude{% end %}</td>
     </tr>
     <tr>
       <td>Clean up</td>
       <td><code>wt remove</code></td>
       <td>{% rawcode() %}cd ../repo && \
-git worktree remove ../repo.feature && \
-git branch -d feature{% end %}</td>
+git worktree remove ../repo.feat && \
+git branch -d feat{% end %}</td>
     </tr>
     <tr>
       <td>List with status</td>
