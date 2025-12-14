@@ -670,7 +670,8 @@ fn parse_working_tree_status(status_output: &str) -> (WorkingTreeStatus, bool, b
             has_modified = true;
         }
 
-        if index_status == 'A' || index_status == 'M' || index_status == 'C' {
+        // Index changes: A = added, M = modified, C = copied, T = type change (file↔symlink)
+        if matches!(index_status, 'A' | 'M' | 'C' | 'T') {
             has_staged = true;
         }
 
@@ -789,5 +790,37 @@ mod tests {
         );
         assert!(is_dirty, "type change should be dirty");
         assert!(status.modified, "type change should show modified symbol");
+    }
+
+    #[test]
+    fn test_parse_status_staged_type_change() {
+        // "T " = type change in index (staged), no worktree changes
+        // Example: file changed to symlink and the change is staged
+        let (status, is_dirty, has_conflicts) = parse_working_tree_status("T  file.txt\n");
+        assert!(
+            !has_conflicts,
+            "staged type change should not be treated as conflict"
+        );
+        assert!(is_dirty, "staged type change should be dirty");
+        assert!(
+            status.staged,
+            "staged type change should show staged symbol (+)"
+        );
+    }
+
+    #[test]
+    fn test_parse_status_staged_type_change_with_worktree_mod() {
+        // "TM" = type change in index, then modified in worktree
+        let (status, is_dirty, has_conflicts) = parse_working_tree_status("TM file.txt\n");
+        assert!(!has_conflicts);
+        assert!(is_dirty, "should be dirty");
+        assert!(
+            status.staged,
+            "should show staged symbol for index type change"
+        );
+        assert!(
+            status.modified,
+            "should show modified symbol for worktree modification"
+        );
     }
 }
