@@ -1021,7 +1021,7 @@ impl PositionMask {
 /// - ✘: Actual conflicts (must resolve)
 /// - ⤴: Rebase in progress
 /// - ⤵: Merge in progress
-/// - ⚑: Path doesn't match template
+/// - ⚑: Worktree path doesn't match branch name
 /// - ⊟: Prunable (directory missing)
 /// - ⊞: Locked worktree
 /// - /: Branch without worktree

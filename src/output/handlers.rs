@@ -287,57 +287,13 @@ pub fn handle_switch_output(
 
     let path = result.path();
     let path_display = format_path_for_display(path);
-    let expected_branch = &branch_info.expected;
-
-    // Handle branch mismatch cases (worktree checked out to wrong branch or detached)
-    if branch_info.is_branch_mismatch() {
-        let mismatch_info = match &branch_info.current {
-            Some(current) => {
-                cformat!("expecting <bold>{expected_branch}</>, got <bold>{current}</>")
-            }
-            None => cformat!("expecting <bold>{expected_branch}</>, got detached HEAD"),
-        };
-
-        match result {
-            SwitchResult::AlreadyAt(_) => {
-                super::print(warning_message(cformat!(
-                    "Already at <bold>{path_display}</>. Branch doesn't match path: {mismatch_info}"
-                )))?;
-            }
-            SwitchResult::Existing(_) => {
-                if is_directive_mode || has_execute_command {
-                    super::print(warning_message(cformat!(
-                        "Switched to <bold>{path_display}</>. Branch doesn't match path: {mismatch_info}"
-                    )))?;
-                } else if Shell::is_integration_configured().ok().flatten().is_some() {
-                    super::print(warning_message(cformat!(
-                        "Worktree at <bold>{path_display}</>. Branch doesn't match path: {mismatch_info}; cannot cd, binary invoked directly"
-                    )))?;
-                } else {
-                    super::print(warning_message(cformat!(
-                        "Worktree at <bold>{path_display}</>. Branch doesn't match path: {mismatch_info}; cannot cd, no shell integration"
-                    )))?;
-                    super::shell_integration_hint(shell_integration_hint())?;
-                }
-            }
-            SwitchResult::Created { .. } => {
-                // Created case should never have mismatch - we just created it
-                unreachable!("Created worktree should not have branch mismatch");
-            }
-        }
-
-        super::flush()?;
-        return Ok(());
-    }
-
-    // Normal case - branch matches
     let branch = branch_info.branch();
 
     // Show path mismatch warning after the main message
     let path_mismatch_warning = branch_info.expected_path.as_ref().map(|expected| {
         let expected_display = format_path_for_display(expected);
-        warning_message(format!(
-            "Worktree path doesn't match naming template; expected {expected_display}"
+        warning_message(cformat!(
+            "Worktree path doesn't match branch name; expected <bold>{expected_display}</> <red>⚑</>"
         ))
     });
 
@@ -359,15 +315,16 @@ pub fn handle_switch_output(
                     super::print(warning)?;
                 }
             } else if Shell::is_integration_configured().ok().flatten().is_some() {
+                // Shell wrapper is configured but user ran binary directly
                 super::print(warning_message(cformat!(
-                    "Worktree for <bold>{branch}</> @ <bold>{path_display}</>; cannot cd (binary invoked directly)"
+                    "Worktree for <bold>{branch}</> @ <bold>{path_display}</>, but cannot change directory — shell integration not active"
                 )))?;
                 if let Some(warning) = path_mismatch_warning {
                     super::print(warning)?;
                 }
             } else {
                 super::print(warning_message(cformat!(
-                    "Worktree for <bold>{branch}</> @ <bold>{path_display}</>; cannot cd (no shell integration)"
+                    "Worktree for <bold>{branch}</> @ <bold>{path_display}</>, but cannot change directory — shell integration not installed"
                 )))?;
                 if let Some(warning) = path_mismatch_warning {
                     super::print(warning)?;

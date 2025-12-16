@@ -128,7 +128,7 @@ The Status column has multiple subcolumns. Within each, only the first matching 
                     [33m⤴[0m       Rebase in progress                      
                     [33m⤵[0m       Merge in progress                       
                     [2m/[0m       Branch without worktree                 
-                    [31m⚑[0m       Path doesn't match template             
+                    [31m⚑[0m       Worktree path doesn't match branch name 
                     [33m⊟[0m       Prunable (directory missing)            
                     [33m⊞[0m       Locked worktree                         
   Main              [2m^[0m       Is the default branch                   

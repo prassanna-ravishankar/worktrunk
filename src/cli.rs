@@ -1905,7 +1905,7 @@ The Status column has multiple subcolumns. Within each, only the first matching 
 | | `⤴` | Rebase in progress |
 | | `⤵` | Merge in progress |
 | | `/` | Branch without worktree |
-| | `⚑` | Path doesn't match template |
+| | `⚑` | Worktree path doesn't match branch name |
 | | `⊟` | Prunable (directory missing) |
 | | `⊞` | Locked worktree |
 | Main | `^` | Is the default branch |

@@ -334,26 +334,19 @@ impl SwitchResult {
     }
 }
 
-/// Branch state for a switch operation, tracking expected vs current branch.
+/// Branch state for a switch operation.
 #[derive(Debug, Clone)]
 pub struct SwitchBranchInfo {
-    /// The branch user expected to switch to (resolved from input)
-    pub expected: String,
-    /// The branch currently checked out (None = detached HEAD)
-    pub current: Option<String>,
+    /// The branch being switched to
+    pub branch: String,
     /// Expected path when there's a path mismatch (None = path matches template)
     pub expected_path: Option<PathBuf>,
 }
 
 impl SwitchBranchInfo {
-    /// Check if there's a mismatch between expected and current branch
-    pub fn is_branch_mismatch(&self) -> bool {
-        self.current.as_deref() != Some(self.expected.as_str())
-    }
-
-    /// The branch name (for no-mismatch case where expected == current)
+    /// The branch name
     pub fn branch(&self) -> &str {
-        self.current.as_deref().unwrap_or(&self.expected)
+        &self.branch
     }
 }
 
@@ -475,48 +468,41 @@ pub fn handle_switch(
     let expected_path = compute_worktree_path(&repo, &resolved_branch, config)?;
 
     // Helper to build switch result for an existing worktree
-    // `actual_branch` is None for detached HEAD
-    let switch_to_existing =
-        |path: PathBuf, actual_branch: Option<String>| -> (SwitchResult, SwitchBranchInfo) {
-            let canonical_path = canonicalize(&path).unwrap_or(path.clone());
-            let current_dir = std::env::current_dir()
-                .ok()
-                .and_then(|p| canonicalize(&p).ok());
-            let already_at_worktree = current_dir
-                .as_ref()
-                .map(|cur| cur == &canonical_path)
-                .unwrap_or(false);
+    let switch_to_existing = |path: PathBuf| -> (SwitchResult, SwitchBranchInfo) {
+        let canonical_path = canonicalize(&path).unwrap_or(path.clone());
+        let current_dir = std::env::current_dir()
+            .ok()
+            .and_then(|p| canonicalize(&p).ok());
+        let already_at_worktree = current_dir
+            .as_ref()
+            .map(|cur| cur == &canonical_path)
+            .unwrap_or(false);
 
-            // Check if the actual path matches the expected path
-            let canonical_expected = canonicalize(&expected_path).unwrap_or(expected_path.clone());
-            let path_mismatch = if canonical_path != canonical_expected {
-                Some(expected_path.clone())
-            } else {
-                None
-            };
-
-            let result = if already_at_worktree {
-                SwitchResult::AlreadyAt(canonical_path)
-            } else {
-                SwitchResult::Existing(canonical_path)
-            };
-            let branch_info = SwitchBranchInfo {
-                expected: resolved_branch.clone(),
-                current: actual_branch,
-                expected_path: path_mismatch,
-            };
-            (result, branch_info)
+        // Check if the actual path matches the expected path
+        let canonical_expected = canonicalize(&expected_path).unwrap_or(expected_path.clone());
+        let path_mismatch = if canonical_path != canonical_expected {
+            Some(expected_path.clone())
+        } else {
+            None
         };
+
+        let result = if already_at_worktree {
+            SwitchResult::AlreadyAt(canonical_path)
+        } else {
+            SwitchResult::Existing(canonical_path)
+        };
+        let branch_info = SwitchBranchInfo {
+            branch: resolved_branch.clone(),
+            expected_path: path_mismatch,
+        };
+        (result, branch_info)
+    };
 
     // Branch-first lookup: check if branch has a worktree anywhere
     match repo.worktree_for_branch(&resolved_branch)? {
         Some(existing_path) if existing_path.exists() => {
             let _ = repo.record_switch_previous(new_previous.as_deref());
-            // Branch matches (found by branch lookup), so actual = requested
-            return Ok(switch_to_existing(
-                existing_path,
-                Some(resolved_branch.clone()),
-            ));
+            return Ok(switch_to_existing(existing_path));
         }
         Some(_) => {
             return Err(GitError::WorktreeMissing {
@@ -658,8 +644,7 @@ pub fn handle_switch(
             from_remote,
         },
         SwitchBranchInfo {
-            expected: resolved_branch.clone(),
-            current: Some(resolved_branch),
+            branch: resolved_branch,
             expected_path: None, // Created at expected path by definition
         },
     ))
@@ -1071,69 +1056,6 @@ mod tests {
             from_remote: Some("origin/feature".to_string()),
         };
         assert_eq!(result.path(), &path);
-    }
-
-    #[test]
-    fn test_switch_branch_info_is_branch_mismatch_true() {
-        let info = SwitchBranchInfo {
-            expected: "feature".to_string(),
-            current: Some("main".to_string()),
-            expected_path: None,
-        };
-        assert!(info.is_branch_mismatch());
-    }
-
-    #[test]
-    fn test_switch_branch_info_is_branch_mismatch_false() {
-        let info = SwitchBranchInfo {
-            expected: "feature".to_string(),
-            current: Some("feature".to_string()),
-            expected_path: None,
-        };
-        assert!(!info.is_branch_mismatch());
-    }
-
-    #[test]
-    fn test_switch_branch_info_is_branch_mismatch_detached() {
-        let info = SwitchBranchInfo {
-            expected: "feature".to_string(),
-            current: None, // Detached HEAD
-            expected_path: None,
-        };
-        assert!(info.is_branch_mismatch());
-    }
-
-    #[test]
-    fn test_switch_branch_info_branch_with_current() {
-        let info = SwitchBranchInfo {
-            expected: "expected".to_string(),
-            current: Some("current".to_string()),
-            expected_path: None,
-        };
-        assert_eq!(info.branch(), "current");
-    }
-
-    #[test]
-    fn test_switch_branch_info_branch_without_current() {
-        let info = SwitchBranchInfo {
-            expected: "expected".to_string(),
-            current: None,
-            expected_path: None,
-        };
-        assert_eq!(info.branch(), "expected");
-    }
-
-    #[test]
-    fn test_switch_branch_info_with_expected_path() {
-        let info = SwitchBranchInfo {
-            expected: "feature".to_string(),
-            current: Some("feature".to_string()),
-            expected_path: Some(PathBuf::from("/expected/path")),
-        };
-        assert_eq!(
-            info.expected_path.as_ref().unwrap().to_str().unwrap(),
-            "/expected/path"
-        );
     }
 
     #[test]

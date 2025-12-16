@@ -99,6 +99,20 @@ behavior:
 "Removing feature worktree in background; retaining branch (--no-delete-branch)"                     // User flag (user keeps)
 ```
 
+**Comma + "but" + em-dash for limitations:** When stating an outcome with a
+limitation and its reason:
+
+```rust
+// Outcome, but limitation — reason
+"Worktree for feature @ ~/repo.feature, but cannot change directory — shell integration not installed"
+"Worktree for feature @ ~/repo.feature, but cannot change directory — shell integration not active"
+```
+
+This pattern:
+- States what succeeded (worktree exists at path)
+- Uses "but" to introduce what didn't work (cannot cd)
+- Uses em-dash to explain why (shell integration status)
+
 **Compute decisions once:** For background operations, check conditions upfront,
 show the message, then pass the decision explicitly rather than re-checking in
 background scripts:
