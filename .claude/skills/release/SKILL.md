@@ -132,9 +132,8 @@ Recommendation: Minor release (0.3.0) — new features, no breaking changes
 
 ## Version Guidelines
 
-- **Patch** (0.1.x → 0.1.y): Bug fixes only
-- **Minor** (0.x.0 → 0.y.0): New features, non-breaking changes
-- **Major** (x.0.0 → y.0.0): Breaking changes (rare in early development)
+- **Second digit** (0.1.0 → 0.2.0): Backward incompatible changes
+- **Third digit** (0.1.0 → 0.1.1): Everything else
 
 Current project status: early release, breaking changes acceptable, optimize for best solution over compatibility.
 
