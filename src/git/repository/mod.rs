@@ -491,7 +491,9 @@ impl Repository {
 
     /// List all local branches.
     fn local_branches(&self) -> anyhow::Result<Vec<String>> {
-        let stdout = self.run_command(&["branch", "--format=%(refname:short)"])?;
+        // Use lstrip=2 instead of refname:short - git adds "heads/" prefix to short
+        // names when disambiguation is needed (e.g., branch "foo" + remote "foo").
+        let stdout = self.run_command(&["branch", "--format=%(refname:lstrip=2)"])?;
         Ok(stdout.lines().map(|s| s.trim().to_string()).collect())
     }
 
@@ -838,7 +840,7 @@ impl Repository {
     pub fn list_local_branches(&self) -> anyhow::Result<Vec<(String, String)>> {
         let output = self.run_command(&[
             "for-each-ref",
-            "--format=%(refname:short) %(objectname)",
+            "--format=%(refname:lstrip=2) %(objectname)",
             "refs/heads/",
         ])?;
 
@@ -864,7 +866,7 @@ impl Repository {
     pub fn list_remote_branches(&self) -> anyhow::Result<Vec<(String, String)>> {
         let output = self.run_command(&[
             "for-each-ref",
-            "--format=%(refname:short) %(objectname)",
+            "--format=%(refname:lstrip=2) %(objectname)",
             "refs/remotes/",
         ])?;
 
@@ -1038,7 +1040,7 @@ impl Repository {
         let stdout = self.run_command(&[
             "branch",
             "--sort=-committerdate",
-            "--format=%(refname:short)",
+            "--format=%(refname:lstrip=2)",
         ])?;
         Ok(stdout
             .lines()
@@ -1070,7 +1072,7 @@ impl Repository {
         let local_output = self.run_command(&[
             "for-each-ref",
             "--sort=-committerdate",
-            "--format=%(refname:short)\t%(committerdate:unix)",
+            "--format=%(refname:lstrip=2)\t%(committerdate:unix)",
             "refs/heads/",
         ])?;
 
@@ -1100,7 +1102,7 @@ impl Repository {
         let remote_output = self.run_command(&[
             "for-each-ref",
             "--sort=-committerdate",
-            "--format=%(refname:short)\t%(committerdate:unix)",
+            "--format=%(refname:lstrip=2)\t%(committerdate:unix)",
             &remote_ref_path,
         ])?;
 
