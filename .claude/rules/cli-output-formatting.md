@@ -89,15 +89,27 @@ behavior:
 ```rust
 // GOOD - parallel structure with integration reason explaining branch deletion
 // Both wt merge and wt remove show integration reason when branch is deleted
-// Target branch is bold; trailing dim symbol references wt list: _ (same commit), ⊂ (content integrated)
+// Target branch is bold; symbol uses its standard styling (dim for _ and ⊂)
 "Removing feature worktree & branch in background (same commit as <bold>main</>, <dim>_</>)"        // SameCommit
 "Removing feature worktree & branch in background (ancestor of <bold>main</>, <dim>⊂</>)"           // Ancestor (main moved past)
 "Removing feature worktree & branch in background (no added changes on <bold>main</>, <dim>⊂</>)"   // NoAddedChanges (empty 3-dot diff)
 "Removing feature worktree & branch in background (tree matches <bold>main</>, <dim>⊂</>)"          // TreesMatch (squash/rebase)
 "Removing feature worktree & branch in background (all changes in <bold>main</>, <dim>⊂</>)"        // MergeAddsNothing (squash + main advanced)
-"Removing feature worktree in background; retaining unmerged branch"                                 // Unmerged (system keeps)
-"Removing feature worktree in background; retaining branch (--no-delete-branch)"                     // User flag (user keeps)
+"Removing feature worktree in background; retaining unmerged branch"                         // Unmerged (system keeps)
+"Removing feature worktree in background; retaining branch (--no-delete-branch)"             // User flag (user keeps)
 ```
+
+**Symbol styling:** Status symbols should use their standard styling consistently
+across all contexts (messages, tables, etc.). Each symbol has a defined
+appearance:
+
+- `_` and `⊂` — dim (integration/safe-to-delete indicators)
+- Other symbols may have colors (e.g., diff indicators)
+
+Symbols should match their `wt list` appearance when referenced in messages.
+When a symbol appears in a progress/success message, ensure the message's color
+(e.g., cyan for progress) is closed BEFORE the symbol so the symbol renders in
+its standard styling, not tinted by the message color.
 
 **Comma + "but" + em-dash for limitations:** When stating an outcome with a
 limitation and its reason:

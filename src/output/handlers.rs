@@ -15,8 +15,8 @@ use worktrunk::git::path_dir_name;
 use worktrunk::path::format_path_for_display;
 use worktrunk::shell::Shell;
 use worktrunk::styling::{
-    error_message, format_with_gutter, hint_message, info_message, progress_message,
-    success_message, warning_message,
+    FormattedMessage, PROGRESS_EMOJI, error_message, format_with_gutter, hint_message,
+    info_message, progress_message, success_message, warning_message,
 };
 
 /// Format a switch success message with a consistent location phrase
@@ -597,20 +597,23 @@ fn handle_removed_worktree_output(
         let flag_note = get_flag_note(deletion_mode, &outcome, effective_target.as_deref());
 
         // Reason in parentheses: user flags shown explicitly, integration reason for automatic cleanup
+        // Note: We use FormattedMessage directly instead of progress_message() to control
+        // where cyan styling ends. The flag_note (integration reason) should use standard
+        // colors so the symbol appears in its canonical dim styling, not cyan.
         let action = if deletion_mode.should_keep() {
             cformat!(
-                "<cyan>Removing <bold>{branch_name}</> worktree in background; retaining branch{flag_note}</>"
+                "{PROGRESS_EMOJI} <cyan>Removing <bold>{branch_name}</> worktree in background; retaining branch</>{flag_note}"
             )
         } else if should_delete_branch {
             cformat!(
-                "<cyan>Removing <bold>{branch_name}</> worktree & branch in background{flag_note}</>"
+                "{PROGRESS_EMOJI} <cyan>Removing <bold>{branch_name}</> worktree & branch in background</>{flag_note}"
             )
         } else {
             cformat!(
-                "<cyan>Removing <bold>{branch_name}</> worktree in background; retaining unmerged branch</>"
+                "{PROGRESS_EMOJI} <cyan>Removing <bold>{branch_name}</> worktree in background; retaining unmerged branch</>"
             )
         };
-        super::print(progress_message(action))?;
+        super::print(FormattedMessage::new(action))?;
 
         // Show hint for unmerged branches (same as synchronous path)
         if !deletion_mode.should_keep() && !should_delete_branch {
