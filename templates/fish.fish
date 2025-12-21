@@ -2,15 +2,16 @@
 
 # Only initialize if {{ cmd }} is available (in PATH or via WORKTRUNK_BIN)
 if type -q {{ cmd }}; or test -n "$WORKTRUNK_BIN"
-    # Execute wt command with file-based directive passing.
+    # Execute {{ cmd }} command with file-based directive passing.
     # Creates a temp file, passes path via WORKTRUNK_DIRECTIVE_FILE, evals it after.
     # WORKTRUNK_BIN can override the binary path (for testing dev builds).
+    # Function name includes cmd to avoid conflicts when multiple commands are loaded.
     #
     # Note: We use `eval (cat ... | string collect)` instead of `source` because:
     # 1. fish's `source` doesn't propagate `exit` to the parent function
     # 2. `eval (cat ...)` without `string collect` splits on newlines, breaking multiline directives
     # With `string collect`, `exit 42` properly exits the function with code 42.
-    function wt_exec
+    function _{{ cmd|safe_fn }}_exec
         test -n "$WORKTRUNK_BIN"; or set -l WORKTRUNK_BIN (type -P {{ cmd }})
 
         set -l directive_file (mktemp)
@@ -66,7 +67,7 @@ if type -q {{ cmd }}; or test -n "$WORKTRUNK_BIN"
             return $status
         end
 
-        wt_exec $args
+        _{{ cmd|safe_fn }}_exec $args
     end
 
     # Completions are in ~/.config/fish/completions/wt.fish (installed by `wt config shell install`)

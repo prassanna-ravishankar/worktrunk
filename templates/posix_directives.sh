@@ -1,7 +1,8 @@
-# Execute wt command with file-based directive passing.
+# Execute {{ cmd }} command with file-based directive passing.
 # Creates a temp file, passes path via WORKTRUNK_DIRECTIVE_FILE, sources it after.
 # WORKTRUNK_BIN can override the binary path (for testing dev builds).
-wt_exec() {
+# Function name includes cmd to avoid conflicts when multiple commands are loaded.
+_{{ cmd|safe_fn }}_exec() {
     local directive_file exit_code=0
     directive_file="$(mktemp)"
 

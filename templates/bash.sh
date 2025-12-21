@@ -51,7 +51,7 @@ if command -v {{ cmd }} >/dev/null 2>&1 || [[ -n "${WORKTRUNK_BIN:-}" ]]; then
             return
         fi
 
-        wt_exec "${args[@]}"
+        _{{ cmd|safe_fn }}_exec "${args[@]}"
     }
 
     # Lazy completions - generate on first TAB, then delegate to clap's completer
