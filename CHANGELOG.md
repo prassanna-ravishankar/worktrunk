@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.1
+
+### Improved
+
+- **`post-switch` hook**: New hook that runs in the background after every `wt switch` operation. Unlike `post-start` (which only runs on creation), `post-switch` runs on all switch results. Use cases include renaming terminal tabs, updating tmux window names, and IDE notifications.
+- **Signal forwarding for hooks**: Hooks now receive SIGINT/SIGTERM when the parent process is interrupted, allowing proper cleanup. Previously, non-interactive shells continued executing after signals.
+- **Faster `wt list` skeleton**: Time-to-skeleton reduced by caching default branch lookup, batching timestamp fetching, and deferring non-essential git operations. Skeleton shows `·` placeholder for gutter symbols until data loads.
+- **Clearer `--clobber` hint**: Error message now says "to overwrite (with backup)" instead of "to retry with backup".
+
+### Documentation
+
+- **State side-effects**: Added section explaining how Worktrunk state operations may trigger git commands.
+- **`wt merge` location**: Clarified that `wt merge` runs from the feature worktree.
+
 ## 0.6.0
 
 ### Improved
