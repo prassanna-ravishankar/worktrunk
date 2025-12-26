@@ -76,6 +76,7 @@ pub enum GitError {
     WorktreePathExists {
         branch: String,
         path: PathBuf,
+        create: bool,
     },
     WorktreeCreationFailed {
         branch: String,
@@ -255,11 +256,20 @@ impl std::fmt::Display for GitError {
                 )
             }
 
-            GitError::WorktreePathExists { branch, path } => {
+            GitError::WorktreePathExists {
+                branch,
+                path,
+                create,
+            } => {
                 let path_display = format_path_for_display(path);
                 let path_str = path.to_string_lossy();
                 let path_escaped = escape(Cow::Borrowed(path_str.as_ref()));
-                let switch_cmd = suggest_command("switch", &[branch], &["--clobber"]);
+                let flags: &[&str] = if *create {
+                    &["--create", "--clobber"]
+                } else {
+                    &["--clobber"]
+                };
+                let switch_cmd = suggest_command("switch", &[branch], flags);
                 write!(
                     f,
                     "{}\n\n{}",
@@ -710,11 +720,26 @@ mod tests {
         let err = GitError::WorktreePathExists {
             branch: "feature".to_string(),
             path: PathBuf::from("/some/path"),
+            create: false,
         };
         assert_snapshot!(err.to_string(), @"
         [31m✗[39m [31mDirectory already exists: [1m/some/path[22m[39m
 
         [2m↳[22m [2mTo remove manually, run [90mrm -rf /some/path[39m; to overwrite (with backup), run [90mwt switch feature --clobber[39m[22m
+        ");
+    }
+
+    #[test]
+    fn snapshot_worktree_error_with_path_and_create() {
+        let err = GitError::WorktreePathExists {
+            branch: "feature".to_string(),
+            path: PathBuf::from("/some/path"),
+            create: true,
+        };
+        assert_snapshot!(err.to_string(), @"
+        [31m✗[39m [31mDirectory already exists: [1m/some/path[22m[39m
+
+        [2m↳[22m [2mTo remove manually, run [90mrm -rf /some/path[39m; to overwrite (with backup), run [90mwt switch feature --create --clobber[39m[22m
         ");
     }
 

@@ -62,6 +62,7 @@ fn display_worktree_path_exists() {
     let err = GitError::WorktreePathExists {
         branch: "feature".to_string(),
         path: PathBuf::from("/tmp/repo.feature"),
+        create: false,
     };
 
     assert_snapshot!("worktree_path_exists", err.to_string());

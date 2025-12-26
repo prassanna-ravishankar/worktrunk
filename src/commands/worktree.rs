@@ -621,6 +621,7 @@ pub fn handle_switch(
             return Err(GitError::WorktreePathExists {
                 branch: resolved_branch.clone(),
                 path: worktree_path,
+                create,
             }
             .into());
         }
@@ -669,6 +670,7 @@ pub fn handle_switch(
                 return Err(GitError::WorktreePathExists {
                     branch: resolved_branch.clone(),
                     path: std::path::PathBuf::from(path_str),
+                    create,
                 }
                 .into());
             }
