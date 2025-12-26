@@ -282,7 +282,7 @@ pub(crate) use parse::DefaultBranchName;
 // They're accessible as git::HookType, git::Worktree, and git::WorktreeList without needing re-export.
 
 /// Hook types for git operations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, strum::Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "kebab-case")]
 pub enum HookType {
     PostCreate,

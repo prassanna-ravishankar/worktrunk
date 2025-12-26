@@ -49,15 +49,11 @@ impl LineDiff {
     pub fn is_empty(&self) -> bool {
         self.added == 0 && self.deleted == 0
     }
-
-    pub fn into_tuple(self) -> (usize, usize) {
-        (self.added, self.deleted)
-    }
 }
 
 impl From<LineDiff> for (usize, usize) {
     fn from(diff: LineDiff) -> Self {
-        diff.into_tuple()
+        (diff.added, diff.deleted)
     }
 }
 
@@ -173,15 +169,6 @@ mod tests {
             deleted: 5,
         };
         assert!(!diff.is_empty());
-    }
-
-    #[test]
-    fn test_line_diff_into_tuple() {
-        let diff = LineDiff {
-            added: 10,
-            deleted: 5,
-        };
-        assert_eq!(diff.into_tuple(), (10, 5));
     }
 
     #[test]

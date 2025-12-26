@@ -9,7 +9,7 @@ use clap_complete::env::CompleteEnv;
 use crate::cli;
 use crate::display::format_relative_time_short;
 use worktrunk::config::{ProjectConfig, WorktrunkConfig};
-use worktrunk::git::{BranchCategory, Repository};
+use worktrunk::git::{BranchCategory, HookType, Repository};
 
 /// Handle shell-initiated completion requests via `COMPLETE=$SHELL wt`
 pub fn maybe_handle_env_completion() -> bool {
@@ -211,25 +211,18 @@ fn complete_hook_commands() -> Vec<CompletionCandidate> {
         })
     });
 
-    let Some(hook_type) = hook_type else {
+    let Some(hook_type_str) = hook_type else {
+        return Vec::new();
+    };
+    let Ok(hook_type) = hook_type_str.parse::<HookType>() else {
         return Vec::new();
     };
 
     let mut candidates = Vec::new();
 
-    // Load user config and add user hook names
-    if let Ok(user_config) = WorktrunkConfig::load() {
-        let user_command_config = match hook_type {
-            "post-create" => &user_config.hooks.post_create,
-            "post-start" => &user_config.hooks.post_start,
-            "pre-commit" => &user_config.hooks.pre_commit,
-            "pre-merge" => &user_config.hooks.pre_merge,
-            "post-merge" => &user_config.hooks.post_merge,
-            "pre-remove" => &user_config.hooks.pre_remove,
-            _ => &None,
-        };
-
-        if let Some(config) = user_command_config {
+    // Helper to extract named commands from a hook config
+    let add_named_commands =
+        |candidates: &mut Vec<_>, config: &worktrunk::config::CommandConfig| {
             candidates.extend(
                 config
                     .commands()
@@ -237,33 +230,22 @@ fn complete_hook_commands() -> Vec<CompletionCandidate> {
                     .filter_map(|cmd| cmd.name.as_ref())
                     .map(|name| CompletionCandidate::new(name.clone())),
             );
-        }
+        };
+
+    // Load user config and add user hook names
+    if let Ok(user_config) = WorktrunkConfig::load()
+        && let Some(config) = user_config.hooks.get(hook_type)
+    {
+        add_named_commands(&mut candidates, config);
     }
 
     // Load project config and add project hook names
     let repo = Repository::current();
     if let Ok(repo_root) = repo.worktree_root()
         && let Ok(Some(project_config)) = ProjectConfig::load(repo_root)
+        && let Some(config) = project_config.hooks.get(hook_type)
     {
-        let project_command_config = match hook_type {
-            "post-create" => &project_config.hooks.post_create,
-            "post-start" => &project_config.hooks.post_start,
-            "pre-commit" => &project_config.hooks.pre_commit,
-            "pre-merge" => &project_config.hooks.pre_merge,
-            "post-merge" => &project_config.hooks.post_merge,
-            "pre-remove" => &project_config.hooks.pre_remove,
-            _ => &None,
-        };
-
-        if let Some(config) = project_command_config {
-            candidates.extend(
-                config
-                    .commands()
-                    .iter()
-                    .filter_map(|cmd| cmd.name.as_ref())
-                    .map(|name| CompletionCandidate::new(name.clone())),
-            );
-        }
+        add_named_commands(&mut candidates, config);
     }
 
     candidates

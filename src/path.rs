@@ -84,9 +84,7 @@ fn find_cygpath_from_shell(shell: &crate::shell_exec::ShellConfig) -> Option<Pat
 /// Uses the `home` crate which handles platform-specific detection:
 /// - Unix: `$HOME` environment variable
 /// - Windows: `USERPROFILE` or `HOMEDRIVE`/`HOMEPATH`
-pub fn home_dir() -> Option<PathBuf> {
-    home::home_dir()
-}
+pub use home::home_dir;
 
 /// Format a filesystem path for user-facing output.
 ///

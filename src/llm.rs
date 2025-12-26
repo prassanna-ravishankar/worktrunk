@@ -333,6 +333,38 @@ enum TemplateType {
     Squash,
 }
 
+/// Load template from inline, file, or default
+fn load_template(
+    inline: Option<&String>,
+    file: Option<&String>,
+    default: &str,
+    file_type_name: &str,
+) -> anyhow::Result<String> {
+    match (inline, file) {
+        (Some(inline), None) => Ok(inline.clone()),
+        (None, Some(path)) => {
+            let expanded_path = PathBuf::from(shellexpand::tilde(path).as_ref());
+            std::fs::read_to_string(&expanded_path).map_err(|e| {
+                anyhow::Error::from(worktrunk::git::GitError::Other {
+                    message: format!(
+                        "Failed to read {} '{}': {}",
+                        file_type_name,
+                        format_path_for_display(&expanded_path),
+                        e
+                    ),
+                })
+            })
+        }
+        (None, None) => Ok(default.to_string()),
+        (Some(_), Some(_)) => {
+            unreachable!(
+                "Config validation should prevent both {} options",
+                file_type_name
+            )
+        }
+    }
+}
+
 /// Build prompt from template using minijinja
 ///
 /// Template variables available to both commit and squash templates:
@@ -351,52 +383,24 @@ fn build_prompt(
 ) -> anyhow::Result<String> {
     // Get template source based on type
     let (template, type_name) = match template_type {
-        TemplateType::Commit => {
-            let tmpl = match (&config.template, &config.template_file) {
-                (Some(inline), None) => inline.clone(),
-                (None, Some(path)) => {
-                    let expanded_path = PathBuf::from(shellexpand::tilde(path).as_ref());
-                    std::fs::read_to_string(&expanded_path).map_err(|e| {
-                        anyhow::Error::from(worktrunk::git::GitError::Other {
-                            message: format!(
-                                "Failed to read template-file '{}': {}",
-                                format_path_for_display(&expanded_path),
-                                e
-                            ),
-                        })
-                    })?
-                }
-                (None, None) => DEFAULT_TEMPLATE.to_string(),
-                (Some(_), Some(_)) => {
-                    unreachable!("Config validation should prevent both template and template-file")
-                }
-            };
-            (tmpl, "Template")
-        }
-        TemplateType::Squash => {
-            let tmpl = match (&config.squash_template, &config.squash_template_file) {
-                (Some(inline), None) => inline.clone(),
-                (None, Some(path)) => {
-                    let expanded_path = PathBuf::from(shellexpand::tilde(path).as_ref());
-                    std::fs::read_to_string(&expanded_path).map_err(|e| {
-                        anyhow::Error::from(worktrunk::git::GitError::Other {
-                            message: format!(
-                                "Failed to read squash-template-file '{}': {}",
-                                format_path_for_display(&expanded_path),
-                                e
-                            ),
-                        })
-                    })?
-                }
-                (None, None) => DEFAULT_SQUASH_TEMPLATE.to_string(),
-                (Some(_), Some(_)) => {
-                    unreachable!(
-                        "Config validation should prevent both squash-template and squash-template-file"
-                    )
-                }
-            };
-            (tmpl, "Squash template")
-        }
+        TemplateType::Commit => (
+            load_template(
+                config.template.as_ref(),
+                config.template_file.as_ref(),
+                DEFAULT_TEMPLATE,
+                "template-file",
+            )?,
+            "Template",
+        ),
+        TemplateType::Squash => (
+            load_template(
+                config.squash_template.as_ref(),
+                config.squash_template_file.as_ref(),
+                DEFAULT_SQUASH_TEMPLATE,
+                "squash-template-file",
+            )?,
+            "Squash template",
+        ),
     };
 
     // Validate non-empty

@@ -7,9 +7,14 @@ use anstyle::Style;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Truncate a styled string to a visible width budget, preserving escapes.
-/// Escape sequences (ANSI/OSC) are zero-width; ellipsis is added when truncating.
+/// Escape sequences (ANSI/OSC) are zero-width; ellipsis ("…") is added when truncating.
 /// Appends ESC[0m on truncation to avoid style bleed.
-pub fn truncate_visible(rendered: &str, max_width: usize, ellipsis: &str) -> String {
+pub fn truncate_visible(rendered: &str, max_width: usize) -> String {
+    truncate_visible_with_ellipsis(rendered, max_width, "…")
+}
+
+/// Truncate a styled string with a custom ellipsis character.
+fn truncate_visible_with_ellipsis(rendered: &str, max_width: usize, ellipsis: &str) -> String {
     if max_width == 0 {
         return String::new();
     }
@@ -145,7 +150,7 @@ impl StyledLine {
             return self;
         }
         let rendered = self.render();
-        let truncated = truncate_visible(&rendered, max_width, "…");
+        let truncated = truncate_visible(&rendered, max_width);
         let mut new_line = StyledLine::new();
         new_line.push_raw(truncated);
         new_line
@@ -231,7 +236,7 @@ mod tests {
     #[test]
     fn test_truncate_visible_preserves_budget_and_resets() {
         let colored = "\u{1b}[31mhello\u{1b}[0m";
-        let out = truncate_visible(colored, 3, "…");
+        let out = truncate_visible(colored, 3);
         assert_eq!(visible_width(&out), 3);
         assert!(out.ends_with("\u{1b}[0m"));
     }
@@ -239,7 +244,7 @@ mod tests {
     #[test]
     fn test_truncate_visible_handles_wide_emoji() {
         let rocket = "🚀";
-        let out = truncate_visible(rocket, 1, "…");
+        let out = truncate_visible(rocket, 1);
         assert_eq!(visible_width(&out), 1);
         assert!(out.ends_with("\u{1b}[0m"));
     }
@@ -247,14 +252,14 @@ mod tests {
     #[test]
     fn test_truncate_visible_zero_width() {
         let text = "hello world";
-        let out = truncate_visible(text, 0, "…");
+        let out = truncate_visible(text, 0);
         assert!(out.is_empty(), "Zero width should return empty string");
     }
 
     #[test]
     fn test_truncate_visible_no_truncation_needed() {
         let text = "short";
-        let out = truncate_visible(text, 100, "…");
+        let out = truncate_visible(text, 100);
         assert_eq!(out, text, "No truncation should return original string");
     }
 
@@ -262,7 +267,7 @@ mod tests {
     fn test_truncate_visible_zero_budget() {
         // When max_width equals ellipsis width, budget becomes 0
         let text = "hello";
-        let out = truncate_visible(text, 1, "…");
+        let out = truncate_visible(text, 1);
         assert!(
             visible_width(&out) <= 1,
             "Output should be within max_width"

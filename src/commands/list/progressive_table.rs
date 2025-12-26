@@ -56,17 +56,17 @@ impl ProgressiveTable {
 
         // Build initial lines: header + rows + spacer + footer
         let mut lines = Vec::with_capacity(row_count + 3);
-        lines.push(truncate_visible(&header, max_width, "…"));
+        lines.push(truncate_visible(&header, max_width));
 
         for skeleton in skeletons {
-            lines.push(truncate_visible(&skeleton, max_width, "…"));
+            lines.push(truncate_visible(&skeleton, max_width));
         }
 
         // Spacer (blank line)
         lines.push(String::new());
 
         // Footer
-        lines.push(truncate_visible(&initial_footer, max_width, "…"));
+        lines.push(truncate_visible(&initial_footer, max_width));
 
         Self {
             lines,
@@ -103,7 +103,7 @@ impl ProgressiveTable {
             return Ok(());
         }
 
-        let truncated = truncate_visible(&content, self.max_width, "…");
+        let truncated = truncate_visible(&content, self.max_width);
 
         // Line index: header (0) + row_idx
         let line_idx = row_idx + 1;
@@ -124,7 +124,7 @@ impl ProgressiveTable {
 
     /// Update the footer message.
     pub fn update_footer(&mut self, content: String) -> std::io::Result<()> {
-        let truncated = truncate_visible(&content, self.max_width, "…");
+        let truncated = truncate_visible(&content, self.max_width);
 
         // Footer is the last line
         let footer_idx = self.lines.len() - 1;

@@ -281,10 +281,6 @@ pub struct ShellInit {
 }
 
 impl ShellInit {
-    pub fn new(shell: Shell) -> Self {
-        Self::with_prefix(shell, "wt".to_string())
-    }
-
     pub fn with_prefix(shell: Shell, cmd: String) -> Self {
         Self { shell, cmd }
     }
@@ -532,7 +528,7 @@ mod tests {
         // Test that shell init generates valid output for each shell
         let shells = [Shell::Bash, Shell::Zsh, Shell::Fish, Shell::PowerShell];
         for shell in shells {
-            let init = ShellInit::new(shell);
+            let init = ShellInit::with_prefix(shell, "wt".to_string());
             let result = init.generate();
             assert!(result.is_ok(), "Failed to generate for {:?}", shell);
             let output = result.unwrap();

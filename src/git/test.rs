@@ -198,7 +198,7 @@ fn test_line_diff_from_numstat(
     let result = LineDiff::from_numstat(input);
 
     assert!(result.is_ok());
-    let (added, deleted) = result.unwrap().into_tuple();
+    let (added, deleted): (usize, usize) = result.unwrap().into();
     assert_eq!(added, expected_added);
     assert_eq!(deleted, expected_deleted);
 }
