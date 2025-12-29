@@ -130,8 +130,8 @@ wt merge: squash, rebase, merge, remove worktree, delete branch, in one command.
 
 [screenshot of Claude Code with worktrunk statusline]
 
-**13/** (106 chars)
-Putting it all together: parallel Claude Code agents in Zellij tabs, creating features, merging them back.
+**13/** (168 chars)
+Putting it all together: parallel Claude Code agents in Zellij tabs, each in its own worktree. The full lifecycle: wt switch, wt list, wt select, wt merge.
 
 [wt-zellij-omnibus.gif]
 
