@@ -135,7 +135,8 @@ Getting started
 
   wt switch --create feature    Create worktree and branch
   wt switch feature             Switch to existing worktree
-  wt merge                      Squash, rebase, and merge to the default branch
+  wt list                       Show all worktrees
+  wt merge                      Squash, rebase, and merge to default branch
 
 Run `wt config shell` to set up directory switching.
 
