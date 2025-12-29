@@ -87,19 +87,13 @@ args = ["-m", "claude-haiku-4.5"]
 def prepare_docs_core(env: DemoEnv):
     """Set up repo for docs wt-core demo with hooks and billing branch."""
     hooks_config = '''[post-start]
-deps = "npm install"
-build = "npm run build"
-dev = "npm run dev"
-db = "docker compose up -d postgres"
+dev = "npm run dev -- --port {{ branch | hash_port }}"
 
 [pre-remove]
 cleanup = "flyctl scale count 0"
 '''
     prepare_demo_repo(env, REPO_ROOT, hooks_config=hooks_config)
-    _write_user_config(env, [
-        "npm install", "npm run build", "npm run dev",
-        "docker compose up -d postgres", "flyctl scale count 0"
-    ])
+    _write_user_config(env, ["npm run dev -- --port {{ branch | hash_port }}", "flyctl scale count 0"])
     _add_billing_branch(env)
 
 
@@ -118,13 +112,13 @@ def prepare_docs_select(env: DemoEnv):
 def prepare_twitter_core(env: DemoEnv):
     """Standard setup with hooks config for most Twitter demos."""
     hooks_config = '''[post-start]
-dev = "npm run dev"
+dev = "npm run dev -- --port {{ branch | hash_port }}"
 
 [pre-remove]
 cleanup = "flyctl scale count 0"
 '''
     prepare_demo_repo(env, REPO_ROOT, hooks_config=hooks_config)
-    _write_user_config(env, ["npm run dev", "flyctl scale count 0"])
+    _write_user_config(env, ["npm run dev -- --port {{ branch | hash_port }}", "flyctl scale count 0"])
     _add_billing_branch(env)
 
 
@@ -164,13 +158,13 @@ def prepare_twitter_hooks(env: DemoEnv):
     """Setup for wt-hooks demo - more hooks to showcase the feature."""
     hooks_config = '''[post-start]
 deps = "npm install"
-dev = "npm run dev"
+dev = "npm run dev -- --port {{ branch | hash_port }}"
 
 [pre-remove]
 cleanup = "flyctl scale count 0"
 '''
     prepare_demo_repo(env, REPO_ROOT, hooks_config=hooks_config)
-    _write_user_config(env, ["npm install", "npm run dev", "flyctl scale count 0"])
+    _write_user_config(env, ["npm install", "npm run dev -- --port {{ branch | hash_port }}", "flyctl scale count 0"])
     _add_billing_branch(env)
 
 

@@ -52,27 +52,22 @@ Type "wt switch alpha"
 Enter
 Sleep 1s
 
-# 3. Show the hooks config (bat syntax highlighting via cat wrapper)
-Type "cat .config/wt.toml"
-Enter
-Sleep 2s
-
-# 4. Create new worktree with post-start
+# 3. Create new worktree with post-start
 Type "wt switch --create api"
 Enter
 Sleep 2.5s
 
-# 5. Show full list with CI status
+# 4. Show full list with CI status
 Type "wt list --full"
 Enter
 Sleep 3s
 
-# 6. Switch to billing (already merged)
+# 5. Switch to billing (already merged)
 Type "wt switch billing"
 Enter
 Sleep 1.5s
 
-# 7. Remove the merged worktree (pre-remove hook runs)
+# 6. Remove the merged worktree (pre-remove hook runs)
 Type "wt remove"
 Enter
 Sleep 5s
