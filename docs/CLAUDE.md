@@ -266,59 +266,17 @@ Demo GIFs (~2MB each) are stored in a separate `worktrunk-assets` repo to avoid 
 
 **To regenerate demos** (required after CLI output changes):
 
-1. Build the vhs-keystrokes binary if missing (one-time setup, see below)
-2. Run the demo build scripts:
-   ```bash
-   ./docs/demos/docs/build      # Doc site demos (SIZE_DOCS: 1600x900, FontSize 24)
-   ./docs/demos/twitter/build   # Twitter demos (SIZE_TWITTER: 1200x700, FontSize 26)
-   ```
-3. Publish: `./dev/publish-assets`
+```bash
+./docs/demos/build docs      # Doc site demos (light + dark)
+./docs/demos/build twitter   # Twitter demos (light only)
+./dev/publish-assets         # Publish to assets repo
+```
 
 Deploy runs `fetch-assets` before building.
 
-### Demo directory structure
-
-```
-docs/demos/
-  tapes/           # All VHS tape files (templated, shared by both builds)
-  docs/build       # Doc site build script (generates light + dark)
-  twitter/build    # Twitter build script (generates light only)
-  shared/          # Python library, themes, fixtures
-  vhs-keystrokes/  # Custom VHS binary (gitignored, built on demand)
-```
-
-Tape files use template variables (`{{FONTSIZE}}`, `{{WIDTH}}`, `{{HEIGHT}}`) so the same tape produces different sizes for docs vs Twitter.
-
-### vhs-keystrokes setup (REQUIRED for wt-select demos)
-
-The `wt-select` demos require a custom VHS fork with keystroke overlay. **Claude must build this binary before regenerating demos.**
-
-Check if the binary exists:
-
-```bash
-ls docs/demos/vhs-keystrokes/vhs-keystrokes
-```
-
-If missing, **build it** (requires Go):
-
-```bash
-cd docs/demos
-git clone -b keypress-overlay https://github.com/max-sixty/vhs.git vhs-keystrokes
-cd vhs-keystrokes && go build -o vhs-keystrokes .
-```
-
-The binary is gitignored. Build scripts skip wt-select GIF recording if missing—**always build vhs-keystrokes first** when regenerating demos.
+For detailed demo development guidelines (timing, debugging, environment setup), see `docs/demos/CLAUDE.md`.
 
 ### Light/dark theme variants
-
-The docs build generates both light and dark GIF variants:
-- `wt-core.gif` / `wt-core-dark.gif`
-- `wt-merge.gif` / `wt-merge-dark.gif`
-- `wt-select.gif` / `wt-select-dark.gif`
-
-Twitter build generates light only (Twitter doesn't support theme-switching media queries).
-
-Theme definitions are in `docs/demos/shared/themes.py`, matching the CSS variables in `_variables.html`.
 
 In markdown, use `<picture>` with media queries:
 ```html

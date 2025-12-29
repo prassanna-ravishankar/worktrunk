@@ -5,17 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 ASSETS_REPO="$REPO_ROOT/../worktrunk-assets"
-
-# Demo sources: name|source_path
-# Both light and dark variants for theme switching
-DEMOS=(
-    "wt-core.gif|$REPO_ROOT/docs/demos/wt-core/out/wt-core.gif"
-    "wt-core-dark.gif|$REPO_ROOT/docs/demos/wt-core/out/wt-core-dark.gif"
-    "wt-merge.gif|$REPO_ROOT/docs/demos/wt-merge/out/wt-merge.gif"
-    "wt-merge-dark.gif|$REPO_ROOT/docs/demos/wt-merge/out/wt-merge-dark.gif"
-    "wt-select.gif|$REPO_ROOT/docs/demos/wt-select/out/wt-select.gif"
-    "wt-select-dark.gif|$REPO_ROOT/docs/demos/wt-select/out/wt-select-dark.gif"
-)
+DEMOS_DIR="$REPO_ROOT/docs/demos/out"
 
 # Clone assets repo if needed
 if [[ ! -d "$ASSETS_REPO/.git" ]]; then
@@ -37,24 +27,20 @@ if ! git pull --ff-only; then
     exit 1
 fi
 
-# Copy available assets
+# Copy all GIFs from demos/out
 echo "Copying assets..."
 copied=()
-for entry in "${DEMOS[@]}"; do
-    name="${entry%%|*}"
-    src="${entry#*|}"
-    if [[ -f "$src" ]]; then
-        cp "$src" "$ASSETS_REPO/demos/"
-        copied+=("$name")
-        echo "  $name"
-    fi
+for src in "$DEMOS_DIR"/*.gif; do
+    [[ -f "$src" ]] || continue
+    name="$(basename "$src")"
+    cp "$src" "$ASSETS_REPO/demos/"
+    copied+=("$name")
+    echo "  $name"
 done
 
 if [[ ${#copied[@]} -eq 0 ]]; then
     echo "No demo GIFs found. Build them first:"
-    echo "  ./docs/demos/wt-core/build"
-    echo "  ./docs/demos/wt-merge/build"
-    echo "  ./docs/demos/wt-select/build"
+    echo "  ./docs/demos/build docs"
     exit 1
 fi
 

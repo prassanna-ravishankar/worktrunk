@@ -1,5 +1,5 @@
 /target
-docs/demos/*/out/
+docs/demos/out/
 docs/static/assets/
 
 # Lychee link checker cache
@@ -10,5 +10,4 @@ test-concurrent.sh
 *.snap.new
 *.snap.pending
 logo-variant-*.png
-docs/demos/wt-select/vhs-keystrokes/
 test-results/
