@@ -2,7 +2,6 @@
 
 import json
 import os
-import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -221,15 +220,6 @@ fi
 
     # Project config directory
     (env.repo / ".config").mkdir(exist_ok=True)
-
-
-def setup_gh_mock(env: DemoEnv, fixtures_dir: Path):
-    """Set up gh CLI mock from demo's fixtures directory."""
-    bin_dir = env.home / "bin"
-    bin_dir.mkdir(parents=True, exist_ok=True)
-    gh_mock = bin_dir / "gh"
-    shutil.copy(fixtures_dir / "gh-mock.sh", gh_mock)
-    gh_mock.chmod(0o755)
 
 
 def setup_claude_code_config(
@@ -694,64 +684,6 @@ def setup_demo_output(out_dir: Path) -> Path:
     starship_config = out_dir / "starship.toml"
     shutil.copy(FIXTURES_DIR / "starship.toml", starship_config)
     return starship_config
-
-
-def build_shell_env(demo_env: "DemoEnv", repo_root: Path, extra: dict = None) -> dict:
-    """Build environment dict for running shell commands in demo context.
-
-    Includes wt, fish, starship setup with isolated HOME.
-    """
-    starship_config = demo_env.out_dir / "starship.toml"
-    starship_cache = demo_env.root / "starship-cache"
-    starship_cache.mkdir(exist_ok=True)
-
-    env = os.environ.copy()
-    env.update({
-        "LANG": "en_US.UTF-8",
-        "LC_ALL": "en_US.UTF-8",
-        "COLUMNS": "140",
-        "RUSTUP_HOME": str(REAL_HOME / ".rustup"),
-        "CARGO_HOME": str(REAL_HOME / ".cargo"),
-        "HOME": str(demo_env.home),
-        "PATH": f"{repo_root}/target/debug:{demo_env.home}/bin:{os.environ['PATH']}",
-        "STARSHIP_CONFIG": str(starship_config),
-        "STARSHIP_CACHE": str(starship_cache),
-        "NO_COLOR": "1",
-        "CLICOLOR": "0",
-    })
-    if extra:
-        env.update(extra)
-    return env
-
-
-def clean_ansi_output(text: str) -> str:
-    """Strip ANSI escape codes and control characters from text."""
-    # Strip ANSI escape sequences
-    clean = re.sub(r"\x1B\[[0-9;?]*[A-Za-z]", "", text)
-    # Strip control characters (except newline, tab, carriage return)
-    clean = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", clean)
-    return clean
-
-
-def run_fish_script(
-    demo_env: "DemoEnv",
-    script: str,
-    env: dict,
-    cwd: Path = None,
-) -> str:
-    """Run a fish script and return cleaned output.
-
-    Automatically prepends shell init and cleans ANSI from output.
-    """
-    full_script = "wt config shell init fish | source\n" + script
-    result = subprocess.run(
-        ["fish", "-c", full_script],
-        cwd=cwd or demo_env.repo,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-    return clean_ansi_output(result.stdout + result.stderr)
 
 
 @dataclass

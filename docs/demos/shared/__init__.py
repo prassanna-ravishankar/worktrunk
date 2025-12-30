@@ -15,7 +15,6 @@ from .lib import (
     build_wt,
     commit_dated,
     prepare_base_repo,
-    setup_gh_mock,
     setup_claude_code_config,
     setup_zellij_config,
     setup_fish_config,
@@ -24,9 +23,6 @@ from .lib import (
     # Demo recording infrastructure
     check_dependencies,
     setup_demo_output,
-    build_shell_env,
-    clean_ansi_output,
-    run_fish_script,
     record_all_themes,
 )
 from .themes import THEMES, format_theme_for_vhs
@@ -46,7 +42,6 @@ __all__ = [
     "build_wt",
     "commit_dated",
     "prepare_base_repo",
-    "setup_gh_mock",
     "setup_claude_code_config",
     "setup_zellij_config",
     "setup_fish_config",
@@ -57,8 +52,5 @@ __all__ = [
     # Demo recording infrastructure
     "check_dependencies",
     "setup_demo_output",
-    "build_shell_env",
-    "clean_ansi_output",
-    "run_fish_script",
     "record_all_themes",
 ]
