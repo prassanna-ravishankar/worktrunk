@@ -740,12 +740,9 @@ def record_text(
         vhs_binary: VHS binary to use
 
     Raises:
-        ValueError: If tape is interactive (caller should check first)
         subprocess.CalledProcessError: If VHS fails
         RuntimeError: If VHS succeeds but output file not created
     """
-    if is_interactive_tape(tape_path):
-        raise ValueError(f"Cannot record text for interactive tape: {tape_path}")
 
     # Render tape with variable substitution
     rendered = render_tape(tape_path, replacements, repo_root)

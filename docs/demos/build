@@ -32,7 +32,7 @@ from shared import (
     setup_claude_code_config, setup_zellij_config, setup_fish_config,
     check_dependencies, setup_demo_output, record_all_themes,
     SIZE_DOCS, SIZE_SOCIAL,
-    is_interactive_tape, record_text, build_tape_replacements,
+    record_text, build_tape_replacements,
 )
 
 REPO_ROOT = SCRIPT_DIR.parent.parent
@@ -313,8 +313,6 @@ def record_demo(
     if not tape_path.exists():
         raise FileNotFoundError(f"{tape_file} not found")
 
-    if text_mode and is_interactive_tape(tape_path):
-        raise ValueError("interactive demo (has TUI/Zellij)")
 
     vhs_binary = VHS_KEYSTROKES if vhs_type == "vhs-keystrokes" else "vhs"
 
@@ -375,7 +373,7 @@ Examples:
   ./build docs                    Build all doc site demos (light + dark)
   ./build social                  Build all social media demos (light only)
   ./build docs --only wt-merge    Build specific demo for docs
-  ./build docs --text             Build text output for non-interactive demos
+  ./build docs --text             Build text output instead of GIFs
   ./build social --only wt-zellij-omnibus --shell   Debug shell for demo
 """
     )
@@ -385,7 +383,7 @@ Examples:
     parser.add_argument("--shell", action="store_true",
                         help="Build demo and spawn interactive shell for debugging (requires --only)")
     parser.add_argument("--text", action="store_true",
-                        help="Record text output instead of GIFs (skips interactive demos)")
+                        help="Record text output instead of GIFs")
     parser.add_argument("--sequential", action="store_true",
                         help="Record demos sequentially instead of in parallel")
     args = parser.parse_args()

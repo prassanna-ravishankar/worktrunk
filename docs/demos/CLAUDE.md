@@ -24,7 +24,10 @@ Tape files use template variables (`{{FONTSIZE}}`, `{{WIDTH}}`, `{{HEIGHT}}`) so
 ```bash
 ./docs/demos/build docs      # Doc site demos (1600x900, light + dark)
 ./docs/demos/build social    # Social media demos (1200x700, light only)
+./docs/demos/build docs --text  # Text output instead of GIFs
 ```
+
+Text output captures terminal frames as plain text. Works for all demos, though interactive demos (TUI navigation, Zellij tabs) produce less useful output since the visual interactions don't translate to text.
 
 Regenerate a single demo:
 
