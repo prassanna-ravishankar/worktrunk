@@ -382,6 +382,21 @@ pub fn handle_switch_output(
                 from_remote.as_deref(),
             )))?;
 
+            // Show worktree-path config hint on first --create in this repo,
+            // unless user already has a custom worktree-path config
+            if *created_branch {
+                let repo = worktrunk::git::Repository::current();
+                let has_custom_config = WorktrunkConfig::load()
+                    .map(|c| c.has_custom_worktree_path())
+                    .unwrap_or(false);
+                if !has_custom_config && !repo.has_shown_hint("worktree-path") {
+                    super::print(hint_message(cformat!(
+                        "Customize worktree locations: <bright-black>wt config create</>"
+                    )))?;
+                    let _ = repo.mark_hint_shown("worktree-path");
+                }
+            }
+
             // Warn if shell won't cd to the new worktree
             if let Some(reason) = shell_warning_reason {
                 if let Some(cmd) = execute_command {
