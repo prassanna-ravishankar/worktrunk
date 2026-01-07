@@ -176,6 +176,17 @@ url = "http://localhost:{{ branch | hash_port }}"
 
 URLs are dimmed when the port isn't listening. The template supports `{{ branch }}` with filters `hash_port` (port 10000-19999) and `sanitize` (filesystem-safe).
 
+### CI platform override
+
+The `[ci]` section overrides CI platform detection for GitHub Enterprise or self-hosted GitLab with custom domains:
+
+```toml
+[ci]
+platform = "github"  # or "gitlab"
+```
+
+By default, the platform is detected from the remote URL. Use this when URL detection fails (e.g., `git.mycompany.com` instead of `github.mycompany.com`).
+
 ## Shell integration
 
 Worktrunk needs shell integration to change directories when switching worktrees. Install with:
@@ -198,6 +209,20 @@ wt config shell init fish | source
 ```
 
 Without shell integration, `wt switch` prints the target directory but cannot `cd` into it.
+
+### Skip first-run prompt
+
+On first run without shell integration, Worktrunk offers to install it. Suppress this prompt in CI or automated environments:
+
+```toml
+skip-shell-integration-prompt = true
+```
+
+Or via environment variable:
+
+```bash
+export WORKTRUNK_SKIP_SHELL_INTEGRATION_PROMPT=true
+```
 
 ## Environment variables
 
@@ -243,7 +268,7 @@ WORKTRUNK_COMMIT_GENERATION__ARGS="test: automated commit" \
 | `WORKTRUNK_CONFIG_PATH` | Override user config file location |
 | `WORKTRUNK_DIRECTIVE_FILE` | Internal: set by shell wrappers to enable directory changes |
 | `WORKTRUNK_SHELL` | Internal: set by shell wrappers to indicate shell type (e.g., `powershell`) |
-| `WORKTRUNK_MAX_CONCURRENT_COMMANDS` | Max parallel git commands (default: 32). Lower if hitting resource limits. |
+| `WORKTRUNK_MAX_CONCURRENT_COMMANDS` | Max parallel git commands (default: 32). Lower if hitting file descriptor limits. |
 | `NO_COLOR` | Disable colored output ([standard](https://no-color.org/)) |
 | `CLICOLOR_FORCE` | Force colored output even when not a TTY |
 
@@ -576,6 +601,15 @@ With `--project`, creates `.config/wt.toml` in the current repository:
 # ============================================================================
 # [list]
 # url = "http://localhost:{{ branch | hash_port }}"
+
+# ============================================================================
+# CI Platform Override
+# ============================================================================
+# Override CI platform detection for GitHub Enterprise or self-hosted GitLab
+# with custom domains where URL detection fails.
+#
+# [ci]
+# platform = "github"  # or "gitlab"
 ```
 
 ### Command reference
@@ -791,7 +825,7 @@ Caches GitHub/GitLab CI status for display in [`wt list`](@/list.md#ci-status).
 
 ### How it works
 
-1. **Platform detection** — Detected from remote URL (github.com → GitHub, gitlab.com → GitLab)
+1. **Platform detection** — From `[ci] platform` in project config, or detected from remote URL (github.com → GitHub, gitlab.com → GitLab)
 2. **CLI requirement** — Requires `gh` (GitHub) or `glab` (GitLab) CLI, authenticated
 3. **What's checked** — PRs/MRs first, then branch pipelines for branches with upstream
 4. **Caching** — Results cached 30-60 seconds per branch+commit
