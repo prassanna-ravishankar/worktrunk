@@ -54,8 +54,14 @@ document.addEventListener('keydown', function(e) {
       return;
     }
 
-    var results = index.search(value, {
+    // Add wildcard suffix for prefix matching (e.g., "switc" matches "switch")
+    var searchTerms = value.split(/\s+/).map(function(term) {
+      return term + '*';
+    }).join(' ');
+
+    var results = index.search(searchTerms, {
       bool: "OR",
+      expand: true,
       fields: {
         title: { boost: 2 },
         body: { boost: 1 }
