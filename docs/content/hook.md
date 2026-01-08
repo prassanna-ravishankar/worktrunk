@@ -204,9 +204,9 @@ Both run when creating a worktree. The difference:
 | Hook | Execution | Best for |
 |------|-----------|----------|
 | `post-create` | Blocks until complete | Tasks the developer needs before working (dependency install) |
-| `post-start` | Background, parallel | Long-running tasks that can finish while you work |
+| `post-start` | Background, parallel | Long-running tasks that can finish in parallel |
 
-Many tasks work well in `post-start` — they'll likely be ready by the time you need them, especially when the fallback is recompiling. If unsure, prefer `post-start` for faster worktree creation.
+Many tasks work well in `post-start` — they'll likely be ready by the time they're needed, especially when the fallback is recompiling. If unsure, prefer `post-start` for faster worktree creation.
 
 ### Copying untracked files
 
@@ -224,7 +224,7 @@ Use `wt step copy-ignored` to copy files listed in `.worktreeinclude` that are a
 copy = "wt step copy-ignored"
 ```
 
-Create a `.worktreeinclude` file in your repository root listing patterns to copy (uses gitignore syntax):
+Create a `.worktreeinclude` file in the repository root listing patterns to copy (uses gitignore syntax):
 
 ```gitignore
 # .worktreeinclude
