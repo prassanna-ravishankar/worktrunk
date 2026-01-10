@@ -80,6 +80,30 @@ git log v<last-version>..HEAD --format="%an <%ae>" | sort -u
 
 Then for each external contributor's commit, find their GitHub username from the commit (usually in the email or PR).
 
+### Credit Issue Reporters
+
+When a fix or feature addresses a user-reported issue *in this repo*, thank the reporter — not just the PR author. Users who take time to report bugs, request features, or provide reproduction steps deserve recognition. (Don't credit reporters from upstream/external repos — only issues filed here.)
+
+```markdown
+- **Feature name**: Description. ([#456](https://github.com/user/repo/pull/456), thanks @reporter for reporting)
+```
+
+For fixes that reference issues:
+
+```markdown
+- **Bug fix**: Description. Fixes [#123](https://github.com/user/repo/issues/123). (thanks @reporter)
+```
+
+**Finding reporters:** Check PR bodies for "Fixes #N", "Closes #N", or issue references. Then look up the issue author with `gh issue view N --json author`.
+
+**When to credit:**
+- Bug reports with clear reproduction steps
+- Feature requests that shaped the implementation
+- Performance reports with measurements (like "takes 15s")
+- Users who helped diagnose issues through discussion
+
+Skip credit for: issues opened by the repo owner, trivial reports, or issues that were substantially different from what was implemented.
+
 ### MANDATORY: Verify Each Changelog Entry
 
 **After drafting changelog entries, you MUST spawn a subagent to verify each bullet point is accurate.** This is non-negotiable — changelog mistakes are a recurring problem.

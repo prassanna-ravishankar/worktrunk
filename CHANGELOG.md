@@ -4,9 +4,9 @@
 
 ### Improved
 
-- **Nix flake for packaging**: New `flake.nix` for Nix users with crane for efficient Rust builds. ([#502](https://github.com/max-sixty/worktrunk/pull/502), thanks @marktoda)
-- **`sanitize_db` template filter**: New filter that transforms strings into database-safe identifiers with a 3-character hash suffix for collision/keyword safety.
-- **`wt select` performance**: 500ms timeout for git commands improves TUI responsiveness on large repos with many branches.
+- **Nix flake for packaging**: New `flake.nix` for Nix users with crane for efficient Rust builds. ([#502](https://github.com/max-sixty/worktrunk/pull/502), thanks @marktoda; thanks @Kabilan108 for requesting)
+- **`sanitize_db` template filter**: New filter that transforms strings into database-safe identifiers with a 3-character hash suffix for collision/keyword safety. ([#498](https://github.com/max-sixty/worktrunk/pull/498), thanks @hugobarauna for requesting)
+- **`wt select` performance**: 500ms timeout for git commands improves TUI responsiveness on large repos with many branches. (thanks @KidkArolis for reporting [#461](https://github.com/max-sixty/worktrunk/issues/461))
 - **`wt select` stale branch handling**: Branches 50+ commits behind the default branch now skip expensive operations, showing `...` in the diff column. Improves performance on repos with many stale branches.
 - **Global merge-base cache**: Cached merge-base results improve `wt list` performance by avoiding redundant git calls.
 - **`wt config show` git version**: Now displays the git version alongside the worktrunk version.
