@@ -1242,7 +1242,6 @@ mod tests {
                 locked: None,
                 prunable: None,
                 working_tree_diff: Some(LineDiff::from((100, 50))),
-                working_tree_diff_with_main: Some(Some(LineDiff::default())),
                 git_operation: GitOperationState::None,
                 is_main: false,
                 is_current: false,
@@ -1341,7 +1340,6 @@ mod tests {
                 locked: None,
                 prunable: None,
                 working_tree_diff: Some(LineDiff::default()),
-                working_tree_diff_with_main: Some(Some(LineDiff::default())),
                 git_operation: GitOperationState::None,
                 is_main: true, // Primary worktree: no ahead/behind shown
                 is_current: false,
