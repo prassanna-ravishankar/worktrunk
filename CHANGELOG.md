@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.2
+
+### Improved
+
+- **Validate before approval prompts**: `wt switch` and `wt remove` now validate operations before prompting for hook approval, so users don't approve hooks for operations that will fail.
+
+### Fixed
+
+- **Homebrew formula SHA256 hashes**: Fixed release workflow that was setting incorrect checksums for Intel and Linux binaries, causing `brew install` to fail. Fixes [#589](https://github.com/max-sixty/worktrunk/issues/589). (thanks @kobrigo for reporting)
+
 ## 0.13.1
 
 ### Fixed
