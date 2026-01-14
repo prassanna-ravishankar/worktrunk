@@ -162,7 +162,7 @@ wt step squash --show-prompt | less
 
 ## Setup
 
-Add to your project config:
+Add to the project config:
 
 ```toml
 # .config/wt.toml

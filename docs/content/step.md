@@ -246,7 +246,7 @@ Git worktrees share the repository but not untracked files. This command copies 
 
 ### Setup
 
-Add to your project config:
+Add to the project config:
 
 ```toml
 # .config/wt.toml
