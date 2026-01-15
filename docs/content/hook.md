@@ -29,31 +29,30 @@ Hooks are shell commands that run at key points in the worktree lifecycle — au
 
 ### post-create
 
-Installing dependencies, database migrations, copying environment files.
+Copying caches, installing dependencies, generating environment files.
 
 ```toml
 [post-create]
+copy = "wt step copy-ignored"
 install = "npm ci"
-migrate = "npm run db:migrate"
-env = "cp .env.example .env"
 ```
 
 ### post-start
 
-Long builds, dev servers, file watchers, downloading large assets. Output logged to `.git/wt-logs/{branch}-{source}-post-start-{name}.log`.
+Dev servers, long builds, file watchers. Output logged to `.git/wt-logs/{branch}-{source}-post-start-{name}.log`.
 
 ```toml
 [post-start]
-build = "npm run build"
-server = "npm run dev"
+server = "npm run dev -- --port {{ branch | hash_port }}"
 ```
 
 ### post-switch
 
-Triggers on all switch results: creating new worktrees, switching to existing ones, or staying on current. Useful for terminal tab renaming, tmux window names, IDE notifications. Output logged to `.git/wt-logs/{branch}-{source}-post-switch-{name}.log`.
+Triggers on all switch results: creating new worktrees, switching to existing ones, or staying on current. Output logged to `.git/wt-logs/{branch}-{source}-post-switch-{name}.log`.
 
 ```toml
-post-switch = "echo 'Switched to {{ branch }}'"
+[post-switch]
+tmux = "[ -n \"$TMUX\" ] && tmux rename-window '{{ branch | sanitize }}'"
 ```
 
 ### pre-commit
