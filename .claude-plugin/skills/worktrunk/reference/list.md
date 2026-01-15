@@ -1,6 +1,8 @@
 # wt list
 
-Show all worktrees with their status. The table includes uncommitted changes, divergence from the default branch and remote, and optional CI status.
+List worktrees and their status
+
+Shows uncommitted changes, divergence from the default branch and remote, and optional CI status.
 
 The table renders progressively: branch names, paths, and commit hashes appear immediately, then status, divergence, and other columns fill in as background git operations complete. With `--full`, CI status fetches from the network — the table displays instantly and CI fills in as results arrive.
 
