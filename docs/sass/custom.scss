@@ -52,11 +52,34 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 650;
     letter-spacing: -0.02em;
-    margin-top: 0;
+    margin-top: 2rem;
     margin-bottom: 0.5rem;
+    position: relative;
+    width: fit-content;  // Block-level but sized to content (for underline effect)
+
+    // Same underline treatment as h2
+    > a {
+        &::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -0.3rem;
+            width: 45%;
+            height: 2px;
+            background: var(--wt-color-craft-brown);
+            opacity: 0.5;
+            border-radius: 1px;
+            transition: background 150ms ease-out, opacity 150ms ease-out;
+        }
+
+        &:hover::after {
+            background: var(--wt-color-accent);
+            opacity: 1;
+        }
+    }
 }
 
 h2 {
@@ -107,6 +130,7 @@ h4 {
 // Heading anchor links - entire heading is clickable
 // .heading-anchor = custom anchors in templates, .zola-anchor = Zola-generated
 h1 > a.heading-anchor,
+h1 > a.zola-anchor,
 h2 > a.zola-anchor,
 h3 > a.zola-anchor,
 h4 > a.zola-anchor {
@@ -129,6 +153,7 @@ h4 > a.zola-anchor {
 }
 
 // Page title heading (used on content pages and hero)
+// These are standalone titles, not section headers, so no underline
 .heading-text {
     font-family: var(--wt-font-head);
     font-size: 1.75rem;
@@ -137,6 +162,12 @@ h4 > a.zola-anchor {
     margin-top: 0;
     margin-bottom: 0.5rem;
     color: var(--wt-color-text);
+    width: auto;  // Override h1's fit-content to allow centering
+
+    // Disable the h1 > a underline for page titles
+    > a::after {
+        display: none;
+    }
 }
 
 // ============================================================================
@@ -696,7 +727,7 @@ main {
 }
 
 .toc-item-child {
-    padding: 0 0.45rem 0.2rem 1rem;
+    padding: 0 0.45rem 0.15rem 1rem;
     margin: 0 0.4rem;
 
     a {
@@ -719,6 +750,27 @@ main {
         a {
             font-size: 0.7rem;
         }
+    }
+
+    // H1 entries in TOC - section markers
+    // Same alignment as H2s, distinguished by weight and spacing
+    &.toc-h1 {
+        margin-top: 0.5rem;
+
+        a {
+            font-weight: 600;
+            color: var(--wt-color-text-muted);
+
+            &:hover {
+                color: var(--wt-color-text);
+                background: var(--wt-color-bg-soft);
+            }
+        }
+    }
+
+    // H2s under H1s - same alignment as standalone H2s
+    &.toc-h2-under-h1 {
+        // No extra indent - aligns with standalone H2s
     }
 }
 
