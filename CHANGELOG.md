@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.22.0
+
+### Improved
+
+- **`wt switch` integrates interactive picker**: `wt switch` without arguments now opens the interactive picker (previously `wt select`). The separate `wt select` command is deprecated with a warning directing users to use `wt switch` instead. Closes [#890](https://github.com/max-sixty/worktrunk/issues/890). (thanks @strangemonad for the suggestion) ([#894](https://github.com/max-sixty/worktrunk/pull/894))
+
+- **TOML syntax highlighting**: Config output from `wt config show` and `wt config shell show-theme` now renders TOML with syntax highlighting (table headers cyan, string values green, comments dimmed). ([#905](https://github.com/max-sixty/worktrunk/pull/905))
+
+- **Bash syntax highlighting improvements**: Multi-line bash commands in hook previews now preserve syntax highlighting across newlines. Wrapped continuation lines are indented with 3 extra spaces to distinguish terminal-forced wraps from actual newlines. ([#906](https://github.com/max-sixty/worktrunk/pull/906))
+
+- **Unified background hook output**: Contiguous post-switch and post-start hooks are now combined into a single output line instead of two separate lines. ([#908](https://github.com/max-sixty/worktrunk/pull/908))
+
+### Documentation
+
+- Removed redundant horizontal rules before H1 headers in documentation pages. ([#909](https://github.com/max-sixty/worktrunk/pull/909))
+
+### Internal
+
+- Updated GitHub Actions and Rust nightly versions. ([#910](https://github.com/max-sixty/worktrunk/pull/910))
+- Bumped tree-sitter ecosystem to 0.26 for unified multi-line highlighting. ([#906](https://github.com/max-sixty/worktrunk/pull/906))
+- Dependency updates: minijinja 2.15.1, clap, indexmap, ignore, thiserror, time, and others. ([#912](https://github.com/max-sixty/worktrunk/pull/912), [#913](https://github.com/max-sixty/worktrunk/pull/913))
+
 ## 0.21.0
 
 ### Improved
