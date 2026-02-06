@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.23.0
+
+### Improved
+
+- **Preserve subdirectory position when switching**: `wt switch` now lands in the same subdirectory of the target worktree if it exists, falling back to the root if it doesn't. [Docs](https://worktrunk.dev/switch/) ([#939](https://github.com/max-sixty/worktrunk/pull/939), thanks @frederik-suerig for requesting)
+
+- **`wt switch --no-cd`**: Skip the directory change after switching, useful for scripting or running commands in another worktree without leaving your current shell position. [Docs](https://worktrunk.dev/switch/) ([#932](https://github.com/max-sixty/worktrunk/pull/932), thanks @ArnaudRinquin for requesting)
+
+- **`Alt-c` to create worktree from picker**: In the interactive picker, press `Alt-c` to create a new worktree using the current query as the branch name. ([#933](https://github.com/max-sixty/worktrunk/pull/933))
+
+- **Faster preview tab switching**: Preview tabs (HEAD±, log, main…±, remote⇅) are now pre-computed in a background thread, making tab switching near-instant. ([#935](https://github.com/max-sixty/worktrunk/pull/935))
+
+### Fixed
+
+- **Pager width detection**: Makes preview pane width available to pagers via `$COLUMNS`, so tools like delta can use it for correct side-by-side rendering (e.g., `pager = "delta --width=$COLUMNS"`). Fixes [#924](https://github.com/max-sixty/worktrunk/issues/924). (thanks @tnlanh for reporting) ([#930](https://github.com/max-sixty/worktrunk/pull/930))
+
+- **ANSI style bleeding in preview tabs**: Fixed styling artifacts where dividers appeared emphasized and diffstat lines appeared dim. ([#931](https://github.com/max-sixty/worktrunk/pull/931))
+
+- **URL template expansion with `--skip`**: Skip URL template expansion when `--skip url-status` is used, avoiding unnecessary work. ([#923](https://github.com/max-sixty/worktrunk/pull/923))
+
+- **Hook error consistency**: `wt hook <type>` now errors consistently for all hook types when no hooks are configured, instead of silently succeeding for some types. ([#916](https://github.com/max-sixty/worktrunk/pull/916))
+
+### Documentation
+
+- Improved install instructions in release notes. ([#918](https://github.com/max-sixty/worktrunk/pull/918))
+
+### Internal
+
+- CI: check for existing fix PRs before creating duplicates. ([#922](https://github.com/max-sixty/worktrunk/pull/922))
+
 ## 0.22.0
 
 ### Improved
