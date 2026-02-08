@@ -1,6 +1,7 @@
 use crate::common::{TestRepo, make_snapshot_cmd, repo};
 use insta_cmd::assert_cmd_snapshot;
 use rstest::rstest;
+use std::process::Stdio;
 
 #[rstest]
 fn test_prune_no_candidates(repo: TestRepo) {
@@ -137,4 +138,38 @@ fn test_prune_force_removes_unmerged(mut repo: TestRepo) {
         &["--force", "--yes"],
         None
     ));
+}
+
+#[rstest]
+fn test_prune_combined_integrated_and_prunable(mut repo: TestRepo) {
+    // Create one integrated branch (normal removal)
+    let wt1 = repo.add_worktree("feature/integrated");
+    repo.commit_in_worktree(&wt1, "f1.txt", "content", "Integrated feature");
+    repo.run_git(&["switch", "main"]);
+    repo.run_git(&["merge", "--ff-only", "feature/integrated"]);
+
+    // Create another integrated branch and delete its directory (prunable + integrated)
+    let wt2 = repo.add_worktree("feature/prunable");
+    repo.commit_in_worktree(&wt2, "f2.txt", "content", "Prunable feature");
+    repo.run_git(&["switch", "main"]);
+    repo.run_git(&["merge", "--ff-only", "feature/prunable"]);
+    std::fs::remove_dir_all(&wt2).unwrap();
+
+    // This should handle both: normal integrated removal + prunable worktree cleanup
+    assert_cmd_snapshot!(make_snapshot_cmd(&repo, "prune", &["--yes"], None));
+}
+
+#[rstest]
+fn test_prune_non_interactive_error(mut repo: TestRepo) {
+    // Create an integrated branch
+    let worktree_path = repo.add_worktree("feature/test");
+    repo.commit_in_worktree(&worktree_path, "f.txt", "content", "Test feature");
+    repo.run_git(&["switch", "main"]);
+    repo.run_git(&["merge", "--ff-only", "feature/test"]);
+
+    // Run without --yes and with stdin closed (non-interactive)
+    let mut cmd = repo.wt_command();
+    cmd.args(["prune"]).stdin(Stdio::null());
+
+    assert_cmd_snapshot!(cmd);
 }
