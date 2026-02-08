@@ -3,6 +3,9 @@ use insta_cmd::assert_cmd_snapshot;
 use rstest::rstest;
 use std::process::Stdio;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 #[rstest]
 fn test_prune_no_candidates(repo: TestRepo) {
     assert_cmd_snapshot!(make_snapshot_cmd(&repo, "prune", &["--dry-run"], None));
@@ -359,4 +362,47 @@ fn test_prune_execute_prunable_integrated(mut repo: TestRepo) {
 
     // This should prune AND delete the branch (it's both prunable and integrated)
     assert_cmd_snapshot!(make_snapshot_cmd(&repo, "prune", &["--yes"], None));
+}
+
+#[rstest]
+fn test_prune_execute_with_hook_failure(mut repo: TestRepo) {
+    // Create integrated branches
+    let wt1 = repo.add_worktree("feature/success");
+    repo.commit_in_worktree(&wt1, "f1.txt", "c1", "Success");
+
+    let wt2 = repo.add_worktree("feature/will-fail");
+    repo.commit_in_worktree(&wt2, "f2.txt", "c2", "Will fail");
+
+    repo.run_git(&["switch", "main"]);
+    repo.run_git(&["merge", "--no-ff", "--no-edit", "feature/success"]);
+    repo.run_git(&["merge", "--no-ff", "--no-edit", "feature/will-fail"]);
+
+    // Add a pre-remove hook that fails for feature/will-fail
+    let hooks_dir = repo.root_path().join(".git").join("hooks");
+    std::fs::create_dir_all(&hooks_dir).unwrap();
+    let hook_path = hooks_dir.join("worktrunk-pre-remove");
+
+    #[cfg(unix)]
+    {
+        std::fs::write(
+            &hook_path,
+            "#!/bin/bash\nif [ \"$1\" = \"feature/will-fail\" ]; then exit 1; fi\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&hook_path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    #[cfg(windows)]
+    {
+        std::fs::write(
+            hook_path.with_extension("bat"),
+            "@echo off\nif \"%1\"==\"feature/will-fail\" exit 1\n",
+        )
+        .unwrap();
+    }
+
+    // Execute - one should succeed, one should fail due to hook
+    let mut cmd = repo.wt_command();
+    cmd.args(["prune", "--yes"]);
+    assert_cmd_snapshot!(cmd);
 }
