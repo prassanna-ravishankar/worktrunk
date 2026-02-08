@@ -112,3 +112,24 @@ fn test_prune_skips_default_branch(repo: TestRepo) {
     // This should always return no candidates since main is the default branch
     assert_cmd_snapshot!(make_snapshot_cmd(&repo, "prune", &["--dry-run"], None));
 }
+
+#[rstest]
+fn test_prune_executes_removal(mut repo: TestRepo) {
+    let worktree_path = repo.add_worktree("feature/to-remove");
+    repo.commit_in_worktree(&worktree_path, "f.txt", "content", "Add feature");
+    repo.run_git(&["switch", "main"]);
+    repo.run_git(&["merge", "--ff-only", "feature/to-remove"]);
+
+    // Execute actual removal with --yes to skip prompt
+    assert_cmd_snapshot!(make_snapshot_cmd(&repo, "prune", &["--yes"], None));
+}
+
+#[rstest]
+fn test_prune_force_removes_unmerged(mut repo: TestRepo) {
+    let worktree_path = repo.add_worktree("feature/unmerged");
+    repo.commit_in_worktree(&worktree_path, "f.txt", "content", "Unmerged work");
+    repo.run_git(&["switch", "main"]);
+
+    // Force removal without merging
+    assert_cmd_snapshot!(make_snapshot_cmd(&repo, "prune", &["--force", "--yes"], None));
+}

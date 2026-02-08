@@ -31,12 +31,21 @@ pub fn collect_candidates(repo: &Repository, opts: &PruneOptions) -> Result<Vec<
         }
 
         // Check integration
-        if let (effective_target, Some(reason)) = repo.integration_reason(branch, &target)? {
+        let (effective_target, integration_reason) = repo.integration_reason(branch, &target)?;
+        if let Some(reason) = integration_reason {
             candidates.push(PruneCandidate {
                 branch: branch.clone(),
                 worktree_path: Some(wt.path.clone()),
                 reason: PruneReason::Integrated(reason, effective_target.clone()),
                 integration_reason: Some(reason),
+            });
+        } else if opts.force {
+            // Force mode: collect unmerged branches too
+            candidates.push(PruneCandidate {
+                branch: branch.clone(),
+                worktree_path: Some(wt.path.clone()),
+                reason: PruneReason::Prunable, // Treat as prunable (will be force-deleted)
+                integration_reason: None,
             });
         }
     }
